@@ -17,6 +17,6 @@ private:
     vk::PhysicalDeviceFeatures deviceFeatures;
     vk::Device device;
 
-    uint32_t graphicsQueueIndex;
-    uint32_t transferQueueIndex;
+    vk::Queue graphicsQueue;
+    vk::Queue transferQueue;
 };

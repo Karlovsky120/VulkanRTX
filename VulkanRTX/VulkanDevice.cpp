@@ -30,6 +30,9 @@ VulkanDevice::VulkanDevice(vk::Instance& instance) :
     uint32_t i = 0;
     uint32_t queuesFound = 0;
 
+    uint32_t graphicsQueueIndex;
+    uint32_t transferQueueIndex;
+
     for (auto queueFamilyProperty : queueFamilyProperties) {
         if (queueFamilyProperty.queueFlags & vk::QueueFlagBits::eGraphics) {
             graphicsQueueIndex = i;
@@ -80,6 +83,9 @@ VulkanDevice::VulkanDevice(vk::Instance& instance) :
     deviceCreateInfo.pEnabledFeatures = &deviceFeatures;
 
     device = physicalDevice.createDevice(deviceCreateInfo);;
+
+    graphicsQueue = device.getQueue(graphicsQueueIndex, 0);
+    transferQueue = device.getQueue(transferQueueIndex, 0);
 }
 
 VulkanDevice::~VulkanDevice() {
