@@ -2,6 +2,7 @@
 
 #include "VulkanDevice.h"
 #include "VulkanInstance.h"
+#include "VulkanSurface.h"
 
 #include <vulkan/vulkan.hpp>
 #include <GLFW/glfw3.h>
@@ -27,6 +28,7 @@ private:
     GLFWwindow* window;
 
     std::unique_ptr<VulkanInstance> instance;
+    std::unique_ptr<VulkanSurface> surface;
     std::unique_ptr<VulkanDevice> device;
 
     void initVulkan();

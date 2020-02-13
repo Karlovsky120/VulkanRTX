@@ -94,11 +94,13 @@
     <ClCompile Include="RTXApplication.cpp" />
     <ClCompile Include="VulkanDevice.cpp" />
     <ClCompile Include="VulkanInstance.cpp" />
+    <ClCompile Include="VulkanSurface.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="RTXApplication.h" />
     <ClInclude Include="VulkanDevice.h" />
     <ClInclude Include="VulkanInstance.h" />
+    <ClInclude Include="VulkanSurface.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

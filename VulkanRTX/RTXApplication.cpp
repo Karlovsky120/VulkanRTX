@@ -8,6 +8,7 @@ void RTXApplication::run() {
 
 void RTXApplication::initVulkan() {
     instance = std::make_unique<VulkanInstance>(true);
+    surface = std::make_unique<VulkanSurface>(instance->getInstance(), window);
     device = std::make_unique<VulkanDevice>(instance->getInstance());
 }
 
