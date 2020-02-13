@@ -4,12 +4,17 @@
 
 class VulkanDevice {
 public:
+    vk::PhysicalDevice& getPhysicalDevice();
     vk::Device& getDevice();
 
     VulkanDevice(vk::Instance& instance, vk::SurfaceKHR& surface);
     ~VulkanDevice();
 
 private:
+    const std::vector<const char*> deviceExtensions = {
+        VK_KHR_SWAPCHAIN_EXTENSION_NAME
+    };
+
     vk::Instance& instance;
     vk::SurfaceKHR& surface;
 

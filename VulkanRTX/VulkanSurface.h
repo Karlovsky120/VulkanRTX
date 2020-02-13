@@ -2,7 +2,7 @@
 
 #include <vulkan/vulkan.hpp>
 
-class GLFWwindow;
+struct GLFWwindow;
 
 class VulkanSurface {
 public:

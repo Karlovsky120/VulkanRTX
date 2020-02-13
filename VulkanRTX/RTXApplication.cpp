@@ -1,5 +1,7 @@
 #include "RTXApplication.h"
 
+#include <GLFW/glfw3.h>
+
 void RTXApplication::run() {
     initWindow();
     initVulkan();
@@ -10,6 +12,7 @@ void RTXApplication::initVulkan() {
     instance = std::make_unique<VulkanInstance>(true);
     surface = std::make_unique<VulkanSurface>(instance->getInstance(), window);
     device = std::make_unique<VulkanDevice>(instance->getInstance(), surface->getSurface());
+    swapchain = std::make_unique<VulkanSwapchain>(*device, surface->getSurface(), WIDTH, HEIGHT);
 }
 
 void RTXApplication::initWindow() {

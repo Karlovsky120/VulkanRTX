@@ -4,6 +4,10 @@ vk::Device& VulkanDevice::getDevice() {
     return device;
 }
 
+vk::PhysicalDevice& VulkanDevice::getPhysicalDevice() {
+    return physicalDevice;
+}
+
 VulkanDevice::VulkanDevice(vk::Instance& instance, vk::SurfaceKHR& surface) :
     instance(instance), surface(surface) {
 
@@ -72,6 +76,7 @@ VulkanDevice::VulkanDevice(vk::Instance& instance, vk::SurfaceKHR& surface) :
     float graphicsQueuePriority = 1.0f;
     graphicsInfo.pQueuePriorities = &graphicsQueuePriority;
     queueCreateInfos.push_back(graphicsInfo);
+    uint32_t uniqueQueueCount = 1;
 
     if (graphicsQueueIndex != transferQueueIndex) {
         vk::DeviceQueueCreateInfo transferInfo;
@@ -80,6 +85,7 @@ VulkanDevice::VulkanDevice(vk::Instance& instance, vk::SurfaceKHR& surface) :
         float transferQueuePriority = 0.5f;
         transferInfo.pQueuePriorities = &transferQueuePriority;
         queueCreateInfos.push_back(transferInfo);
+        ++uniqueQueueCount;
     }
 
     if (presentQueueIndex != graphicsQueueIndex && presentQueueIndex != transferQueueIndex) {
@@ -89,14 +95,18 @@ VulkanDevice::VulkanDevice(vk::Instance& instance, vk::SurfaceKHR& surface) :
         float presentQueuePriority = 0.75f;
         presentInfo.pQueuePriorities = &presentQueuePriority;
         queueCreateInfos.push_back(presentInfo);
+        ++uniqueQueueCount;
     }
 
     vk::PhysicalDeviceFeatures deviceFeatures;
 
     vk::DeviceCreateInfo deviceCreateInfo;
     deviceCreateInfo.pQueueCreateInfos = queueCreateInfos.data();
-    deviceCreateInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
+    deviceCreateInfo.queueCreateInfoCount = uniqueQueueCount;
     deviceCreateInfo.pEnabledFeatures = &deviceFeatures;
+
+    deviceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size());
+    deviceCreateInfo.ppEnabledExtensionNames = deviceExtensions.data();
 
     device = physicalDevice.createDevice(deviceCreateInfo);;
 
