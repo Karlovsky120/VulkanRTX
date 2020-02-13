@@ -4,8 +4,6 @@
 
 #include <vulkan/vulkan.hpp>
 
-#include <memory>
-
 class VulkanInstance {
 public:
     vk::Instance& getInstance();

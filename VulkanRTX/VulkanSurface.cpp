@@ -1,5 +1,7 @@
 #include "VulkanSurface.h"
 
+#include <GLFW/glfw3.h>
+
 vk::SurfaceKHR& VulkanSurface::getSurface() {
     return surface;
 }
