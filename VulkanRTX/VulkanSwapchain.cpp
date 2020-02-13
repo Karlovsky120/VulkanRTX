@@ -33,6 +33,28 @@ vk::Extent2D VulkanSwapchain::chooseExtent(vk::SurfaceCapabilitiesKHR& capabilit
     return actualExtent;
 }
 
+void VulkanSwapchain::createImageViews() {
+    for (size_t i = 0; i < swapchainImages.size(); ++i) {
+        vk::ImageViewCreateInfo createInfo;
+        createInfo.image = swapchainImages[i];
+        createInfo.viewType = vk::ImageViewType::e2D;
+        createInfo.format = format.format;
+
+        createInfo.components.r = vk::ComponentSwizzle::eIdentity;
+        createInfo.components.g = vk::ComponentSwizzle::eIdentity;
+        createInfo.components.b = vk::ComponentSwizzle::eIdentity;
+        createInfo.components.a = vk::ComponentSwizzle::eIdentity;
+
+        createInfo.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
+        createInfo.subresourceRange.baseMipLevel = 0;
+        createInfo.subresourceRange.levelCount = 1;
+        createInfo.subresourceRange.baseArrayLayer = 0;
+        createInfo.subresourceRange.layerCount = 1;
+
+        swapchainImageViews.push_back(device.createImageView(createInfo));
+    }
+}
+
 VulkanSwapchain::VulkanSwapchain(VulkanDevice& vulkanDevice, vk::SurfaceKHR& surface, uint32_t width, uint32_t height) :
     device(vulkanDevice.getDevice()) {
 
@@ -71,8 +93,14 @@ VulkanSwapchain::VulkanSwapchain(VulkanDevice& vulkanDevice, vk::SurfaceKHR& sur
     swapchain = device.createSwapchainKHR(createInfo);
 
     swapchainImages = device.getSwapchainImagesKHR(swapchain);
+
+    createImageViews();
 }
 
 VulkanSwapchain::~VulkanSwapchain() {
+    for (vk::ImageView imageView : swapchainImageViews) {
+        device.destroyImageView(imageView);
+    }
+
     device.destroySwapchainKHR(swapchain);
 }
