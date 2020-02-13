@@ -104,6 +104,7 @@ for %%f in (*.vert *.tesc *.tese *.geom *.frag *.comp) do %VK_SDK_PATH%\Bin\glsl
     <ClCompile Include="RTXApplication.cpp" />
     <ClCompile Include="VulkanDevice.cpp" />
     <ClCompile Include="VulkanInstance.cpp" />
+    <ClCompile Include="VulkanShaderModule.cpp" />
     <ClCompile Include="VulkanSurface.cpp" />
     <ClCompile Include="VulkanSwapchain.cpp" />
   </ItemGroup>
@@ -111,6 +112,7 @@ for %%f in (*.vert *.tesc *.tese *.geom *.frag *.comp) do %VK_SDK_PATH%\Bin\glsl
     <ClInclude Include="RTXApplication.h" />
     <ClInclude Include="VulkanDevice.h" />
     <ClInclude Include="VulkanInstance.h" />
+    <ClInclude Include="VulkanShaderModule.h" />
     <ClInclude Include="VulkanSurface.h" />
     <ClInclude Include="VulkanSwapchain.h" />
   </ItemGroup>
