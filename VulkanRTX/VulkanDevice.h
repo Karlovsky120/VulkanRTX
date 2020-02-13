@@ -6,11 +6,12 @@ class VulkanDevice {
 public:
     vk::Device& getDevice();
 
-    VulkanDevice(vk::Instance& instance);
+    VulkanDevice(vk::Instance& instance, vk::SurfaceKHR& surface);
     ~VulkanDevice();
 
 private:
     vk::Instance& instance;
+    vk::SurfaceKHR& surface;
 
     vk::PhysicalDevice physicalDevice;
     vk::PhysicalDeviceProperties deviceProperties;
@@ -19,4 +20,5 @@ private:
 
     vk::Queue graphicsQueue;
     vk::Queue transferQueue;
+    vk::Queue presentQueue;
 };

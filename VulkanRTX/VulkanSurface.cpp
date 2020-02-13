@@ -1,5 +1,9 @@
 #include "VulkanSurface.h"
 
+vk::SurfaceKHR& VulkanSurface::getSurface() {
+    return surface;
+}
+
 VulkanSurface::VulkanSurface(vk::Instance& instance, GLFWwindow* window) :
     instance(instance) {
 

@@ -5,6 +5,8 @@
 
 class VulkanSurface {
 public:
+    vk::SurfaceKHR& getSurface();
+
     VulkanSurface(vk::Instance& instance, GLFWwindow* window);
 
     ~VulkanSurface();
