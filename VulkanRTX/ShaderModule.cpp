@@ -1,9 +1,9 @@
-#include "VulkanShaderModule.h"
+#include "ShaderModule.h"
 
 #include <fstream>
 #include <vector>
 
-VulkanShaderModule::VulkanShaderModule(vk::Device device, const std::string& shaderPath) :
+ShaderModule::ShaderModule(vk::Device device, const std::string& shaderPath) :
     device(device) {
 
     std::ifstream file(shaderPath, std::ios::ate | std::ios::binary);
@@ -28,6 +28,6 @@ VulkanShaderModule::VulkanShaderModule(vk::Device device, const std::string& sha
     module = device.createShaderModule(createInfo);
 }
 
-VulkanShaderModule::~VulkanShaderModule() {
+ShaderModule::~ShaderModule() {
     device.destroyShaderModule(module);
 }

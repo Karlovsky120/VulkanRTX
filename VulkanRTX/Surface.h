@@ -4,13 +4,13 @@
 
 struct GLFWwindow;
 
-class VulkanSurface {
+class Surface {
 public:
     vk::SurfaceKHR& getSurface();
 
-    VulkanSurface(vk::Instance& instance, GLFWwindow* window);
+    Surface(vk::Instance& instance, GLFWwindow* window);
 
-    ~VulkanSurface();
+    ~Surface();
 
 private:
     vk::SurfaceKHR surface;

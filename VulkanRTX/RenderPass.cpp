@@ -1,12 +1,12 @@
-#include "VulkanRenderPass.h"
+#include "RenderPass.h"
 
-#include "VulkanSwapchain.h"
+#include "Swapchain.h"
 
-vk::RenderPass& VulkanRenderPass::getRenderPass() {
+vk::RenderPass& RenderPass::getRenderPass() {
     return renderPass;
 }
 
-VulkanRenderPass::VulkanRenderPass(vk::Device& device, VulkanSwapchain& swapchain) :
+RenderPass::RenderPass(vk::Device& device, Swapchain& swapchain) :
     device(device) {
 
     vk::AttachmentDescription colorAttachment;
@@ -39,6 +39,6 @@ VulkanRenderPass::VulkanRenderPass(vk::Device& device, VulkanSwapchain& swapchai
     renderPass = device.createRenderPass(renderPassInfo);
 }
 
-VulkanRenderPass::~VulkanRenderPass() {
+RenderPass::~RenderPass() {
     device.destroyRenderPass(renderPass);
 }

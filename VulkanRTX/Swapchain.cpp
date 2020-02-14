@@ -1,14 +1,14 @@
-#include "VulkanSwapchain.h"
+#include "Swapchain.h"
 
-vk::Extent2D& VulkanSwapchain::getExtent() {
+vk::Extent2D& Swapchain::getExtent() {
     return extent;
 }
 
-vk::SurfaceFormatKHR VulkanSwapchain::getFormat() {
+vk::SurfaceFormatKHR Swapchain::getFormat() {
     return format;
 }
 
-vk::SurfaceFormatKHR VulkanSwapchain::chooseFormat(std::vector<vk::SurfaceFormatKHR>& availableFormats) {
+vk::SurfaceFormatKHR Swapchain::chooseFormat(std::vector<vk::SurfaceFormatKHR>& availableFormats) {
     for (const auto& availableFormat : availableFormats) {
         if (availableFormat.format == vk::Format::eB8G8R8A8Srgb && availableFormat.colorSpace == vk::ColorSpaceKHR::eSrgbNonlinear) {
             return availableFormat;
@@ -18,7 +18,7 @@ vk::SurfaceFormatKHR VulkanSwapchain::chooseFormat(std::vector<vk::SurfaceFormat
     return availableFormats[0];
 }
 
-vk::PresentModeKHR VulkanSwapchain::choosePresentMode(std::vector<vk::PresentModeKHR>& availablePresentModes) {
+vk::PresentModeKHR Swapchain::choosePresentMode(std::vector<vk::PresentModeKHR>& availablePresentModes) {
     for (const auto& availablePresentMode : availablePresentModes) {
         if (availablePresentMode == vk::PresentModeKHR::eMailbox) {
             presentMode = availablePresentMode;
@@ -28,7 +28,7 @@ vk::PresentModeKHR VulkanSwapchain::choosePresentMode(std::vector<vk::PresentMod
     return vk::PresentModeKHR::eFifo;
 }
 
-vk::Extent2D VulkanSwapchain::chooseExtent(vk::SurfaceCapabilitiesKHR& capabilities, uint32_t width, uint32_t height) {
+vk::Extent2D Swapchain::chooseExtent(vk::SurfaceCapabilitiesKHR& capabilities, uint32_t width, uint32_t height) {
     if (capabilities.currentExtent.width != UINT32_MAX) {
         return capabilities.currentExtent;
     }
@@ -41,7 +41,7 @@ vk::Extent2D VulkanSwapchain::chooseExtent(vk::SurfaceCapabilitiesKHR& capabilit
     return actualExtent;
 }
 
-void VulkanSwapchain::createImageViews() {
+void Swapchain::createImageViews() {
     for (size_t i = 0; i < swapchainImages.size(); ++i) {
         vk::ImageViewCreateInfo createInfo;
         createInfo.image = swapchainImages[i];
@@ -63,10 +63,10 @@ void VulkanSwapchain::createImageViews() {
     }
 }
 
-VulkanSwapchain::VulkanSwapchain(VulkanDevice& vulkanDevice, vk::SurfaceKHR& surface, uint32_t width, uint32_t height) :
-    device(vulkanDevice.getDevice()) {
+Swapchain::Swapchain(Device& Device, vk::SurfaceKHR& surface, uint32_t width, uint32_t height) :
+    device(Device.getDevice()) {
 
-    vk::PhysicalDevice physicalDevice = vulkanDevice.getPhysicalDevice();
+    vk::PhysicalDevice physicalDevice = Device.getPhysicalDevice();
 
     vk::SurfaceCapabilitiesKHR capabilities = physicalDevice.getSurfaceCapabilitiesKHR(surface);
 
@@ -105,7 +105,7 @@ VulkanSwapchain::VulkanSwapchain(VulkanDevice& vulkanDevice, vk::SurfaceKHR& sur
     createImageViews();
 }
 
-VulkanSwapchain::~VulkanSwapchain() {
+Swapchain::~Swapchain() {
     for (vk::ImageView imageView : swapchainImageViews) {
         device.destroyImageView(imageView);
     }

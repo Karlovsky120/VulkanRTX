@@ -102,23 +102,23 @@ for %%f in (*.vert *.tesc *.tese *.geom *.frag *.comp) do %VK_SDK_PATH%\Bin\glsl
   <ItemGroup>
     <ClCompile Include="main.cpp" />
     <ClCompile Include="RTXApplication.cpp" />
-    <ClCompile Include="VulkanDevice.cpp" />
-    <ClCompile Include="VulkanInstance.cpp" />
-    <ClCompile Include="VulkanPipeline.cpp" />
-    <ClCompile Include="VulkanRenderPass.cpp" />
-    <ClCompile Include="VulkanShaderModule.cpp" />
-    <ClCompile Include="VulkanSurface.cpp" />
-    <ClCompile Include="VulkanSwapchain.cpp" />
+    <ClCompile Include="Device.cpp" />
+    <ClCompile Include="Instance.cpp" />
+    <ClCompile Include="Pipeline.cpp" />
+    <ClCompile Include="RenderPass.cpp" />
+    <ClCompile Include="ShaderModule.cpp" />
+    <ClCompile Include="Surface.cpp" />
+    <ClCompile Include="Swapchain.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="RTXApplication.h" />
-    <ClInclude Include="VulkanDevice.h" />
-    <ClInclude Include="VulkanInstance.h" />
-    <ClInclude Include="VulkanPipeline.h" />
-    <ClInclude Include="VulkanRenderPass.h" />
-    <ClInclude Include="VulkanShaderModule.h" />
-    <ClInclude Include="VulkanSurface.h" />
-    <ClInclude Include="VulkanSwapchain.h" />
+    <ClInclude Include="Device.h" />
+    <ClInclude Include="Instance.h" />
+    <ClInclude Include="Pipeline.h" />
+    <ClInclude Include="RenderPass.h" />
+    <ClInclude Include="ShaderModule.h" />
+    <ClInclude Include="Surface.h" />
+    <ClInclude Include="Swapchain.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\fragmentShader.frag">

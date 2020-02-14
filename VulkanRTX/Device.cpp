@@ -1,14 +1,14 @@
-#include "VulkanDevice.h"
+#include "Device.h"
 
-vk::Device& VulkanDevice::getDevice() {
+vk::Device& Device::getDevice() {
     return device;
 }
 
-vk::PhysicalDevice& VulkanDevice::getPhysicalDevice() {
+vk::PhysicalDevice& Device::getPhysicalDevice() {
     return physicalDevice;
 }
 
-VulkanDevice::VulkanDevice(vk::Instance& instance, vk::SurfaceKHR& surface) :
+Device::Device(vk::Instance& instance, vk::SurfaceKHR& surface) :
     instance(instance), surface(surface) {
 
     std::vector<vk::PhysicalDevice> physicalDevices = instance.enumeratePhysicalDevices();
@@ -112,6 +112,6 @@ VulkanDevice::VulkanDevice(vk::Instance& instance, vk::SurfaceKHR& surface) :
     presentQueue = device.getQueue(presentQueueIndex, 0);
 }
 
-VulkanDevice::~VulkanDevice() {
+Device::~Device() {
     device.destroy();
 }

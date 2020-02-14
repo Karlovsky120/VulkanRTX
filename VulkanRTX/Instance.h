@@ -1,18 +1,18 @@
 #pragma once
 
-#include "VulkanDevice.h"
+#include "Device.h"
 
 #include <vulkan/vulkan.hpp>
 
-class VulkanInstance {
+class Instance {
 public:
     vk::Instance& getInstance();
 
-    VulkanInstance(const bool validationLayersEnabled);
-    ~VulkanInstance();
+    Instance(const bool validationLayersEnabled);
+    ~Instance();
 
-    VulkanInstance(const VulkanInstance&) = delete;
-    VulkanInstance& operator=(const VulkanInstance&) = delete;
+    Instance(const Instance&) = delete;
+    Instance& operator=(const Instance&) = delete;
 
 private:
     const std::vector<const char*> validationLayers = {

@@ -2,14 +2,14 @@
 
 #include <vulkan/vulkan.hpp>
 
-class VulkanSwapchain;
+class Swapchain;
 
-class VulkanRenderPass {
+class RenderPass {
 public:
     vk::RenderPass& getRenderPass();
 
-    VulkanRenderPass(vk::Device& device, VulkanSwapchain& swapchain);
-    ~VulkanRenderPass();
+    RenderPass(vk::Device& device, Swapchain& swapchain);
+    ~RenderPass();
 
 private:
     vk::RenderPass renderPass;

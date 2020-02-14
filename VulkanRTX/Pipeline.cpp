@@ -1,10 +1,10 @@
-#include "VulkanPipeline.h"
+#include "Pipeline.h"
 
-#include "VulkanSwapchain.h"
+#include "Swapchain.h"
 
 #include <fstream>
 
-vk::ShaderModule VulkanPipeline::createShaderModule(const std::string& shaderPath) {
+vk::ShaderModule Pipeline::createShaderModule(const std::string& shaderPath) {
 
     std::ifstream file(shaderPath, std::ios::ate | std::ios::binary);
 
@@ -29,8 +29,8 @@ vk::ShaderModule VulkanPipeline::createShaderModule(const std::string& shaderPat
     return shaderModules.back();
 }
 
-VulkanPipeline::VulkanPipeline(vk::Device& device, VulkanSwapchain& swapchain) :
-    device(device), renderPass(VulkanRenderPass(device, swapchain)) {
+Pipeline::Pipeline(vk::Device& device, Swapchain& swapchain) :
+    device(device), renderPass(RenderPass(device, swapchain)) {
 
     vk::PipelineVertexInputStateCreateInfo vertexInputInfo;
     vertexInputInfo.vertexBindingDescriptionCount = 0;
@@ -158,7 +158,7 @@ VulkanPipeline::VulkanPipeline(vk::Device& device, VulkanSwapchain& swapchain) :
     }
 }
 
-VulkanPipeline::~VulkanPipeline() {
+Pipeline::~Pipeline() {
     device.destroyPipeline(pipeline);
     device.destroyPipelineLayout(pipelineLayout);
 }

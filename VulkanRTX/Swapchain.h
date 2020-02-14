@@ -1,18 +1,18 @@
 #pragma once
 
-#include "VulkanDevice.h"
+#include "Device.h"
 
 #include <vulkan/vulkan.hpp>
 
 #include <vector>
 
-class VulkanSwapchain {
+class Swapchain {
 public:
     vk::Extent2D& getExtent();
     vk::SurfaceFormatKHR getFormat();
 
-    VulkanSwapchain(VulkanDevice& vulkanDevice, vk::SurfaceKHR& surface, uint32_t width, uint32_t height);
-    ~VulkanSwapchain();
+    Swapchain(Device& vulkanDevice, vk::SurfaceKHR& surface, uint32_t width, uint32_t height);
+    ~Swapchain();
 
 private:
     vk::SwapchainKHR swapchain;

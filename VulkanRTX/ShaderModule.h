@@ -4,10 +4,10 @@
 
 #include <string>
 
-class VulkanShaderModule {
+class ShaderModule {
 public:
-    VulkanShaderModule(vk::Device device, const std::string& shaderPath);
-    ~VulkanShaderModule();
+    ShaderModule(vk::Device device, const std::string& shaderPath);
+    ~ShaderModule();
 
 private:
     vk::ShaderModule module;

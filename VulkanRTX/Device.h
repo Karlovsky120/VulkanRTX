@@ -2,13 +2,13 @@
 
 #include <vulkan/vulkan.hpp>
 
-class VulkanDevice {
+class Device {
 public:
     vk::PhysicalDevice& getPhysicalDevice();
     vk::Device& getDevice();
 
-    VulkanDevice(vk::Instance& instance, vk::SurfaceKHR& surface);
-    ~VulkanDevice();
+    Device(vk::Instance& instance, vk::SurfaceKHR& surface);
+    ~Device();
 
 private:
     const std::vector<const char*> deviceExtensions = {

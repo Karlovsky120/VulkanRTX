@@ -1,15 +1,15 @@
-#include "VulkanInstance.h"
+#include "Instance.h"
 
 #include <vulkan/vulkan.hpp>
 #include <GLFW/glfw3.h>
 
 #include <iostream>
 
-vk::Instance& VulkanInstance::getInstance() {
+vk::Instance& Instance::getInstance() {
     return instance;
 }
 
-VulkanInstance::VulkanInstance(const bool enableValidationLayers) :
+Instance::Instance(const bool enableValidationLayers) :
     validationLayersEnabled(enableValidationLayers) {
 
     vk::ApplicationInfo appInfo;
@@ -60,7 +60,7 @@ VulkanInstance::VulkanInstance(const bool enableValidationLayers) :
     }
 }
 
-const std::vector<const char*> VulkanInstance::getRequiredExtensions() const {
+const std::vector<const char*> Instance::getRequiredExtensions() const {
     uint32_t glfwExtensionCount = 0;
     const char** glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
 
@@ -73,7 +73,7 @@ const std::vector<const char*> VulkanInstance::getRequiredExtensions() const {
     return extensions;
 }
 
-VKAPI_ATTR VkBool32 VKAPI_CALL VulkanInstance::debugCallback(
+VKAPI_ATTR VkBool32 VKAPI_CALL Instance::debugCallback(
     VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
     VkDebugUtilsMessageTypeFlagsEXT messageType,
     const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
@@ -85,7 +85,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL VulkanInstance::debugCallback(
     return VK_FALSE;
 }
 
-VulkanInstance::~VulkanInstance() {
+Instance::~Instance() {
     if (validationLayersEnabled) {
         instance.destroyDebugUtilsMessengerEXT(debugMessenger, nullptr, loader);
     }

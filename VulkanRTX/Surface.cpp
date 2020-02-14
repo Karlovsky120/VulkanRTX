@@ -1,12 +1,12 @@
-#include "VulkanSurface.h"
+#include "Surface.h"
 
 #include <GLFW/glfw3.h>
 
-vk::SurfaceKHR& VulkanSurface::getSurface() {
+vk::SurfaceKHR& Surface::getSurface() {
     return surface;
 }
 
-VulkanSurface::VulkanSurface(vk::Instance& instance, GLFWwindow* window) :
+Surface::Surface(vk::Instance& instance, GLFWwindow* window) :
     instance(instance) {
 
     VkSurfaceKHR vulkanSurface;
@@ -17,6 +17,6 @@ VulkanSurface::VulkanSurface(vk::Instance& instance, GLFWwindow* window) :
     surface = vk::SurfaceKHR(vulkanSurface);
 }
 
-VulkanSurface::~VulkanSurface() {
+Surface::~Surface() {
     instance.destroySurfaceKHR(surface);
 }

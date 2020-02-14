@@ -9,11 +9,11 @@ void RTXApplication::run() {
 }
 
 void RTXApplication::initVulkan() {
-    instance = std::make_unique<VulkanInstance>(true);
-    surface = std::make_unique<VulkanSurface>(instance->getInstance(), window);
-    device = std::make_unique<VulkanDevice>(instance->getInstance(), surface->getSurface());
-    swapchain = std::make_unique<VulkanSwapchain>(*device, surface->getSurface(), WIDTH, HEIGHT);
-    pipeline = std::make_unique<VulkanPipeline>(device->getDevice(), *swapchain);
+    instance = std::make_unique<Instance>(true);
+    surface = std::make_unique<Surface>(instance->getInstance(), window);
+    device = std::make_unique<Device>(instance->getInstance(), surface->getSurface());
+    swapchain = std::make_unique<Swapchain>(*device, surface->getSurface(), WIDTH, HEIGHT);
+    pipeline = std::make_unique<Pipeline>(device->getDevice(), *swapchain);
 }
 
 void RTXApplication::initWindow() {
