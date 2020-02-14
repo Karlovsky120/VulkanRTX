@@ -8,6 +8,9 @@
 
 class VulkanSwapchain {
 public:
+    vk::Extent2D& getExtent();
+    vk::SurfaceFormatKHR getFormat();
+
     VulkanSwapchain(VulkanDevice& vulkanDevice, vk::SurfaceKHR& surface, uint32_t width, uint32_t height);
     ~VulkanSwapchain();
 

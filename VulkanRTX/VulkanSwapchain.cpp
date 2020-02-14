@@ -1,5 +1,13 @@
 #include "VulkanSwapchain.h"
 
+vk::Extent2D& VulkanSwapchain::getExtent() {
+    return extent;
+}
+
+vk::SurfaceFormatKHR VulkanSwapchain::getFormat() {
+    return format;
+}
+
 vk::SurfaceFormatKHR VulkanSwapchain::chooseFormat(std::vector<vk::SurfaceFormatKHR>& availableFormats) {
     for (const auto& availableFormat : availableFormats) {
         if (availableFormat.format == vk::Format::eB8G8R8A8Srgb && availableFormat.colorSpace == vk::ColorSpaceKHR::eSrgbNonlinear) {

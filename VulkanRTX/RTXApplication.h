@@ -2,6 +2,7 @@
 
 #include "VulkanDevice.h"
 #include "VulkanInstance.h"
+#include "VulkanPipeline.h"
 #include "VulkanSurface.h"
 #include "VulkanSwapchain.h"
 
@@ -33,6 +34,7 @@ private:
     std::unique_ptr<VulkanSurface> surface;
     std::unique_ptr<VulkanDevice> device;
     std::unique_ptr<VulkanSwapchain> swapchain;
+    std::unique_ptr<VulkanPipeline> pipeline;
 
     void initVulkan();
     void initWindow();
