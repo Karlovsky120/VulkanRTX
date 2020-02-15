@@ -7,6 +7,9 @@ public:
     vk::PhysicalDevice& getPhysicalDevice();
     vk::Device& getDevice();
 
+    vk::Queue& getGraphicsQueue();
+    uint32_t getGraphicsQueueIndex();
+
     Device(vk::Instance& instance, vk::SurfaceKHR& surface);
     ~Device();
 
@@ -22,6 +25,10 @@ private:
     vk::PhysicalDeviceProperties deviceProperties;
     vk::PhysicalDeviceFeatures deviceFeatures;
     vk::Device device;
+
+    uint32_t graphicsQueueIndex;
+    uint32_t transferQueueIndex;
+    uint32_t presentQueueIndex;
 
     vk::Queue graphicsQueue;
     vk::Queue transferQueue;

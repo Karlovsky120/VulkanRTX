@@ -8,6 +8,14 @@ vk::PhysicalDevice& Device::getPhysicalDevice() {
     return physicalDevice;
 }
 
+vk::Queue& Device::getGraphicsQueue() {
+    return graphicsQueue;
+}
+
+uint32_t Device::getGraphicsQueueIndex() {
+    return graphicsQueueIndex;
+}
+
 Device::Device(vk::Instance& instance, vk::SurfaceKHR& surface) :
     instance(instance), surface(surface) {
 
@@ -32,10 +40,6 @@ Device::Device(vk::Instance& instance, vk::SurfaceKHR& surface) :
     auto queueFamilyProperties = physicalDevice.getQueueFamilyProperties();
 
     uint32_t queuesFound = 0;
-
-    uint32_t graphicsQueueIndex;
-    uint32_t transferQueueIndex;
-    uint32_t presentQueueIndex;
 
     uint32_t i = 0;
     for (auto queueFamilyProperty : queueFamilyProperties) {

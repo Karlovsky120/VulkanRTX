@@ -1,5 +1,6 @@
 #pragma once
 
+#include "CommandPool.h"
 #include "Device.h"
 #include "Framebuffers.h"
 #include "Instance.h"
@@ -37,6 +38,7 @@ private:
     std::unique_ptr<Swapchain> swapchain;
     std::unique_ptr<Pipeline> pipeline;
     std::unique_ptr<Framebuffers> framebuffers;
+    std::unique_ptr<CommandPool> commandPool;
 
     void initVulkan();
     void initWindow();
