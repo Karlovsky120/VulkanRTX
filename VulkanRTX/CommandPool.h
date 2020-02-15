@@ -6,6 +6,8 @@ class Device;
 
 class CommandPool {
 public:
+    vk::CommandPool& getCommandPool();
+
     CommandPool(Device& device, uint32_t queueFamilyIndex);
     ~CommandPool();
 

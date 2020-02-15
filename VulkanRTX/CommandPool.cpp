@@ -2,6 +2,10 @@
 
 #include "Device.h"
 
+vk::CommandPool& CommandPool::getCommandPool() {
+    return commandPool;
+}
+
 CommandPool::CommandPool(Device& device, uint32_t queueFamilyIndex) :
     device(device) {
 

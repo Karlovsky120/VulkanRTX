@@ -15,7 +15,9 @@ void RTXApplication::initVulkan() {
     swapchain = std::make_unique<Swapchain>(*device, surface->getSurface(), WIDTH, HEIGHT);
     pipeline = std::make_unique<Pipeline>(device->getDevice(), *swapchain);
     framebuffers = std::make_unique<Framebuffers>(device->getDevice(), *swapchain, *pipeline);
+    renderPass = std::make_unique<RenderPass>(device->getDevice(), *swapchain);
     commandPool = std::make_unique<CommandPool>(*device, device->getGraphicsQueueIndex());
+    commandBuffer = std::make_unique<CommandBuffer>(device->getDevice(), commandPool->getCommandPool());
 }
 
 void RTXApplication::initWindow() {
