@@ -12,6 +12,8 @@ class Pipeline {
 public:
     vk::ShaderModule createShaderModule(const std::string& shaderPath);
 
+    RenderPass& getRenderPass();
+
     Pipeline(vk::Device& device, Swapchain& swapchain);
     ~Pipeline();
 

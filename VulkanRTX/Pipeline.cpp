@@ -4,6 +4,10 @@
 
 #include <fstream>
 
+RenderPass& Pipeline::getRenderPass() {
+    return renderPass;
+}
+
 vk::ShaderModule Pipeline::createShaderModule(const std::string& shaderPath) {
 
     std::ifstream file(shaderPath, std::ios::ate | std::ios::binary);

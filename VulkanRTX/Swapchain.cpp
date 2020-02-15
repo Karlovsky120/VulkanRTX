@@ -8,6 +8,10 @@ vk::SurfaceFormatKHR Swapchain::getFormat() {
     return format;
 }
 
+std::vector<vk::ImageView> Swapchain::getImageViews() {
+    return imageViews;
+}
+
 vk::SurfaceFormatKHR Swapchain::chooseFormat(std::vector<vk::SurfaceFormatKHR>& availableFormats) {
     for (const auto& availableFormat : availableFormats) {
         if (availableFormat.format == vk::Format::eB8G8R8A8Srgb && availableFormat.colorSpace == vk::ColorSpaceKHR::eSrgbNonlinear) {
@@ -42,9 +46,9 @@ vk::Extent2D Swapchain::chooseExtent(vk::SurfaceCapabilitiesKHR& capabilities, u
 }
 
 void Swapchain::createImageViews() {
-    for (size_t i = 0; i < swapchainImages.size(); ++i) {
+    for (size_t i = 0; i < images.size(); ++i) {
         vk::ImageViewCreateInfo createInfo;
-        createInfo.image = swapchainImages[i];
+        createInfo.image = images[i];
         createInfo.viewType = vk::ImageViewType::e2D;
         createInfo.format = format.format;
 
@@ -59,7 +63,7 @@ void Swapchain::createImageViews() {
         createInfo.subresourceRange.baseArrayLayer = 0;
         createInfo.subresourceRange.layerCount = 1;
 
-        swapchainImageViews.push_back(device.createImageView(createInfo));
+        imageViews.push_back(device.createImageView(createInfo));
     }
 }
 
@@ -100,13 +104,13 @@ Swapchain::Swapchain(Device& Device, vk::SurfaceKHR& surface, uint32_t width, ui
 
     swapchain = device.createSwapchainKHR(createInfo);
 
-    swapchainImages = device.getSwapchainImagesKHR(swapchain);
+    images = device.getSwapchainImagesKHR(swapchain);
 
     createImageViews();
 }
 
 Swapchain::~Swapchain() {
-    for (vk::ImageView imageView : swapchainImageViews) {
+    for (vk::ImageView imageView : imageViews) {
         device.destroyImageView(imageView);
     }
 

@@ -10,14 +10,15 @@ class Swapchain {
 public:
     vk::Extent2D& getExtent();
     vk::SurfaceFormatKHR getFormat();
+    std::vector<vk::ImageView> getImageViews();
 
     Swapchain(Device& vulkanDevice, vk::SurfaceKHR& surface, uint32_t width, uint32_t height);
     ~Swapchain();
 
 private:
     vk::SwapchainKHR swapchain;
-    std::vector<vk::Image> swapchainImages;
-    std::vector<vk::ImageView> swapchainImageViews;
+    std::vector<vk::Image> images;
+    std::vector<vk::ImageView> imageViews;
 
     vk::SurfaceFormatKHR chooseFormat(std::vector<vk::SurfaceFormatKHR>& availableFormats);
     vk::PresentModeKHR choosePresentMode(std::vector<vk::PresentModeKHR>& availablePresentModes);

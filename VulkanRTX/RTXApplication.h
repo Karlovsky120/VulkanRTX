@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Device.h"
+#include "Framebuffers.h"
 #include "Instance.h"
 #include "Pipeline.h"
 #include "Surface.h"
@@ -35,6 +36,7 @@ private:
     std::unique_ptr<Device> device;
     std::unique_ptr<Swapchain> swapchain;
     std::unique_ptr<Pipeline> pipeline;
+    std::unique_ptr<Framebuffers> framebuffers;
 
     void initVulkan();
     void initWindow();
