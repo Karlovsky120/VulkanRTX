@@ -1,17 +1,26 @@
 #include "Instance.h"
 
+#include "PhysicalDevice.h"
+#include "Surface.h"
+
 #include <vulkan/vulkan.hpp>
 #include <GLFW/glfw3.h>
 
 #include <iostream>
 
-vk::Instance& Instance::getInstance() {
-    return instance;
+vk::Instance& Instance::get() {
+    return m_instance;
 }
 
-Instance::Instance(const bool enableValidationLayers) :
-    validationLayersEnabled(enableValidationLayers) {
+std::unique_ptr<PhysicalDevice> Instance::createPhysicalDevice() {
+    return std::make_unique<PhysicalDevice>(*this);
+}
 
+std::unique_ptr<Surface> Instance::createSurface(GLFWwindow* window, uint32_t width, uint32_t height) {
+    return std::make_unique<Surface>(*this, window, width, height);
+}
+
+Instance::Instance() {
     vk::ApplicationInfo appInfo;
     appInfo.pApplicationName = "RTX Application";
     appInfo.applicationVersion = VK_MAKE_VERSION(0, 1, 0);
@@ -19,60 +28,56 @@ Instance::Instance(const bool enableValidationLayers) :
     appInfo.engineVersion = VK_MAKE_VERSION(0, 1, 0);
     appInfo.apiVersion = VK_API_VERSION_1_2;
 
-    uint32_t glfwExtensionCount = 0;
-    const char** glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
-
     vk::InstanceCreateInfo createInfo;
     createInfo.pApplicationInfo = &appInfo;
 
-    std::vector<const char*> extensions = getRequiredExtensions();
-    createInfo.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
-    createInfo.ppEnabledExtensionNames = extensions.data();
-
-    vk::DebugUtilsMessengerCreateInfoEXT debugCreateInfo;
-
-    if (enableValidationLayers) {
-        createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
-        createInfo.ppEnabledLayerNames = validationLayers.data();
-
-        debugCreateInfo.messageSeverity =
-            vk::DebugUtilsMessageSeverityFlagBitsEXT::eInfo |
-            vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose |
-            vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning |
-            vk::DebugUtilsMessageSeverityFlagBitsEXT::eError;
-        debugCreateInfo.messageType =
-            vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral |
-            vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation |
-            vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance;
-        debugCreateInfo.pfnUserCallback = debugCallback;
-
-        createInfo.pNext = &debugCreateInfo;
-    }
-    else {
-        createInfo.enabledLayerCount = 0;
-    }
-
-    instance = vk::createInstance(createInfo);
-    loader = vk::DispatchLoaderDynamic(instance, vkGetInstanceProcAddr);
-
-    if (enableValidationLayers) {
-        debugMessenger = instance.createDebugUtilsMessengerEXT(debugCreateInfo, nullptr, loader);
-    }
-}
-
-const std::vector<const char*> Instance::getRequiredExtensions() const {
     uint32_t glfwExtensionCount = 0;
     const char** glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
 
     std::vector<const char*> extensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
 
-    if (validationLayersEnabled) {
-        extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-    }
+#ifdef ENABLE_VALIDATION
+    extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+#endif
 
-    return extensions;
+    createInfo.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
+    createInfo.ppEnabledExtensionNames = extensions.data();
+
+#ifdef ENABLE_VALIDATION
+    const std::vector<const char*> validationLayers = {
+        "VK_LAYER_LUNARG_api_dump",
+        "VK_LAYER_KHRONOS_validation"
+    };
+
+    createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
+    createInfo.ppEnabledLayerNames = validationLayers.data();
+
+    vk::DebugUtilsMessengerCreateInfoEXT debugCreateInfo;
+    debugCreateInfo.messageSeverity =
+        vk::DebugUtilsMessageSeverityFlagBitsEXT::eInfo |
+        vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose |
+        vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning |
+        vk::DebugUtilsMessageSeverityFlagBitsEXT::eError;
+    debugCreateInfo.messageType =
+        vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral |
+        vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation |
+        vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance;
+    debugCreateInfo.pfnUserCallback = debugCallback;
+
+    createInfo.pNext = &debugCreateInfo;
+#else
+    createInfo.enabledLayerCount = 0;
+#endif
+
+    m_instance = vk::createInstance(createInfo);
+    m_loader = vk::DispatchLoaderDynamic(m_instance, vkGetInstanceProcAddr);
+
+#ifdef ENABLE_VALIDATION
+    m_debugMessenger = m_instance.createDebugUtilsMessengerEXT(debugCreateInfo, nullptr, m_loader);
+#endif
 }
 
+#ifdef ENABLE_VALIDATION
 VKAPI_ATTR VkBool32 VKAPI_CALL Instance::debugCallback(
     VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
     VkDebugUtilsMessageTypeFlagsEXT messageType,
@@ -84,11 +89,12 @@ VKAPI_ATTR VkBool32 VKAPI_CALL Instance::debugCallback(
 
     return VK_FALSE;
 }
+#endif
 
 Instance::~Instance() {
-    if (validationLayersEnabled) {
-        instance.destroyDebugUtilsMessengerEXT(debugMessenger, nullptr, loader);
-    }
+#ifdef ENABLE_VALIDATION
+    m_instance.destroyDebugUtilsMessengerEXT(m_debugMessenger, nullptr, m_loader);
+#endif
 
-    instance.destroy();
+    m_instance.destroy();
 }

@@ -1,40 +1,18 @@
 #include "Pipeline.h"
 
+#include "LogicalDevice.h"
+#include "RenderPass.h"
+#include "ShaderModule.h"
 #include "Swapchain.h"
 
 #include <fstream>
 
-RenderPass& Pipeline::getRenderPass() {
-    return renderPass;
+vk::Pipeline& Pipeline::get() {
+    return m_pipeline;
 }
 
-vk::ShaderModule Pipeline::createShaderModule(const std::string& shaderPath) {
-
-    std::ifstream file(shaderPath, std::ios::ate | std::ios::binary);
-
-    if (!file.is_open()) {
-        throw std::runtime_error("Failed to open file " + shaderPath + "!");
-    }
-
-    size_t fileSize = (size_t)file.tellg();
-
-    std::vector<char> code(fileSize);
-
-    file.seekg(0);
-    file.read(code.data(), fileSize);
-
-    file.close();
-
-    vk::ShaderModuleCreateInfo createInfo;
-    createInfo.codeSize = fileSize;
-    createInfo.pCode = reinterpret_cast<const uint32_t*>(code.data());
-
-    shaderModules.push_back(device.createShaderModule(createInfo));
-    return shaderModules.back();
-}
-
-Pipeline::Pipeline(vk::Device& device, Swapchain& swapchain) :
-    device(device), renderPass(RenderPass(device, swapchain)) {
+Pipeline::Pipeline(LogicalDevice& logicalDevice, Swapchain& swapchain) :
+    m_logicalDevice(logicalDevice) {
 
     vk::PipelineVertexInputStateCreateInfo vertexInputInfo;
     vertexInputInfo.vertexBindingDescriptionCount = 0;
@@ -121,16 +99,18 @@ Pipeline::Pipeline(vk::Device& device, Swapchain& swapchain) :
     pipelineLayoutInfo.pushConstantRangeCount = 0;
     pipelineLayoutInfo.pPushConstantRanges = nullptr;
 
-    pipelineLayout = device.createPipelineLayout(pipelineLayoutInfo);
+    m_pipelineLayout = logicalDevice.get().createPipelineLayout(pipelineLayoutInfo);
 
+    std::unique_ptr<ShaderModule> vertexShaderModule = logicalDevice.createShaderModule("shaders/bin/vertexShader.vert.spv");
     vk::PipelineShaderStageCreateInfo vertShaderStageInfo;
     vertShaderStageInfo.stage = vk::ShaderStageFlagBits::eVertex;
-    vertShaderStageInfo.module = createShaderModule("shaders/bin/vertexShader.vert.spv");
+    vertShaderStageInfo.module = vertexShaderModule->get();
     vertShaderStageInfo.pName = "main";
 
+    std::unique_ptr<ShaderModule> fragmentShaderModule = logicalDevice.createShaderModule("shaders/bin/fragmentShader.frag.spv");
     vk::PipelineShaderStageCreateInfo fragShaderStageInfo;
     fragShaderStageInfo.stage = vk::ShaderStageFlagBits::eFragment;
-    fragShaderStageInfo.module = createShaderModule("shaders/bin/fragmentShader.frag.spv");
+    fragShaderStageInfo.module = fragmentShaderModule->get();
     fragShaderStageInfo.pName = "main";
 
     vk::PipelineShaderStageCreateInfo shaderStages[] = {vertShaderStageInfo, fragShaderStageInfo};
@@ -148,21 +128,20 @@ Pipeline::Pipeline(vk::Device& device, Swapchain& swapchain) :
     pipelineInfo.pColorBlendState = &colorBlending;
     pipelineInfo.pDynamicState = nullptr;
 
-    pipelineInfo.layout = pipelineLayout;
-    pipelineInfo.renderPass = renderPass.getRenderPass();
+    pipelineInfo.layout = m_pipelineLayout;
+
+    m_renderPass = logicalDevice.createRenderPass(swapchain);
+
+    pipelineInfo.renderPass = m_renderPass->get();
     pipelineInfo.subpass = 0;
 
     pipelineInfo.basePipelineHandle = nullptr;
     pipelineInfo.basePipelineIndex = -1;
 
-    pipeline = device.createGraphicsPipeline(nullptr, pipelineInfo);
-
-    for (auto shaderModule : shaderModules) {
-        device.destroyShaderModule(shaderModule);
-    }
+    m_pipeline = logicalDevice.get().createGraphicsPipeline(nullptr, pipelineInfo);
 }
 
 Pipeline::~Pipeline() {
-    device.destroyPipeline(pipeline);
-    device.destroyPipelineLayout(pipelineLayout);
+    m_logicalDevice.get().destroyPipeline(m_pipeline);
+    m_logicalDevice.get().destroyPipelineLayout(m_pipelineLayout);
 }

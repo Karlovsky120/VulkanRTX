@@ -1,14 +1,18 @@
 #include "Framebuffers.h"
 
-#include "Device.h"
-#include "Pipeline.h"
+#include "LogicalDevice.h"
+#include "RenderPass.h"
 #include "Swapchain.h"
 
-Framebuffers::Framebuffers(vk::Device& device, Swapchain& swapchain, Pipeline& pipeline) :
-    device(device) {
+vk::Framebuffer& Framebuffers::get(uint32_t index) {
+    return m_framebuffers[index];
+}
+
+Framebuffers::Framebuffers(LogicalDevice& logicalDevice, Swapchain& swapchain, RenderPass& renderPass) :
+    m_logicalDevice(logicalDevice) {
     std::vector<vk::ImageView> swapchainImageViews = swapchain.getImageViews();
 
-    framebuffers.resize(swapchainImageViews.size());
+    m_framebuffers.resize(swapchainImageViews.size());
 
     for (size_t i = 0; i < swapchainImageViews.size(); ++i) {
         vk::ImageView attachments[] = {
@@ -16,19 +20,19 @@ Framebuffers::Framebuffers(vk::Device& device, Swapchain& swapchain, Pipeline& p
         };
 
         vk::FramebufferCreateInfo framebufferInfo;
-        framebufferInfo.renderPass = pipeline.getRenderPass().getRenderPass();
+        framebufferInfo.renderPass = renderPass.get();
         framebufferInfo.attachmentCount = 1;
         framebufferInfo.pAttachments = attachments;
         framebufferInfo.width = swapchain.getExtent().width;
         framebufferInfo.height = swapchain.getExtent().height;
         framebufferInfo.layers = 1;
 
-        framebuffers[i] = device.createFramebuffer(framebufferInfo);
+        m_framebuffers[i] = logicalDevice.get().createFramebuffer(framebufferInfo);
     }
 }
 
 Framebuffers::~Framebuffers() {
-    for (auto framebuffer : framebuffers) {
-        device.destroyFramebuffer(framebuffer);
+    for (auto framebuffer : m_framebuffers) {
+        m_logicalDevice.get().destroyFramebuffer(framebuffer);
     }
 }

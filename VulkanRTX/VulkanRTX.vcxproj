@@ -56,7 +56,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;_CONSOLE;ENABLE_VALIDATION;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>$(VULKAN_SDK)\Include;$(ProjectDir)include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
@@ -104,8 +104,9 @@ for %%f in (*.vert *.tesc *.tese *.geom *.frag *.comp) do %VK_SDK_PATH%\Bin\glsl
     <ClCompile Include="CommandPool.cpp" />
     <ClCompile Include="Framebuffers.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="PhysicalDevice.cpp" />
     <ClCompile Include="RTXApplication.cpp" />
-    <ClCompile Include="Device.cpp" />
+    <ClCompile Include="LogicalDevice.cpp" />
     <ClCompile Include="Instance.cpp" />
     <ClCompile Include="Pipeline.cpp" />
     <ClCompile Include="RenderPass.cpp" />
@@ -117,8 +118,9 @@ for %%f in (*.vert *.tesc *.tese *.geom *.frag *.comp) do %VK_SDK_PATH%\Bin\glsl
     <ClInclude Include="CommandBuffer.h" />
     <ClInclude Include="CommandPool.h" />
     <ClInclude Include="Framebuffers.h" />
+    <ClInclude Include="PhysicalDevice.h" />
     <ClInclude Include="RTXApplication.h" />
-    <ClInclude Include="Device.h" />
+    <ClInclude Include="LogicalDevice.h" />
     <ClInclude Include="Instance.h" />
     <ClInclude Include="Pipeline.h" />
     <ClInclude Include="RenderPass.h" />

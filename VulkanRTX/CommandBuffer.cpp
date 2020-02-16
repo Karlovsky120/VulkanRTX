@@ -1,5 +1,7 @@
 #include "CommandBuffer.h"
 
+#include "CommandPool.h"
+#include "LogicalDevice.h"
 #include "Swapchain.h"
 
 void CommandBuffer::begin() {
@@ -23,13 +25,13 @@ void CommandBuffer::beginRenderPass(vk::RenderPass& renderPass, vk::Framebuffer&
     commandBuffer.beginRenderPass(renderPassInfo, vk::SubpassContents::eInline);
 }
 
-CommandBuffer::CommandBuffer(vk::Device& device, vk::CommandPool& commandPool) :
-    device(device) {
+CommandBuffer::CommandBuffer(LogicalDevice& logicalDevice, CommandPool& commandPool) :
+    m_logicalDevice(logicalDevice) {
 
     vk::CommandBufferAllocateInfo allocInfo;
-    allocInfo.commandPool = commandPool;
+    allocInfo.commandPool = commandPool.get();
     allocInfo.level = vk::CommandBufferLevel::ePrimary;
     allocInfo.commandBufferCount = 1;
 
-    commandBuffer = device.allocateCommandBuffers(allocInfo)[0];
+    commandBuffer = logicalDevice.get().allocateCommandBuffers(allocInfo)[0];
 }

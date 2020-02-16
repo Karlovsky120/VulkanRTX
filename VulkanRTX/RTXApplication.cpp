@@ -9,15 +9,16 @@ void RTXApplication::run() {
 }
 
 void RTXApplication::initVulkan() {
-    instance = std::make_unique<Instance>(true);
-    surface = std::make_unique<Surface>(instance->getInstance(), window);
-    device = std::make_unique<Device>(instance->getInstance(), surface->getSurface());
-    swapchain = std::make_unique<Swapchain>(*device, surface->getSurface(), WIDTH, HEIGHT);
-    pipeline = std::make_unique<Pipeline>(device->getDevice(), *swapchain);
-    framebuffers = std::make_unique<Framebuffers>(device->getDevice(), *swapchain, *pipeline);
-    renderPass = std::make_unique<RenderPass>(device->getDevice(), *swapchain);
-    commandPool = std::make_unique<CommandPool>(*device, device->getGraphicsQueueIndex());
-    commandBuffer = std::make_unique<CommandBuffer>(device->getDevice(), commandPool->getCommandPool());
+    instance = std::make_unique<Instance>();
+    surface = instance->createSurface(window, WIDTH, HEIGHT);
+    physicalDevice = instance->createPhysicalDevice();
+    logicalDevice = physicalDevice->createLogicalDevice(*surface);
+    swapchain = logicalDevice->createSwapchain(*physicalDevice, *surface);
+    renderPass = logicalDevice->createRenderPass(*swapchain);
+    pipeline = logicalDevice->createPipeline(*swapchain);
+    framebuffers = logicalDevice->createFramebuffers(*swapchain, *renderPass);
+    commandPool = logicalDevice->createCommandPool(logicalDevice->getGraphicsQueueIndex());
+    commandBuffer = logicalDevice->createCommandBuffer(*commandPool);
 }
 
 void RTXApplication::initWindow() {

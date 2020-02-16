@@ -1,13 +1,14 @@
 #include "RenderPass.h"
 
+#include "LogicalDevice.h"
 #include "Swapchain.h"
 
-vk::RenderPass& RenderPass::getRenderPass() {
-    return renderPass;
+vk::RenderPass& RenderPass::get() {
+    return m_renderPass;
 }
 
-RenderPass::RenderPass(vk::Device& device, Swapchain& swapchain) :
-    device(device) {
+RenderPass::RenderPass(LogicalDevice& logicalDevice, Swapchain& swapchain) :
+    m_logicalDevice(logicalDevice) {
 
     vk::AttachmentDescription colorAttachment;
     colorAttachment.format = swapchain.getFormat().format;
@@ -36,9 +37,9 @@ RenderPass::RenderPass(vk::Device& device, Swapchain& swapchain) :
     renderPassInfo.subpassCount = 1;
     renderPassInfo.pSubpasses = &subpass;
 
-    renderPass = device.createRenderPass(renderPassInfo);
+    m_renderPass = logicalDevice.get().createRenderPass(renderPassInfo);
 }
 
 RenderPass::~RenderPass() {
-    device.destroyRenderPass(renderPass);
+    m_logicalDevice.get().destroyRenderPass(m_renderPass);
 }

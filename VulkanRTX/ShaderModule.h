@@ -4,13 +4,17 @@
 
 #include <string>
 
+class LogicalDevice;
+
 class ShaderModule {
 public:
-    ShaderModule(vk::Device device, const std::string& shaderPath);
+    vk::ShaderModule& get();
+
+    ShaderModule(LogicalDevice& logicalDevice, const std::string shaderPath);
     ~ShaderModule();
 
 private:
-    vk::ShaderModule module;
+    vk::ShaderModule m_shaderModule;
 
-    vk::Device& device;
+    LogicalDevice& m_logicalDevice;
 };

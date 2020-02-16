@@ -4,12 +4,13 @@
 
 #include <vector>
 
-class Device;
+class CommandPool;
+class LogicalDevice;
 class Swapchain;
 
 class CommandBuffer {
 public:
-    CommandBuffer(vk::Device& device, vk::CommandPool& commandPool);
+    CommandBuffer(LogicalDevice& device, CommandPool& commandPool);
 
     void begin();
     void beginRenderPass(vk::RenderPass& renderPass, vk::Framebuffer& framebuffer, Swapchain& swapchain);
@@ -17,5 +18,5 @@ public:
 private:
     vk::CommandBuffer commandBuffer;
 
-    vk::Device& device;
+    LogicalDevice& m_logicalDevice;
 };

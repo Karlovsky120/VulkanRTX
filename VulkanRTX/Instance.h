@@ -1,32 +1,32 @@
 #pragma once
 
-#include "Device.h"
-
 #include <vulkan/vulkan.hpp>
+
+class PhysicalDevice;
+class Surface;
+
+struct GLFWwindow;
 
 class Instance {
 public:
-    vk::Instance& getInstance();
+    vk::Instance& get();
 
-    Instance(const bool validationLayersEnabled);
+    std::unique_ptr<PhysicalDevice> createPhysicalDevice();
+    std::unique_ptr<Surface> createSurface(GLFWwindow* window, uint32_t width, uint32_t height);
+
+    Instance();
     ~Instance();
 
     Instance(const Instance&) = delete;
     Instance& operator=(const Instance&) = delete;
 
 private:
-    const std::vector<const char*> validationLayers = {
-        "VK_LAYER_LUNARG_api_dump",
-        "VK_LAYER_KHRONOS_validation"
-    };
+    vk::Instance m_instance;
 
-    vk::Instance instance;
-    vk::DispatchLoaderDynamic loader;
-    vk::DebugUtilsMessengerEXT debugMessenger;
+    vk::DispatchLoaderDynamic m_loader;
 
-    const bool validationLayersEnabled;
-
-    const std::vector<const char*> getRequiredExtensions() const;
+#ifdef ENABLE_VALIDATION
+    vk::DebugUtilsMessengerEXT m_debugMessenger;
 
     static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
         VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
@@ -34,4 +34,5 @@ private:
         const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
         void* pUserData
     );
+#endif
 };

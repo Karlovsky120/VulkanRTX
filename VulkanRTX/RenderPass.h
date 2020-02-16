@@ -2,17 +2,18 @@
 
 #include <vulkan/vulkan.hpp>
 
+class LogicalDevice;
 class Swapchain;
 
 class RenderPass {
 public:
-    vk::RenderPass& getRenderPass();
+    vk::RenderPass& get();
 
-    RenderPass(vk::Device& device, Swapchain& swapchain);
+    RenderPass(LogicalDevice& logicalDevice, Swapchain& swapchain);
     ~RenderPass();
 
 private:
-    vk::RenderPass renderPass;
+    vk::RenderPass m_renderPass;
 
-    vk::Device& device;
+    LogicalDevice& m_logicalDevice;
 };

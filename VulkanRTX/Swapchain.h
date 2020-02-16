@@ -1,24 +1,33 @@
 #pragma once
 
-#include "Device.h"
-
 #include <vulkan/vulkan.hpp>
 
 #include <vector>
 
+class LogicalDevice;
+class PhysicalDevice;
+class Surface;
+
 class Swapchain {
 public:
+    vk::SwapchainKHR& get();
+
     vk::Extent2D& getExtent();
     vk::SurfaceFormatKHR getFormat();
     std::vector<vk::ImageView> getImageViews();
 
-    Swapchain(Device& vulkanDevice, vk::SurfaceKHR& surface, uint32_t width, uint32_t height);
+    Swapchain(LogicalDevice& logicalDevice, PhysicalDevice& physicalDevice, Surface& surface);
     ~Swapchain();
 
 private:
-    vk::SwapchainKHR swapchain;
-    std::vector<vk::Image> images;
-    std::vector<vk::ImageView> imageViews;
+    vk::SwapchainKHR m_swapchain;
+
+    std::vector<vk::Image> m_images;
+    std::vector<vk::ImageView> m_imageViews;
+
+    vk::Extent2D m_extent;
+    vk::SurfaceFormatKHR m_format;
+    vk::PresentModeKHR m_presentMode;
 
     vk::SurfaceFormatKHR chooseFormat(std::vector<vk::SurfaceFormatKHR>& availableFormats);
     vk::PresentModeKHR choosePresentMode(std::vector<vk::PresentModeKHR>& availablePresentModes);
@@ -26,10 +35,5 @@ private:
 
     void createImageViews();
 
-    vk::SurfaceFormatKHR format;
-    vk::PresentModeKHR presentMode;
-
-    vk::Extent2D extent;
-
-    vk::Device& device;
+    LogicalDevice& m_logicalDevice;
 };

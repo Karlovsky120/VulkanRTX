@@ -1,22 +1,34 @@
 #include "Surface.h"
 
+#include "Instance.h"
+
 #include <GLFW/glfw3.h>
 
-vk::SurfaceKHR& Surface::getSurface() {
-    return surface;
+vk::SurfaceKHR& Surface::get() {
+    return m_surface;
 }
 
-Surface::Surface(vk::Instance& instance, GLFWwindow* window) :
-    instance(instance) {
+uint32_t Surface::getWidth() {
+    return m_width;
+}
+
+uint32_t Surface::getHeight() {
+    return m_height;
+}
+
+Surface::Surface(Instance& instance, GLFWwindow* window, uint32_t width, uint32_t height) :
+    m_instance(instance),
+    m_width(width),
+    m_height(height) {
 
     VkSurfaceKHR vulkanSurface;
-    if (glfwCreateWindowSurface(instance, window, nullptr, &vulkanSurface) != VK_SUCCESS) {
+    if (glfwCreateWindowSurface(instance.get(), window, nullptr, &vulkanSurface) != VK_SUCCESS) {
         throw std::runtime_error("Failed to create window surface!");
     }
 
-    surface = vk::SurfaceKHR(vulkanSurface);
+    m_surface = vk::SurfaceKHR(vulkanSurface);
 }
 
 Surface::~Surface() {
-    instance.destroySurfaceKHR(surface);
+    m_instance.get().destroySurfaceKHR(m_surface);
 }

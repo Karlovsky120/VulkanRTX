@@ -2,17 +2,17 @@
 
 #include <vulkan/vulkan.hpp>
 
-class Device;
+class LogicalDevice;
 
 class CommandPool {
 public:
-    vk::CommandPool& getCommandPool();
+    vk::CommandPool& get();
 
-    CommandPool(Device& device, uint32_t queueFamilyIndex);
+    CommandPool(LogicalDevice& device, uint32_t queueFamilyIndex);
     ~CommandPool();
 
 private:
-    vk::CommandPool commandPool;
+    vk::CommandPool m_commandPool;
 
-    Device& device;
+    LogicalDevice& m_logicalDevice;
 };

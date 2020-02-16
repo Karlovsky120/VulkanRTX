@@ -2,28 +2,24 @@
 
 #include <vulkan/vulkan.hpp>
 
-#include "RenderPass.h"
-
 #include <string>
 
+class LogicalDevice;
 class Swapchain;
+class RenderPass;
 
 class Pipeline {
 public:
-    vk::ShaderModule createShaderModule(const std::string& shaderPath);
+    vk::Pipeline& get();
 
-    RenderPass& getRenderPass();
-
-    Pipeline(vk::Device& device, Swapchain& swapchain);
+    Pipeline(LogicalDevice& logicalDevice, Swapchain& swapchain);
     ~Pipeline();
 
 private:
-    vk::PipelineLayout pipelineLayout;
-    vk::Pipeline pipeline;
+    vk::PipelineLayout m_pipelineLayout;
+    vk::Pipeline m_pipeline;
 
-    std::vector<vk::ShaderModule> shaderModules;
+    std::unique_ptr<RenderPass> m_renderPass;
 
-    RenderPass renderPass;
-
-    vk::Device& device;
+    LogicalDevice& m_logicalDevice;
 };

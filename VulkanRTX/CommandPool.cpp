@@ -1,20 +1,20 @@
 #include "CommandPool.h"
 
-#include "Device.h"
+#include "LogicalDevice.h"
 
-vk::CommandPool& CommandPool::getCommandPool() {
-    return commandPool;
+vk::CommandPool& CommandPool::get() {
+    return m_commandPool;
 }
 
-CommandPool::CommandPool(Device& device, uint32_t queueFamilyIndex) :
-    device(device) {
+CommandPool::CommandPool(LogicalDevice& logicalDevice, uint32_t queueFamilyIndex) :
+    m_logicalDevice(logicalDevice) {
 
     vk::CommandPoolCreateInfo poolInfo;
     poolInfo.queueFamilyIndex = queueFamilyIndex;
 
-    commandPool = device.getDevice().createCommandPool(poolInfo);
+    m_commandPool = logicalDevice.get().createCommandPool(poolInfo);
 }
 
 CommandPool::~CommandPool() {
-    device.getDevice().destroyCommandPool(commandPool);
+    m_logicalDevice.get().destroyCommandPool(m_commandPool);
 }
