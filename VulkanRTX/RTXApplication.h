@@ -44,7 +44,8 @@ private:
     std::unique_ptr<Framebuffers> framebuffers;
     std::unique_ptr<RenderPass> renderPass;
     std::unique_ptr<CommandPool> commandPool;
-    std::unique_ptr<CommandBuffer> commandBuffer;
+
+    std::vector<std::unique_ptr<CommandBuffer>> commandBuffers;
 
     void initVulkan();
     void initWindow();

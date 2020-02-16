@@ -4,10 +4,14 @@
 #include "LogicalDevice.h"
 #include "Swapchain.h"
 
+vk::CommandBuffer& CommandBuffer::get() {
+    return m_commandBuffer;
+}
+
 void CommandBuffer::begin() {
     vk::CommandBufferBeginInfo beginInfo;
 
-    commandBuffer.begin(beginInfo);
+    m_commandBuffer.begin(beginInfo);
 }
 
 void CommandBuffer::beginRenderPass(vk::RenderPass& renderPass, vk::Framebuffer& framebuffer, Swapchain& swapchain) {
@@ -22,7 +26,7 @@ void CommandBuffer::beginRenderPass(vk::RenderPass& renderPass, vk::Framebuffer&
     renderPassInfo.clearValueCount = 1;
     renderPassInfo.pClearValues = &clearColor;
 
-    commandBuffer.beginRenderPass(renderPassInfo, vk::SubpassContents::eInline);
+    m_commandBuffer.beginRenderPass(renderPassInfo, vk::SubpassContents::eInline);
 }
 
 CommandBuffer::CommandBuffer(LogicalDevice& logicalDevice, CommandPool& commandPool) :
@@ -33,5 +37,5 @@ CommandBuffer::CommandBuffer(LogicalDevice& logicalDevice, CommandPool& commandP
     allocInfo.level = vk::CommandBufferLevel::ePrimary;
     allocInfo.commandBufferCount = 1;
 
-    commandBuffer = logicalDevice.get().allocateCommandBuffers(allocInfo)[0];
+    m_commandBuffer = logicalDevice.get().allocateCommandBuffers(allocInfo)[0];
 }

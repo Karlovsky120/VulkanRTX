@@ -8,6 +8,10 @@ vk::Framebuffer& Framebuffers::get(uint32_t index) {
     return m_framebuffers[index];
 }
 
+vk::Framebuffer& Framebuffers::getNext() {
+    return m_framebuffers[m_currentIndex++];
+}
+
 Framebuffers::Framebuffers(LogicalDevice& logicalDevice, Swapchain& swapchain, RenderPass& renderPass) :
     m_logicalDevice(logicalDevice) {
     std::vector<vk::ImageView> swapchainImageViews = swapchain.getImageViews();

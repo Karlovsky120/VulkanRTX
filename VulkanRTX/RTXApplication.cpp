@@ -18,7 +18,18 @@ void RTXApplication::initVulkan() {
     pipeline = logicalDevice->createPipeline(*swapchain);
     framebuffers = logicalDevice->createFramebuffers(*swapchain, *renderPass);
     commandPool = logicalDevice->createCommandPool(logicalDevice->getGraphicsQueueIndex());
-    commandBuffer = logicalDevice->createCommandBuffer(*commandPool);
+
+    uint32_t imageCount = swapchain->getImageViews().size();
+
+    for (size_t i = 0; i < imageCount; ++i) {
+        commandBuffers.push_back(logicalDevice->createCommandBuffer(*commandPool));
+        commandBuffers[i]->begin();
+        commandBuffers[i]->beginRenderPass(renderPass->get(), framebuffers->getNext(), *swapchain);
+        commandBuffers[i]->get().bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline->get());
+        commandBuffers[i]->get().draw(3, 1, 0, 0);
+        commandBuffers[i]->get().endRenderPass();
+        commandBuffers[i]->get().end();
+    }
 }
 
 void RTXApplication::initWindow() {
