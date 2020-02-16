@@ -33,6 +33,8 @@ private:
     const uint32_t WIDTH = 1280;
     const uint32_t HEIGHT = 720;
 
+    const uint32_t MAX_FRAMES_IN_FLIGHT = 2;
+
     GLFWwindow* window;
 
     std::unique_ptr<Instance> instance;
@@ -47,7 +49,15 @@ private:
 
     std::vector<std::unique_ptr<CommandBuffer>> commandBuffers;
 
+    std::vector<vk::UniqueSemaphore> imageAvailableSemaphores;
+    std::vector<vk::UniqueSemaphore> renderFinishedSemaphores;
+    std::vector<vk::UniqueFence> inFlightFences;
+    std::vector<vk::UniqueFence*> imagesInFlight;
+
+    size_t currentFrame = 0;
+
     void initVulkan();
     void initWindow();
     void mainLoop();
+    void drawFrame();
 };

@@ -46,6 +46,10 @@ vk::Queue& LogicalDevice::getGraphicsQueue() {
     return m_graphicsQueue;
 }
 
+vk::Queue& LogicalDevice::getPresentQueue() {
+    return m_presentQueue;
+}
+
 uint32_t LogicalDevice::getGraphicsQueueIndex() {
     return m_graphicsQueueIndex;
 }

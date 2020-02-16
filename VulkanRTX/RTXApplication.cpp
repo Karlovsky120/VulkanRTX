@@ -19,7 +19,7 @@ void RTXApplication::initVulkan() {
     framebuffers = logicalDevice->createFramebuffers(*swapchain, *renderPass);
     commandPool = logicalDevice->createCommandPool(logicalDevice->getGraphicsQueueIndex());
 
-    uint32_t imageCount = swapchain->getImageViews().size();
+    size_t imageCount = swapchain->getImageViews().size();
 
     for (size_t i = 0; i < imageCount; ++i) {
         commandBuffers.push_back(logicalDevice->createCommandBuffer(*commandPool));
@@ -29,6 +29,18 @@ void RTXApplication::initVulkan() {
         commandBuffers[i]->get().draw(3, 1, 0, 0);
         commandBuffers[i]->get().endRenderPass();
         commandBuffers[i]->get().end();
+    }
+
+    vk::SemaphoreCreateInfo semaphoreInfo;
+    vk::FenceCreateInfo fenceInfo;
+    fenceInfo.flags = vk::FenceCreateFlagBits::eSignaled;
+
+    imagesInFlight.resize(swapchain->getImageViews().size(), nullptr);
+
+    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
+        imageAvailableSemaphores.push_back(logicalDevice->get().createSemaphoreUnique(semaphoreInfo));
+        renderFinishedSemaphores.push_back(logicalDevice->get().createSemaphoreUnique(semaphoreInfo));
+        inFlightFences.push_back(logicalDevice->get().createFenceUnique(fenceInfo));
     }
 }
 
@@ -44,7 +56,56 @@ void RTXApplication::initWindow() {
 void RTXApplication::mainLoop() {
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
+        drawFrame();
     }
+
+    logicalDevice->get().waitIdle();
+}
+
+void RTXApplication::drawFrame() {
+    logicalDevice->get().waitForFences(1, &*inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
+
+    uint32_t imageIndex;
+
+    logicalDevice->get().acquireNextImageKHR(swapchain->get(), UINT64_MAX, *imageAvailableSemaphores[currentFrame], nullptr, &imageIndex);
+
+    if (imagesInFlight[imageIndex] != nullptr) {
+        logicalDevice->get().waitForFences(1, &**imagesInFlight[imageIndex], VK_TRUE, UINT64_MAX);
+    }
+
+    imagesInFlight[imageIndex] = &inFlightFences[currentFrame];
+
+    vk::SubmitInfo submitInfo;
+    submitInfo.waitSemaphoreCount = 1;
+
+    vk::Semaphore waitSemaphores[] = {*imageAvailableSemaphores[currentFrame]};
+    submitInfo.pWaitSemaphores = waitSemaphores;
+
+    vk::PipelineStageFlags waitStages[] = {vk::PipelineStageFlagBits::eColorAttachmentOutput};
+    submitInfo.pWaitDstStageMask = waitStages;
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &commandBuffers[imageIndex]->get();
+
+    vk::Semaphore signalSemaphores[] = {*renderFinishedSemaphores[currentFrame]};
+    submitInfo.signalSemaphoreCount = 1;
+    submitInfo.pSignalSemaphores = signalSemaphores;
+
+    logicalDevice->get().resetFences(1, &*inFlightFences[currentFrame]);
+
+    logicalDevice->getGraphicsQueue().submit(submitInfo, *inFlightFences[currentFrame]);
+
+    vk::PresentInfoKHR presentInfo;
+    presentInfo.waitSemaphoreCount = 1;
+    presentInfo.pWaitSemaphores = signalSemaphores;
+
+    vk::SwapchainKHR swapchains[] = {swapchain->get()};
+    presentInfo.swapchainCount = 1;
+    presentInfo.pSwapchains = swapchains;
+    presentInfo.pImageIndices = &imageIndex;
+
+    logicalDevice->getPresentQueue().presentKHR(presentInfo);
+
+    currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
 }
 
 RTXApplication::~RTXApplication() {

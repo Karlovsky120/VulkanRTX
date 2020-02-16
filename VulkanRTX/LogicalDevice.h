@@ -24,6 +24,8 @@ public:
     std::unique_ptr<CommandBuffer> createCommandBuffer(CommandPool& commandPool);
 
     vk::Queue& getGraphicsQueue();
+    vk::Queue& getPresentQueue();
+
     uint32_t getGraphicsQueueIndex();
 
     LogicalDevice(PhysicalDevice& physicalDevice, Surface& surface);
