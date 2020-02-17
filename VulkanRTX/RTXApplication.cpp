@@ -42,8 +42,10 @@ void RTXApplication::createSwapchainHierarchy() {
 
     size_t imageCount = swapchain->getImageViews().size();
 
+    commandBuffers.resize(imageCount);
+
     for (size_t i = 0; i < imageCount; ++i) {
-        commandBuffers.push_back(logicalDevice->createCommandBuffer(*commandPool));
+        commandBuffers[i] = logicalDevice->createCommandBuffer(*commandPool);
         commandBuffers[i]->begin();
         commandBuffers[i]->beginRenderPass(renderPass->get(), framebuffers->getNext(), *swapchain);
         commandBuffers[i]->get().bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline->get());
@@ -58,7 +60,6 @@ void RTXApplication::deleteSwapchainHierarchy() {
         commandBuffers[i].reset();
     }
 
-    commandBuffers.clear();
     framebuffers.reset();
     pipeline.reset();
     renderPass.reset();
