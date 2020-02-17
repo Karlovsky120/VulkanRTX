@@ -7,6 +7,7 @@
 #include "LogicalDevice.h"
 #include "PhysicalDevice.h"
 #include "Pipeline.h"
+#include "PipelineLayout.h"
 #include "RenderPass.h"
 #include "Surface.h"
 #include "Swapchain.h"
@@ -36,6 +37,7 @@ private:
     std::unique_ptr<PhysicalDevice> physicalDevice;
     std::unique_ptr<LogicalDevice> logicalDevice;
     std::unique_ptr<Swapchain> swapchain;
+    std::unique_ptr<PipelineLayout> pipelineLayout;
     std::unique_ptr<Pipeline> pipeline;
     std::unique_ptr<Framebuffers> framebuffers;
     std::unique_ptr<RenderPass> renderPass;

@@ -1,6 +1,7 @@
 #include "Pipeline.h"
 
 #include "LogicalDevice.h"
+#include "PipelineLayout.h"
 #include "RenderPass.h"
 #include "ShaderModule.h"
 #include "Swapchain.h"
@@ -11,7 +12,7 @@ vk::Pipeline& Pipeline::get() {
     return m_pipeline;
 }
 
-Pipeline::Pipeline(LogicalDevice& logicalDevice, RenderPass& renderPass, Swapchain& swapchain) :
+Pipeline::Pipeline(LogicalDevice& logicalDevice, PipelineLayout& pipelineLayout, RenderPass& renderPass, Swapchain& swapchain) :
     m_logicalDevice(logicalDevice),
     m_renderPass(renderPass) {
 
@@ -94,14 +95,6 @@ Pipeline::Pipeline(LogicalDevice& logicalDevice, RenderPass& renderPass, Swapcha
     dynamicState.dynamicStateCount = 2;
     dynamicState.pDynamicStates = dynamicStates;
 
-    vk::PipelineLayoutCreateInfo pipelineLayoutInfo;
-    pipelineLayoutInfo.setLayoutCount = 0;
-    pipelineLayoutInfo.pSetLayouts = nullptr;
-    pipelineLayoutInfo.pushConstantRangeCount = 0;
-    pipelineLayoutInfo.pPushConstantRanges = nullptr;
-
-    m_pipelineLayout = logicalDevice.get().createPipelineLayout(pipelineLayoutInfo);
-
     std::unique_ptr<ShaderModule> vertexShaderModule = logicalDevice.createShaderModule("shaders/bin/vertexShader.vert.spv");
     vk::PipelineShaderStageCreateInfo vertShaderStageInfo;
     vertShaderStageInfo.stage = vk::ShaderStageFlagBits::eVertex;
@@ -129,7 +122,7 @@ Pipeline::Pipeline(LogicalDevice& logicalDevice, RenderPass& renderPass, Swapcha
     pipelineInfo.pColorBlendState = &colorBlending;
     pipelineInfo.pDynamicState = nullptr;
 
-    pipelineInfo.layout = m_pipelineLayout;
+    pipelineInfo.layout = pipelineLayout.get();
 
     pipelineInfo.renderPass = renderPass.get();
     pipelineInfo.subpass = 0;
@@ -142,5 +135,4 @@ Pipeline::Pipeline(LogicalDevice& logicalDevice, RenderPass& renderPass, Swapcha
 
 Pipeline::~Pipeline() {
     m_logicalDevice.get().destroyPipeline(m_pipeline);
-    m_logicalDevice.get().destroyPipelineLayout(m_pipelineLayout);
 }

@@ -15,6 +15,7 @@ void RTXApplication::initVulkan() {
     surface = instance->createSurface(window, WIDTH, HEIGHT);
     physicalDevice = instance->createPhysicalDevice();
     logicalDevice = physicalDevice->createLogicalDevice(*surface);
+    pipelineLayout = logicalDevice->createPipelineLayout();
     commandPool = logicalDevice->createCommandPool(logicalDevice->getGraphicsQueueIndex());
 
     createSwapchainHierarchy();
@@ -37,7 +38,7 @@ void RTXApplication::initVulkan() {
 void RTXApplication::createSwapchainHierarchy() {
     swapchain = logicalDevice->createSwapchain(*physicalDevice, *surface);
     renderPass = logicalDevice->createRenderPass(*swapchain);
-    pipeline = logicalDevice->createPipeline(*renderPass, *swapchain);
+    pipeline = logicalDevice->createPipeline(*pipelineLayout, *renderPass, *swapchain);
     framebuffers = logicalDevice->createFramebuffers(*swapchain, *renderPass);
 
     size_t imageCount = swapchain->getImageViews().size();

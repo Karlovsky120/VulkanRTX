@@ -5,6 +5,7 @@
 #include "Framebuffers.h"
 #include "PhysicalDevice.h"
 #include "Pipeline.h"
+#include "PipelineLayout.h"
 #include "RenderPass.h"
 #include "ShaderModule.h"
 #include "Surface.h"
@@ -26,8 +27,12 @@ std::unique_ptr<ShaderModule> LogicalDevice::createShaderModule(const std::strin
     return std::make_unique<ShaderModule>(*this, shaderPath);
 }
 
-std::unique_ptr<Pipeline> LogicalDevice::createPipeline(RenderPass& renderPass, Swapchain& swapchain) {
-    return std::make_unique<Pipeline>(*this, renderPass, swapchain);
+std::unique_ptr<PipelineLayout> LogicalDevice::createPipelineLayout() {
+    return std::make_unique<PipelineLayout>(*this);
+}
+
+std::unique_ptr<Pipeline> LogicalDevice::createPipeline(PipelineLayout& pipelineLayout, RenderPass& renderPass, Swapchain& swapchain) {
+    return std::make_unique<Pipeline>(*this, pipelineLayout, renderPass, swapchain);
 }
 
 std::unique_ptr<Framebuffers> LogicalDevice::createFramebuffers(Swapchain& swapchain, RenderPass& renderPass) {
