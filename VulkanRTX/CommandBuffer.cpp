@@ -30,7 +30,8 @@ void CommandBuffer::beginRenderPass(vk::RenderPass& renderPass, vk::Framebuffer&
 }
 
 CommandBuffer::CommandBuffer(LogicalDevice& logicalDevice, CommandPool& commandPool) :
-    m_logicalDevice(logicalDevice) {
+    m_logicalDevice(logicalDevice),
+    m_commandPool(commandPool) {
 
     vk::CommandBufferAllocateInfo allocInfo;
     allocInfo.commandPool = commandPool.get();
@@ -38,4 +39,8 @@ CommandBuffer::CommandBuffer(LogicalDevice& logicalDevice, CommandPool& commandP
     allocInfo.commandBufferCount = 1;
 
     m_commandBuffer = logicalDevice.get().allocateCommandBuffers(allocInfo)[0];
+}
+
+CommandBuffer::~CommandBuffer() {
+    m_logicalDevice.get().freeCommandBuffers(m_commandPool.get(), m_commandBuffer);
 }

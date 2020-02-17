@@ -26,8 +26,8 @@ std::unique_ptr<ShaderModule> LogicalDevice::createShaderModule(const std::strin
     return std::make_unique<ShaderModule>(*this, shaderPath);
 }
 
-std::unique_ptr<Pipeline> LogicalDevice::createPipeline(Swapchain& swapchain) {
-    return std::make_unique<Pipeline>(*this, swapchain);
+std::unique_ptr<Pipeline> LogicalDevice::createPipeline(RenderPass& renderPass, Swapchain& swapchain) {
+    return std::make_unique<Pipeline>(*this, renderPass, swapchain);
 }
 
 std::unique_ptr<Framebuffers> LogicalDevice::createFramebuffers(Swapchain& swapchain, RenderPass& renderPass) {

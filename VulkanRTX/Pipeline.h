@@ -12,14 +12,13 @@ class Pipeline {
 public:
     vk::Pipeline& get();
 
-    Pipeline(LogicalDevice& logicalDevice, Swapchain& swapchain);
+    Pipeline(LogicalDevice& logicalDevice, RenderPass& renderPass, Swapchain& swapchain);
     ~Pipeline();
 
 private:
     vk::PipelineLayout m_pipelineLayout;
     vk::Pipeline m_pipeline;
 
-    std::unique_ptr<RenderPass> m_renderPass;
-
+    RenderPass& m_renderPass;
     LogicalDevice& m_logicalDevice;
 };

@@ -16,8 +16,13 @@ uint32_t Surface::getHeight() {
     return m_height;
 }
 
+GLFWwindow* Surface::getWindow() {
+    return m_window;
+}
+
 Surface::Surface(Instance& instance, GLFWwindow* window, uint32_t width, uint32_t height) :
     m_instance(instance),
+    m_window(window),
     m_width(width),
     m_height(height) {
 

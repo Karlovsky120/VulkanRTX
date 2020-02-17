@@ -24,12 +24,6 @@ public:
     ~RTXApplication();
 
 private:
-#ifdef NDEBUG
-    const bool enableValidationLayers = false;
-#else
-    const bool enableValidationLayers = true;
-#endif
-
     const uint32_t WIDTH = 1280;
     const uint32_t HEIGHT = 720;
 
@@ -55,9 +49,17 @@ private:
     std::vector<vk::UniqueFence*> imagesInFlight;
 
     size_t currentFrame = 0;
+    bool framebufferResized = false;
+
+    bool flag = false;
 
     void initVulkan();
+    void createSwapchainHierarchy();
+    void deleteSwapchainHierarchy();
+
     void initWindow();
     void mainLoop();
     void drawFrame();
+
+    static void framebufferSizeCallback(GLFWwindow* window, int width, int height);
 };

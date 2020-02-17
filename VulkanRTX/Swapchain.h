@@ -31,9 +31,10 @@ private:
 
     vk::SurfaceFormatKHR chooseFormat(std::vector<vk::SurfaceFormatKHR>& availableFormats);
     vk::PresentModeKHR choosePresentMode(std::vector<vk::PresentModeKHR>& availablePresentModes);
-    vk::Extent2D chooseExtent(vk::SurfaceCapabilitiesKHR& surfaceCapabilites, uint32_t width, uint32_t height);
+    vk::Extent2D chooseExtent(vk::SurfaceCapabilitiesKHR& surfaceCapabilites);
 
     void createImageViews();
 
+    Surface& m_surface;
     LogicalDevice& m_logicalDevice;
 };

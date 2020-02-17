@@ -18,7 +18,7 @@ public:
     std::unique_ptr<Swapchain> createSwapchain(PhysicalDevice& physicalDevice, Surface& surface);
     std::unique_ptr<RenderPass> createRenderPass(Swapchain& swapchain);
     std::unique_ptr<ShaderModule> createShaderModule(const std::string shaderPath);
-    std::unique_ptr<Pipeline> createPipeline(Swapchain& swapchain);
+    std::unique_ptr<Pipeline> createPipeline(RenderPass& renderPass, Swapchain& swapchain);
     std::unique_ptr<Framebuffers> createFramebuffers(Swapchain& swapchain, RenderPass& renderPass);
     std::unique_ptr<CommandPool> createCommandPool(uint32_t queueFamilyIndex);
     std::unique_ptr<CommandBuffer> createCommandBuffer(CommandPool& commandPool);

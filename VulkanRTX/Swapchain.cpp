@@ -4,6 +4,8 @@
 #include "PhysicalDevice.h"
 #include "Surface.h"
 
+#include <GLFW/glfw3.h>
+
 vk::SwapchainKHR& Swapchain::get() {
     return m_swapchain;
 }
@@ -40,12 +42,19 @@ vk::PresentModeKHR Swapchain::choosePresentMode(std::vector<vk::PresentModeKHR>&
     return vk::PresentModeKHR::eFifo;
 }
 
-vk::Extent2D Swapchain::chooseExtent(vk::SurfaceCapabilitiesKHR& capabilities, uint32_t width, uint32_t height) {
+vk::Extent2D Swapchain::chooseExtent(vk::SurfaceCapabilitiesKHR& capabilities) {
     if (capabilities.currentExtent.width != UINT32_MAX) {
         return capabilities.currentExtent;
     }
 
-    vk::Extent2D actualExtent = {width, height};
+    int width;
+    int height;
+    glfwGetFramebufferSize(m_surface.getWindow(), &width, &height);
+
+    vk::Extent2D actualExtent = {
+        static_cast<uint32_t>(width),
+        static_cast<uint32_t>(height)
+    };
 
     actualExtent.width = (std::max)(capabilities.minImageExtent.width, (std::min)(capabilities.maxImageExtent.width, actualExtent.width));
     actualExtent.height = (std::max)(capabilities.minImageExtent.height, (std::min)(capabilities.maxImageExtent.height, actualExtent.height));
@@ -76,7 +85,8 @@ void Swapchain::createImageViews() {
 }
 
 Swapchain::Swapchain(LogicalDevice& logicalDevice, PhysicalDevice& physicalDevice, Surface& surface) :
-    m_logicalDevice(logicalDevice) {
+    m_logicalDevice(logicalDevice),
+    m_surface(surface) {
 
     vk::SurfaceCapabilitiesKHR capabilities = physicalDevice.get().getSurfaceCapabilitiesKHR(surface.get());
 
@@ -85,7 +95,7 @@ Swapchain::Swapchain(LogicalDevice& logicalDevice, PhysicalDevice& physicalDevic
 
     m_format = chooseFormat(availableFormats);
     m_presentMode = choosePresentMode(availablePresentModes);
-    m_extent = chooseExtent(capabilities, surface.getWidth(), surface.getHeight());
+    m_extent = chooseExtent(capabilities);
 
     uint32_t imageCount = capabilities.minImageCount + 1;
     if (capabilities.maxImageCount > 0 && imageCount > capabilities.maxImageCount) {

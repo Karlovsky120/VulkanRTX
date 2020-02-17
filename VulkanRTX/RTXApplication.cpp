@@ -2,6 +2,8 @@
 
 #include <GLFW/glfw3.h>
 
+#include <iostream>
+
 void RTXApplication::run() {
     initWindow();
     initVulkan();
@@ -13,11 +15,30 @@ void RTXApplication::initVulkan() {
     surface = instance->createSurface(window, WIDTH, HEIGHT);
     physicalDevice = instance->createPhysicalDevice();
     logicalDevice = physicalDevice->createLogicalDevice(*surface);
+    commandPool = logicalDevice->createCommandPool(logicalDevice->getGraphicsQueueIndex());
+
+    createSwapchainHierarchy();
+
+    vk::SemaphoreCreateInfo semaphoreInfo;
+    vk::FenceCreateInfo fenceInfo;
+    fenceInfo.flags = vk::FenceCreateFlagBits::eSignaled;
+
+    size_t imageCount = swapchain->getImageViews().size();
+
+    imagesInFlight.resize(imageCount, nullptr);
+
+    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
+        imageAvailableSemaphores.push_back(logicalDevice->get().createSemaphoreUnique(semaphoreInfo));
+        renderFinishedSemaphores.push_back(logicalDevice->get().createSemaphoreUnique(semaphoreInfo));
+        inFlightFences.push_back(logicalDevice->get().createFenceUnique(fenceInfo));
+    }
+}
+
+void RTXApplication::createSwapchainHierarchy() {
     swapchain = logicalDevice->createSwapchain(*physicalDevice, *surface);
     renderPass = logicalDevice->createRenderPass(*swapchain);
-    pipeline = logicalDevice->createPipeline(*swapchain);
+    pipeline = logicalDevice->createPipeline(*renderPass, *swapchain);
     framebuffers = logicalDevice->createFramebuffers(*swapchain, *renderPass);
-    commandPool = logicalDevice->createCommandPool(logicalDevice->getGraphicsQueueIndex());
 
     size_t imageCount = swapchain->getImageViews().size();
 
@@ -30,27 +51,37 @@ void RTXApplication::initVulkan() {
         commandBuffers[i]->get().endRenderPass();
         commandBuffers[i]->get().end();
     }
+}
 
-    vk::SemaphoreCreateInfo semaphoreInfo;
-    vk::FenceCreateInfo fenceInfo;
-    fenceInfo.flags = vk::FenceCreateFlagBits::eSignaled;
+void RTXApplication::deleteSwapchainHierarchy() {
+    logicalDevice->get().waitIdle();
 
-    imagesInFlight.resize(swapchain->getImageViews().size(), nullptr);
-
-    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
-        imageAvailableSemaphores.push_back(logicalDevice->get().createSemaphoreUnique(semaphoreInfo));
-        renderFinishedSemaphores.push_back(logicalDevice->get().createSemaphoreUnique(semaphoreInfo));
-        inFlightFences.push_back(logicalDevice->get().createFenceUnique(fenceInfo));
+    for (size_t i = 0; i < swapchain->getImageViews().size(); ++i) {
+        commandBuffers[i].reset();
     }
+
+    commandBuffers.clear();
+    framebuffers.reset();
+    pipeline.reset();
+    renderPass.reset();
+    swapchain.reset();
 }
 
 void RTXApplication::initWindow() {
     glfwInit();
 
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+    glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
 
     window = glfwCreateWindow(WIDTH, HEIGHT, "Vulkan shenanigans", nullptr, nullptr);
+
+    glfwSetWindowUserPointer(window, this);
+    glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
+}
+
+void RTXApplication::framebufferSizeCallback(GLFWwindow* window, int width, int height) {
+    auto app = reinterpret_cast<RTXApplication*>(glfwGetWindowUserPointer(window));
+    app->framebufferResized = true;
 }
 
 void RTXApplication::mainLoop() {
@@ -63,11 +94,26 @@ void RTXApplication::mainLoop() {
 }
 
 void RTXApplication::drawFrame() {
+
+    // Render
     logicalDevice->get().waitForFences(1, &*inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
 
     uint32_t imageIndex;
 
-    logicalDevice->get().acquireNextImageKHR(swapchain->get(), UINT64_MAX, *imageAvailableSemaphores[currentFrame], nullptr, &imageIndex);
+    vk::Result acquireResult;
+
+    try {
+        acquireResult = logicalDevice->get().acquireNextImageKHR(swapchain->get(), UINT64_MAX, *imageAvailableSemaphores[currentFrame], nullptr, &imageIndex);
+    }
+    catch (vk::OutOfDateKHRError) {
+        deleteSwapchainHierarchy();
+        createSwapchainHierarchy();
+        return;
+    }
+
+    if (acquireResult != vk::Result::eSuccess && acquireResult != vk::Result::eSuboptimalKHR) {
+        throw std::runtime_error("Failed to acquire swapchain image!");
+    }
 
     if (imagesInFlight[imageIndex] != nullptr) {
         logicalDevice->get().waitForFences(1, &**imagesInFlight[imageIndex], VK_TRUE, UINT64_MAX);
@@ -94,6 +140,7 @@ void RTXApplication::drawFrame() {
 
     logicalDevice->getGraphicsQueue().submit(submitInfo, *inFlightFences[currentFrame]);
 
+    // Present
     vk::PresentInfoKHR presentInfo;
     presentInfo.waitSemaphoreCount = 1;
     presentInfo.pWaitSemaphores = signalSemaphores;
@@ -103,7 +150,22 @@ void RTXApplication::drawFrame() {
     presentInfo.pSwapchains = swapchains;
     presentInfo.pImageIndices = &imageIndex;
 
-    logicalDevice->getPresentQueue().presentKHR(presentInfo);
+    vk::Result presentResult;
+    try {
+        presentResult = logicalDevice->getPresentQueue().presentKHR(presentInfo);
+    }
+    catch (vk::OutOfDateKHRError) {
+        presentResult = vk::Result::eErrorOutOfDateKHR;
+    }
+
+    if (presentResult == vk::Result::eErrorOutOfDateKHR || presentResult == vk::Result::eSuboptimalKHR || framebufferResized) {
+        framebufferResized = false;
+        deleteSwapchainHierarchy();
+        createSwapchainHierarchy();
+    }
+    else if (acquireResult != vk::Result::eSuccess) {
+        throw std::runtime_error("Failed to acquire swapchain image!");
+    }
 
     currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
 }

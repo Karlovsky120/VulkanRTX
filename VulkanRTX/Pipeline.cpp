@@ -11,8 +11,9 @@ vk::Pipeline& Pipeline::get() {
     return m_pipeline;
 }
 
-Pipeline::Pipeline(LogicalDevice& logicalDevice, Swapchain& swapchain) :
-    m_logicalDevice(logicalDevice) {
+Pipeline::Pipeline(LogicalDevice& logicalDevice, RenderPass& renderPass, Swapchain& swapchain) :
+    m_logicalDevice(logicalDevice),
+    m_renderPass(renderPass) {
 
     vk::PipelineVertexInputStateCreateInfo vertexInputInfo;
     vertexInputInfo.vertexBindingDescriptionCount = 0;
@@ -130,9 +131,7 @@ Pipeline::Pipeline(LogicalDevice& logicalDevice, Swapchain& swapchain) :
 
     pipelineInfo.layout = m_pipelineLayout;
 
-    m_renderPass = logicalDevice.createRenderPass(swapchain);
-
-    pipelineInfo.renderPass = m_renderPass->get();
+    pipelineInfo.renderPass = renderPass.get();
     pipelineInfo.subpass = 0;
 
     pipelineInfo.basePipelineHandle = nullptr;
