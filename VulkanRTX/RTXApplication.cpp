@@ -54,8 +54,6 @@ void RTXApplication::createSwapchainHierarchy() {
 }
 
 void RTXApplication::deleteSwapchainHierarchy() {
-    logicalDevice->get().waitIdle();
-
     for (size_t i = 0; i < swapchain->getImageViews().size(); ++i) {
         commandBuffers[i].reset();
     }
@@ -65,6 +63,23 @@ void RTXApplication::deleteSwapchainHierarchy() {
     pipeline.reset();
     renderPass.reset();
     swapchain.reset();
+}
+
+void RTXApplication::recreateSwapchainHierarchy() {
+    int width = 0;
+    int height = 0;
+
+    glfwGetFramebufferSize(window, &width, &height);
+
+    while (width == 0 || height == 0) {
+        glfwGetFramebufferSize(window, &width, &height);
+        glfwWaitEvents();
+    }
+
+    logicalDevice->get().waitIdle();
+
+    deleteSwapchainHierarchy();
+    createSwapchainHierarchy();
 }
 
 void RTXApplication::initWindow() {
@@ -106,8 +121,7 @@ void RTXApplication::drawFrame() {
         acquireResult = logicalDevice->get().acquireNextImageKHR(swapchain->get(), UINT64_MAX, *imageAvailableSemaphores[currentFrame], nullptr, &imageIndex);
     }
     catch (vk::OutOfDateKHRError) {
-        deleteSwapchainHierarchy();
-        createSwapchainHierarchy();
+        recreateSwapchainHierarchy();
         return;
     }
 
@@ -160,8 +174,7 @@ void RTXApplication::drawFrame() {
 
     if (presentResult == vk::Result::eErrorOutOfDateKHR || presentResult == vk::Result::eSuboptimalKHR || framebufferResized) {
         framebufferResized = false;
-        deleteSwapchainHierarchy();
-        createSwapchainHierarchy();
+        recreateSwapchainHierarchy();
     }
     else if (acquireResult != vk::Result::eSuccess) {
         throw std::runtime_error("Failed to acquire swapchain image!");

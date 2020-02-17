@@ -51,15 +51,15 @@ private:
     size_t currentFrame = 0;
     bool framebufferResized = false;
 
-    bool flag = false;
-
     void initVulkan();
-    void createSwapchainHierarchy();
-    void deleteSwapchainHierarchy();
-
     void initWindow();
     void mainLoop();
     void drawFrame();
+
+    void createSwapchainHierarchy();
+    void deleteSwapchainHierarchy();
+
+    void recreateSwapchainHierarchy();
 
     static void framebufferSizeCallback(GLFWwindow* window, int width, int height);
 };
