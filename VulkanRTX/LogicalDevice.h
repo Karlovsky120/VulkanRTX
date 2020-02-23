@@ -5,6 +5,9 @@
 class Buffer;
 class CommandBuffer;
 class CommandPool;
+class DescriptorPool;
+class DescriptorSetLayout;
+class DescriptorSets;
 class DeviceMemory;
 class Framebuffers;
 class PhysicalDevice;
@@ -23,7 +26,10 @@ public:
     std::unique_ptr<RenderPass> createRenderPass(vk::SurfaceFormatKHR& surfaceFormat);
     std::unique_ptr<ShaderModule> createShaderModule(const std::string shaderPath);
     std::unique_ptr<Pipeline> createPipeline(PipelineLayout& pipelineLayout, RenderPass& renderPass, Swapchain& swapchain);
-    std::unique_ptr<PipelineLayout> createPipelineLayout();
+    std::unique_ptr<DescriptorSetLayout> createDescriptorSetLayout();
+    std::unique_ptr<DescriptorPool> createDescriptorPool(uint32_t descriptorCount);
+    std::unique_ptr<DescriptorSets> allocateDescriptorSets(vk::DescriptorPool& descriptorPool, std::vector<vk::DescriptorSetLayout> setLayouts);
+    std::unique_ptr<PipelineLayout> createPipelineLayout(vk::DescriptorSetLayout setLayout);
     std::unique_ptr<Framebuffers> createFramebuffers(RenderPass& renderPass, Swapchain& swapchain);
     std::unique_ptr<CommandPool> createCommandPool(uint32_t queueFamilyIndex);
     std::unique_ptr<CommandBuffer> createCommandBuffer(CommandPool& commandPool);

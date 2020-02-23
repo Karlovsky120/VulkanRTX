@@ -1,7 +1,10 @@
 #include "RTXApplication.h"
 
 #include <GLFW/glfw3.h>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtx/transform.hpp>
 
+#include <chrono>
 #include <iostream>
 
 void RTXApplication::run() {
@@ -15,10 +18,11 @@ void RTXApplication::initVulkan() {
     surface = instance->createSurface(window, WIDTH, HEIGHT);
     physicalDevice = instance->createPhysicalDevice();
     logicalDevice = physicalDevice->createLogicalDevice(*surface);
-    pipelineLayout = logicalDevice->createPipelineLayout();
+    descriptorSetLayout = logicalDevice->createDescriptorSetLayout();
+    pipelineLayout = logicalDevice->createPipelineLayout(descriptorSetLayout->get());
     graphicsCommandPool = logicalDevice->createCommandPool(logicalDevice->getGraphicsQueueIndex());
     transferCommandPool = logicalDevice->createCommandPool(logicalDevice->getTransferQueueIndex());
-    
+
     transferBuffer = logicalDevice->createCommandBuffer(*transferCommandPool);
 
     MemoryAllocator::init(&physicalDevice->get(), &logicalDevice->get());
@@ -69,9 +73,60 @@ void RTXApplication::initVulkan() {
 
     logicalDevice->get().waitForFences(*uploadFence, true, UINT64_MAX);
 
-    createSwapchainHierarchy();
+    swapchain = logicalDevice->createSwapchain(*physicalDevice, *surface);
+    renderPass = logicalDevice->createRenderPass(swapchain->getFormat());
+    pipeline = logicalDevice->createPipeline(*pipelineLayout, *renderPass, *swapchain);
+    framebuffers = logicalDevice->createFramebuffers(*renderPass, *swapchain);
 
     size_t imageCount = swapchain->getImageViews().size();
+
+    descriptorPool = logicalDevice->createDescriptorPool(imageCount);
+
+    std::vector<vk::DescriptorSetLayout> descriptorLayouts;
+
+    for (size_t i = 0; i < imageCount; ++i) {
+        uniformBuffers.push_back(logicalDevice->createBuffer(sizeof(UniformBufferObject),
+                                                             vk::BufferUsageFlagBits::eUniformBuffer,
+                                                             vk::MemoryPropertyFlagBits::eHostVisible
+                                                             | vk::MemoryPropertyFlagBits::eHostCoherent));
+
+        descriptorLayouts.push_back(descriptorSetLayout->get());
+    }
+
+    descriptorSets = logicalDevice->allocateDescriptorSets(descriptorPool->get(), descriptorLayouts);
+
+    commandBuffers.resize(imageCount);
+
+    for (size_t i = 0; i < imageCount; ++i) {
+        vk::DescriptorBufferInfo bufferInfo;
+        bufferInfo.buffer = uniformBuffers.back()->get();
+        bufferInfo.offset = 0;
+        bufferInfo.range = sizeof(UniformBufferObject);
+
+        vk::WriteDescriptorSet descriptorWrite = {};
+        descriptorWrite.dstSet = descriptorSets->get(i);
+        descriptorWrite.dstBinding = 0;
+        descriptorWrite.dstArrayElement = 0;
+        descriptorWrite.descriptorType = vk::DescriptorType::eUniformBuffer;
+        descriptorWrite.descriptorCount = 1;
+        descriptorWrite.pBufferInfo = &bufferInfo;
+
+        logicalDevice->get().updateDescriptorSets(1, &descriptorWrite, 0, nullptr);
+
+        commandBuffers[i] = logicalDevice->createCommandBuffer(*graphicsCommandPool);
+        commandBuffers[i]->begin();
+        commandBuffers[i]->beginRenderPass(renderPass->get(), framebuffers->getNext(), *swapchain);
+        commandBuffers[i]->get().bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline->get());
+
+        vk::DeviceSize offset(0);
+        commandBuffers[i]->get().bindVertexBuffers(0, vertexBuffer->get(), offset);
+        commandBuffers[i]->get().bindIndexBuffer(indexBuffer->get(), 0, vk::IndexType::eUint16);
+        commandBuffers[i]->get().bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipelineLayout->get(), 0, descriptorSets->get(i), {nullptr});
+        commandBuffers[i]->get().drawIndexed(6, 1, 0, 0, 0);
+        commandBuffers[i]->get().endRenderPass();
+        commandBuffers[i]->get().end();
+    }
+
     imagesInFlight.resize(imageCount);
 
     vk::SemaphoreCreateInfo semaphoreInfo;
@@ -103,6 +158,7 @@ void RTXApplication::createSwapchainHierarchy() {
         vk::DeviceSize offset(0);
         commandBuffers[i]->get().bindVertexBuffers(0, vertexBuffer->get(), offset);
         commandBuffers[i]->get().bindIndexBuffer(indexBuffer->get(), 0, vk::IndexType::eUint16);
+        commandBuffers[i]->get().bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipelineLayout->get(), 0, descriptorSets->get(i), {0});
         commandBuffers[i]->get().drawIndexed(6, 1, 0, 0, 0);
         commandBuffers[i]->get().endRenderPass();
         commandBuffers[i]->get().end();
@@ -163,6 +219,21 @@ void RTXApplication::mainLoop() {
     logicalDevice->get().waitIdle();
 }
 
+void RTXApplication::updateUniformBuffer(uint32_t bufferIndex) {
+    static auto startTime = std::chrono::high_resolution_clock::now();
+
+    auto currentTime = std::chrono::high_resolution_clock::now();
+    float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
+
+    UniformBufferObject ubo = {};
+    ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+    ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+    ubo.proj = glm::perspective(glm::radians(45.0f), swapchain->getExtent().width / (float)swapchain->getExtent().height, 0.1f, 10.0f);
+    ubo.proj[1][1] *= -1;
+
+    uniformBuffers[bufferIndex]->copyToBuffer(ubo);
+}
+
 void RTXApplication::drawFrame() {
 
     // Render
@@ -183,6 +254,8 @@ void RTXApplication::drawFrame() {
     if (acquireResult != vk::Result::eSuccess && acquireResult != vk::Result::eSuboptimalKHR) {
         throw std::runtime_error("Failed to acquire swapchain image!");
     }
+
+    updateUniformBuffer(imageIndex);
 
     if (imagesInFlight[imageIndex] != VK_NULL_HANDLE) {
         logicalDevice->get().waitForFences(1, &imagesInFlight[imageIndex], VK_TRUE, UINT64_MAX);

@@ -3,6 +3,9 @@
 #include "Buffer.h"
 #include "CommandBuffer.h"
 #include "CommandPool.h"
+#include "DescriptorPool.h"
+#include "DescriptorSets.h"
+#include "DescriptorSetLayout.h"
 #include "DeviceMemory.h"
 #include "Framebuffers.h"
 #include "PhysicalDevice.h"
@@ -29,8 +32,20 @@ std::unique_ptr<ShaderModule> LogicalDevice::createShaderModule(const std::strin
     return std::make_unique<ShaderModule>(*m_logicalDevice, shaderPath);
 }
 
-std::unique_ptr<PipelineLayout> LogicalDevice::createPipelineLayout() {
-    return std::make_unique<PipelineLayout>(*m_logicalDevice);
+std::unique_ptr<DescriptorSetLayout> LogicalDevice::createDescriptorSetLayout() {
+    return std::make_unique<DescriptorSetLayout>(*m_logicalDevice);
+}
+
+std::unique_ptr<DescriptorPool> LogicalDevice::createDescriptorPool(uint32_t descriptorCount) {
+    return std::make_unique<DescriptorPool>(*m_logicalDevice, descriptorCount);
+}
+
+std::unique_ptr<DescriptorSets> LogicalDevice::allocateDescriptorSets(vk::DescriptorPool& descriptorPool, std::vector<vk::DescriptorSetLayout> setLayouts) {
+    return std::make_unique<DescriptorSets>(*m_logicalDevice, descriptorPool, setLayouts);
+}
+
+std::unique_ptr<PipelineLayout> LogicalDevice::createPipelineLayout(vk::DescriptorSetLayout setLayout) {
+    return std::make_unique<PipelineLayout>(*m_logicalDevice, setLayout);
 }
 
 std::unique_ptr<Pipeline> LogicalDevice::createPipeline(PipelineLayout& pipelineLayout, RenderPass& renderPass, Swapchain& swapchain) {

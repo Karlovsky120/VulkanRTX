@@ -103,6 +103,9 @@ for %%f in (*.vert *.tesc *.tese *.geom *.frag *.comp) do %VK_SDK_PATH%\Bin\glsl
   <ItemGroup>
     <ClCompile Include="CommandBuffer.cpp" />
     <ClCompile Include="CommandPool.cpp" />
+    <ClCompile Include="DescriptorPool.cpp" />
+    <ClCompile Include="DescriptorSets.cpp" />
+    <ClCompile Include="DescriptorSetLayout.cpp" />
     <ClCompile Include="DeviceMemory.cpp" />
     <ClCompile Include="Framebuffers.cpp" />
     <ClCompile Include="main.cpp" />
@@ -123,6 +126,9 @@ for %%f in (*.vert *.tesc *.tese *.geom *.frag *.comp) do %VK_SDK_PATH%\Bin\glsl
   <ItemGroup>
     <ClInclude Include="CommandBuffer.h" />
     <ClInclude Include="CommandPool.h" />
+    <ClInclude Include="DescriptorPool.h" />
+    <ClInclude Include="DescriptorSets.h" />
+    <ClInclude Include="DescriptorSetLayout.h" />
     <ClInclude Include="DeviceMemory.h" />
     <ClInclude Include="Framebuffers.h" />
     <ClInclude Include="MemoryAllocator.h" />

@@ -8,7 +8,7 @@ class PipelineLayout {
 public:
     vk::PipelineLayout& get();
 
-    PipelineLayout(vk::Device& logicalDevice);
+    PipelineLayout(vk::Device& logicalDevice, vk::DescriptorSetLayout setLayout);
 
 private:
     vk::UniquePipelineLayout m_pipelineLayout;

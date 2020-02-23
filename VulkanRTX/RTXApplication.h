@@ -3,6 +3,9 @@
 #include "Buffer.h"
 #include "CommandBuffer.h"
 #include "CommandPool.h"
+#include "DescriptorPool.h"
+#include "DescriptorSets.h"
+#include "DescriptorSetLayout.h"
 #include "DeviceMemory.h"
 #include "Framebuffers.h"
 #include "Instance.h"
@@ -39,6 +42,9 @@ private:
     std::unique_ptr<PhysicalDevice> physicalDevice;
     std::unique_ptr<LogicalDevice> logicalDevice;
     std::unique_ptr<Swapchain> swapchain;
+    std::unique_ptr<DescriptorSetLayout> descriptorSetLayout;
+    std::unique_ptr<DescriptorPool> descriptorPool;
+    std::unique_ptr<DescriptorSets> descriptorSets;
     std::unique_ptr<PipelineLayout> pipelineLayout;
     std::unique_ptr<Pipeline> pipeline;
     std::unique_ptr<Framebuffers> framebuffers;
@@ -50,6 +56,7 @@ private:
 
     std::unique_ptr<CommandBuffer> transferBuffer;
 
+    std::vector<std::unique_ptr<Buffer>> uniformBuffers;
     std::vector<std::unique_ptr<CommandBuffer>> commandBuffers;
 
     std::vector<vk::UniqueSemaphore> imageAvailableSemaphores;
@@ -64,6 +71,8 @@ private:
     void initWindow();
     void mainLoop();
     void drawFrame();
+
+    void updateUniformBuffer(uint32_t bufferIndex);
 
     void createSwapchainHierarchy();
     void deleteSwapchainHierarchy();

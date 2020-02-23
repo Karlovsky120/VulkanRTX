@@ -15,7 +15,12 @@ public:
 
 	const vk::MemoryRequirements& getMemoryRequirements() const;
 
-	template<class T>
+	template <class T>
+	void copyToBuffer(T data) {
+		copyToBuffer(std::vector<T>{data});
+	}
+
+	template <class T>
 	void copyToBuffer(std::vector<T> data) {
 		assert(m_memoryFlags & vk::MemoryPropertyFlagBits::eHostVisible);
 
