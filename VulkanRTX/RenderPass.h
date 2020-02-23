@@ -9,11 +9,10 @@ class RenderPass {
 public:
     vk::RenderPass& get();
 
-    RenderPass(LogicalDevice& logicalDevice, Swapchain& swapchain);
-    ~RenderPass();
+    RenderPass(vk::Device& logicalDevice, vk::SurfaceFormatKHR& surfaceFormat);
 
 private:
-    vk::RenderPass m_renderPass;
+    vk::UniqueRenderPass m_renderPass;
 
-    LogicalDevice& m_logicalDevice;
+    vk::Device& m_logicalDevice;
 };

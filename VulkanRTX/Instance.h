@@ -12,16 +12,15 @@ public:
     vk::Instance& get();
 
     std::unique_ptr<PhysicalDevice> createPhysicalDevice();
-    std::unique_ptr<Surface> createSurface(GLFWwindow* window, uint32_t width, uint32_t height);
+    std::unique_ptr<Surface> createSurface(GLFWwindow* window,
+                                           const uint32_t width,
+                                           const uint32_t height);
 
     Instance();
     ~Instance();
 
-    Instance(const Instance&) = delete;
-    Instance& operator=(const Instance&) = delete;
-
 private:
-    vk::Instance m_instance;
+    vk::UniqueInstance m_instance;
 
     vk::DispatchLoaderDynamic m_loader;
 

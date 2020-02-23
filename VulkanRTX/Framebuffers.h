@@ -4,22 +4,19 @@
 
 #include <vector>
 
-class LogicalDevice;
-class RenderPass;
 class Swapchain;
 
 class Framebuffers {
 public:
-    vk::Framebuffer& get(uint32_t index);
+    vk::Framebuffer& get(const uint32_t index);
     vk::Framebuffer& getNext();
 
-    Framebuffers(LogicalDevice& device, Swapchain& swapchain, RenderPass& renderPass);
-    ~Framebuffers();
+    Framebuffers(vk::Device& device, vk::RenderPass& renderPass, Swapchain& swapchain);
 
 private:
-    std::vector<vk::Framebuffer> m_framebuffers;
+    std::vector<vk::UniqueFramebuffer> m_framebuffers;
 
     uint32_t m_currentIndex = 0;
 
-    LogicalDevice& m_logicalDevice;
+    vk::Device& m_logicalDevice;
 };

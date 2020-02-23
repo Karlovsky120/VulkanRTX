@@ -16,17 +16,66 @@ void RTXApplication::initVulkan() {
     physicalDevice = instance->createPhysicalDevice();
     logicalDevice = physicalDevice->createLogicalDevice(*surface);
     pipelineLayout = logicalDevice->createPipelineLayout();
-    commandPool = logicalDevice->createCommandPool(logicalDevice->getGraphicsQueueIndex());
+    graphicsCommandPool = logicalDevice->createCommandPool(logicalDevice->getGraphicsQueueIndex());
+    transferCommandPool = logicalDevice->createCommandPool(logicalDevice->getTransferQueueIndex());
+    
+    transferBuffer = logicalDevice->createCommandBuffer(*transferCommandPool);
+
+    MemoryAllocator::init(&physicalDevice->get(), &logicalDevice->get());
+
+    std::vector<vk::BufferCopy> bufferCopies(2);
+
+    const std::vector<float> vertices = {
+        -0.5f, -0.5f, 1.0f, 0.0f, 0.0f,
+        0.5f, -0.5f, 0.0f, 1.0f, 0.0f,
+        0.5f, 0.5f, 0.0f, 0.0f, 1.0f,
+        -0.5f, 0.5f, 1.0f, 1.0f, 1.0f
+    };
+
+    const std::vector<uint16_t> indices = {
+        0, 1, 2, 2, 3, 0
+    };
+
+    std::unique_ptr<Buffer> hostIndexBuffer;
+    stageDataUploadToGPU(hostIndexBuffer, indexBuffer,
+                         bufferCopies[1], vk::BufferUsageFlagBits::eIndexBuffer,
+                         indices);
+
+    std::unique_ptr<Buffer> hostVertexBuffer;
+    stageDataUploadToGPU(hostVertexBuffer, vertexBuffer,
+                         bufferCopies[0], vk::BufferUsageFlagBits::eVertexBuffer,
+                         vertices);
+
+    std::vector<vk::Buffer*> srcBuffers;
+    srcBuffers.push_back(hostVertexBuffer->getPtr());
+    srcBuffers.push_back(hostIndexBuffer->getPtr());
+
+    std::vector<vk::Buffer*> dstBuffers;
+    dstBuffers.push_back(vertexBuffer->getPtr());
+    dstBuffers.push_back(indexBuffer->getPtr());
+
+    transferBuffer->begin();
+    Buffer::copyBuffersToGPU(transferBuffer->get(), srcBuffers, dstBuffers, bufferCopies);
+    transferBuffer->get().end();
+
+    vk::SubmitInfo submitInfo;
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &transferBuffer->get();
+
+    vk::FenceCreateInfo fenceInfo;
+    vk::UniqueFence uploadFence = logicalDevice->get().createFenceUnique(fenceInfo);
+
+    logicalDevice->getTransferQueue().submit(submitInfo, *uploadFence);
+
+    logicalDevice->get().waitForFences(*uploadFence, true, UINT64_MAX);
 
     createSwapchainHierarchy();
 
-    vk::SemaphoreCreateInfo semaphoreInfo;
-    vk::FenceCreateInfo fenceInfo;
-    fenceInfo.flags = vk::FenceCreateFlagBits::eSignaled;
-
     size_t imageCount = swapchain->getImageViews().size();
+    imagesInFlight.resize(imageCount);
 
-    imagesInFlight.resize(imageCount, nullptr);
+    vk::SemaphoreCreateInfo semaphoreInfo;
+    fenceInfo.flags = vk::FenceCreateFlagBits::eSignaled;
 
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
         imageAvailableSemaphores.push_back(logicalDevice->get().createSemaphoreUnique(semaphoreInfo));
@@ -37,20 +86,24 @@ void RTXApplication::initVulkan() {
 
 void RTXApplication::createSwapchainHierarchy() {
     swapchain = logicalDevice->createSwapchain(*physicalDevice, *surface);
-    renderPass = logicalDevice->createRenderPass(*swapchain);
+    renderPass = logicalDevice->createRenderPass(swapchain->getFormat());
     pipeline = logicalDevice->createPipeline(*pipelineLayout, *renderPass, *swapchain);
-    framebuffers = logicalDevice->createFramebuffers(*swapchain, *renderPass);
+    framebuffers = logicalDevice->createFramebuffers(*renderPass, *swapchain);
 
     size_t imageCount = swapchain->getImageViews().size();
 
     commandBuffers.resize(imageCount);
 
     for (size_t i = 0; i < imageCount; ++i) {
-        commandBuffers[i] = logicalDevice->createCommandBuffer(*commandPool);
+        commandBuffers[i] = logicalDevice->createCommandBuffer(*graphicsCommandPool);
         commandBuffers[i]->begin();
         commandBuffers[i]->beginRenderPass(renderPass->get(), framebuffers->getNext(), *swapchain);
         commandBuffers[i]->get().bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline->get());
-        commandBuffers[i]->get().draw(3, 1, 0, 0);
+
+        vk::DeviceSize offset(0);
+        commandBuffers[i]->get().bindVertexBuffers(0, vertexBuffer->get(), offset);
+        commandBuffers[i]->get().bindIndexBuffer(indexBuffer->get(), 0, vk::IndexType::eUint16);
+        commandBuffers[i]->get().drawIndexed(6, 1, 0, 0, 0);
         commandBuffers[i]->get().endRenderPass();
         commandBuffers[i]->get().end();
     }
@@ -131,11 +184,11 @@ void RTXApplication::drawFrame() {
         throw std::runtime_error("Failed to acquire swapchain image!");
     }
 
-    if (imagesInFlight[imageIndex] != nullptr) {
-        logicalDevice->get().waitForFences(1, &**imagesInFlight[imageIndex], VK_TRUE, UINT64_MAX);
+    if (imagesInFlight[imageIndex] != VK_NULL_HANDLE) {
+        logicalDevice->get().waitForFences(1, &imagesInFlight[imageIndex], VK_TRUE, UINT64_MAX);
     }
 
-    imagesInFlight[imageIndex] = &inFlightFences[currentFrame];
+    imagesInFlight[imageIndex] = *inFlightFences[currentFrame];
 
     vk::SubmitInfo submitInfo;
     submitInfo.waitSemaphoreCount = 1;
@@ -186,6 +239,8 @@ void RTXApplication::drawFrame() {
 }
 
 RTXApplication::~RTXApplication() {
+    MemoryAllocator::deinit();
+
     glfwDestroyWindow(window);
 
     glfwTerminate();

@@ -1,24 +1,29 @@
 #include "Pipeline.h"
 
 #include "LogicalDevice.h"
-#include "PipelineLayout.h"
-#include "RenderPass.h"
 #include "ShaderModule.h"
-#include "Swapchain.h"
+#include "VertexInputDescription.h"
 
 #include <fstream>
 
 vk::Pipeline& Pipeline::get() {
-    return m_pipeline;
+    return *m_pipeline;
 }
 
-Pipeline::Pipeline(LogicalDevice& logicalDevice, PipelineLayout& pipelineLayout, RenderPass& renderPass, Swapchain& swapchain) :
-    m_logicalDevice(logicalDevice),
+Pipeline::Pipeline(LogicalDevice& logicalDevice,
+                   vk::PipelineLayout& pipelineLayout,
+                   vk::RenderPass& renderPass,
+                   vk::Extent2D& extent) :
+    m_logicalDevice(logicalDevice.get()),
     m_renderPass(renderPass) {
 
+    VertexInputDescription vertexInputDescription;
+
     vk::PipelineVertexInputStateCreateInfo vertexInputInfo;
-    vertexInputInfo.vertexBindingDescriptionCount = 0;
-    vertexInputInfo.vertexAttributeDescriptionCount = 0;
+    vertexInputInfo.vertexBindingDescriptionCount = 1;
+    vertexInputInfo.vertexAttributeDescriptionCount = vertexInputDescription.getAttributeCount();
+    vertexInputInfo.pVertexBindingDescriptions = &vertexInputDescription.getBindingDescription();
+    vertexInputInfo.pVertexAttributeDescriptions = vertexInputDescription.getAttributeDescriptions().data();
 
     vk::PipelineInputAssemblyStateCreateInfo inputAssembly;
     inputAssembly.topology = vk::PrimitiveTopology::eTriangleList;
@@ -27,14 +32,14 @@ Pipeline::Pipeline(LogicalDevice& logicalDevice, PipelineLayout& pipelineLayout,
     vk::Viewport viewport;
     viewport.x = 0.0f;
     viewport.y = 0.0f;
-    viewport.width = (float)swapchain.getExtent().width;
-    viewport.height = (float)swapchain.getExtent().height;
+    viewport.width = (float)extent.width;
+    viewport.height = (float)extent.height;
     viewport.minDepth = 0.0f;
     viewport.maxDepth = 1.0f;
 
     vk::Rect2D scissor;
     scissor.offset = {0, 0};
-    scissor.extent = swapchain.getExtent();
+    scissor.extent = extent;
 
     vk::PipelineViewportStateCreateInfo viewportState;
     viewportState.viewportCount = 1;
@@ -122,17 +127,13 @@ Pipeline::Pipeline(LogicalDevice& logicalDevice, PipelineLayout& pipelineLayout,
     pipelineInfo.pColorBlendState = &colorBlending;
     pipelineInfo.pDynamicState = nullptr;
 
-    pipelineInfo.layout = pipelineLayout.get();
+    pipelineInfo.layout = pipelineLayout;
 
-    pipelineInfo.renderPass = renderPass.get();
+    pipelineInfo.renderPass = renderPass;
     pipelineInfo.subpass = 0;
 
     pipelineInfo.basePipelineHandle = nullptr;
     pipelineInfo.basePipelineIndex = -1;
 
-    m_pipeline = logicalDevice.get().createGraphicsPipeline(nullptr, pipelineInfo);
-}
-
-Pipeline::~Pipeline() {
-    m_logicalDevice.get().destroyPipeline(m_pipeline);
+    m_pipeline = m_logicalDevice.createGraphicsPipelineUnique(nullptr, pipelineInfo);
 }

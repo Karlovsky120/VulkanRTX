@@ -9,15 +9,18 @@
 #include <iostream>
 
 vk::Instance& Instance::get() {
-    return m_instance;
+    return *m_instance;
 }
 
 std::unique_ptr<PhysicalDevice> Instance::createPhysicalDevice() {
-    return std::make_unique<PhysicalDevice>(*this);
+    return std::make_unique<PhysicalDevice>(*m_instance);
 }
 
-std::unique_ptr<Surface> Instance::createSurface(GLFWwindow* window, uint32_t width, uint32_t height) {
-    return std::make_unique<Surface>(*this, window, width, height);
+std::unique_ptr<Surface> Instance::createSurface(GLFWwindow* window,
+                                                 const uint32_t width,
+                                                 const uint32_t height) {
+
+    return std::make_unique<Surface>(*m_instance, window, width, height);
 }
 
 Instance::Instance() {
@@ -26,7 +29,7 @@ Instance::Instance() {
     appInfo.applicationVersion = VK_MAKE_VERSION(0, 1, 0);
     appInfo.pEngineName = "Nengine";
     appInfo.engineVersion = VK_MAKE_VERSION(0, 1, 0);
-    appInfo.apiVersion = VK_API_VERSION_1_2;
+    appInfo.apiVersion = VK_API_VERSION_1_1;
 
     vk::InstanceCreateInfo createInfo;
     createInfo.pApplicationInfo = &appInfo;
@@ -69,11 +72,11 @@ Instance::Instance() {
     createInfo.enabledLayerCount = 0;
 #endif
 
-    m_instance = vk::createInstance(createInfo);
-    m_loader = vk::DispatchLoaderDynamic(m_instance, vkGetInstanceProcAddr);
+    m_instance = vk::createInstanceUnique(createInfo);
+    m_loader = vk::DispatchLoaderDynamic(*m_instance, vkGetInstanceProcAddr);
 
 #ifdef ENABLE_VALIDATION
-    m_debugMessenger = m_instance.createDebugUtilsMessengerEXT(debugCreateInfo, nullptr, m_loader);
+    m_debugMessenger = m_instance->createDebugUtilsMessengerEXT(debugCreateInfo, nullptr, m_loader);
 #endif
 }
 
@@ -93,8 +96,6 @@ VKAPI_ATTR VkBool32 VKAPI_CALL Instance::debugCallback(
 
 Instance::~Instance() {
 #ifdef ENABLE_VALIDATION
-    m_instance.destroyDebugUtilsMessengerEXT(m_debugMessenger, nullptr, m_loader);
+    m_instance->destroyDebugUtilsMessengerEXT(m_debugMessenger, nullptr, m_loader);
 #endif
-
-    m_instance.destroy();
 }

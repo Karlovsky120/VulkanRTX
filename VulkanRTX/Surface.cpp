@@ -8,11 +8,11 @@ vk::SurfaceKHR& Surface::get() {
     return m_surface;
 }
 
-uint32_t Surface::getWidth() {
+uint32_t Surface::getWidth() const {
     return m_width;
 }
 
-uint32_t Surface::getHeight() {
+uint32_t Surface::getHeight() const {
     return m_height;
 }
 
@@ -20,14 +20,14 @@ GLFWwindow* Surface::getWindow() {
     return m_window;
 }
 
-Surface::Surface(Instance& instance, GLFWwindow* window, uint32_t width, uint32_t height) :
+Surface::Surface(vk::Instance& instance, GLFWwindow* window, const uint32_t width, const uint32_t height) :
     m_instance(instance),
     m_window(window),
     m_width(width),
     m_height(height) {
 
     VkSurfaceKHR vulkanSurface;
-    if (glfwCreateWindowSurface(instance.get(), window, nullptr, &vulkanSurface) != VK_SUCCESS) {
+    if (glfwCreateWindowSurface(instance, window, nullptr, &vulkanSurface) != VK_SUCCESS) {
         throw std::runtime_error("Failed to create window surface!");
     }
 
@@ -35,5 +35,5 @@ Surface::Surface(Instance& instance, GLFWwindow* window, uint32_t width, uint32_
 }
 
 Surface::~Surface() {
-    m_instance.get().destroySurfaceKHR(m_surface);
+    m_instance.destroySurfaceKHR(m_surface);
 }

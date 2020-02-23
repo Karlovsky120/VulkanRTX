@@ -10,19 +10,22 @@ class Surface {
 public:
     vk::SurfaceKHR& get();
 
-    uint32_t getWidth();
-    uint32_t getHeight();
+    uint32_t getWidth() const;
+    uint32_t getHeight() const;
     GLFWwindow* getWindow();
 
-    Surface(Instance& instance, GLFWwindow* window, uint32_t width, uint32_t height);
+    Surface(vk::Instance& instance,
+            GLFWwindow* window,
+            const uint32_t width,
+            const uint32_t height);
     ~Surface();
 
 private:
     vk::SurfaceKHR m_surface;
 
-    uint32_t m_width;
-    uint32_t m_height;
+    const uint32_t m_width;
+    const uint32_t m_height;
     GLFWwindow* m_window;
 
-    Instance& m_instance;
+    vk::Instance& m_instance;
 };

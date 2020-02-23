@@ -7,14 +7,14 @@
 #include <GLFW/glfw3.h>
 
 vk::SwapchainKHR& Swapchain::get() {
-    return m_swapchain;
+    return *m_swapchain;
 }
 
 vk::Extent2D& Swapchain::getExtent() {
     return m_extent;
 }
 
-vk::SurfaceFormatKHR Swapchain::getFormat() {
+vk::SurfaceFormatKHR& Swapchain::getFormat() {
     return m_format;
 }
 
@@ -80,18 +80,19 @@ void Swapchain::createImageViews() {
         createInfo.subresourceRange.baseArrayLayer = 0;
         createInfo.subresourceRange.layerCount = 1;
 
-        m_imageViews.push_back(m_logicalDevice.get().createImageView(createInfo));
+        m_imageViews.push_back(m_logicalDevice.createImageView(createInfo));
     }
 }
 
-Swapchain::Swapchain(LogicalDevice& logicalDevice, PhysicalDevice& physicalDevice, Surface& surface) :
+Swapchain::Swapchain(vk::Device& logicalDevice, vk::PhysicalDevice& physicalDevice, Surface& surface) :
     m_logicalDevice(logicalDevice),
     m_surface(surface) {
 
-    vk::SurfaceCapabilitiesKHR capabilities = physicalDevice.get().getSurfaceCapabilitiesKHR(surface.get());
+    vk::SurfaceKHR vkSurface = surface.get();
+    vk::SurfaceCapabilitiesKHR capabilities = physicalDevice.getSurfaceCapabilitiesKHR(vkSurface);
 
-    std::vector<vk::SurfaceFormatKHR> availableFormats = physicalDevice.get().getSurfaceFormatsKHR(surface.get());
-    std::vector<vk::PresentModeKHR> availablePresentModes = physicalDevice.get().getSurfacePresentModesKHR(surface.get());
+    std::vector<vk::SurfaceFormatKHR> availableFormats = physicalDevice.getSurfaceFormatsKHR(vkSurface);
+    std::vector<vk::PresentModeKHR> availablePresentModes = physicalDevice.getSurfacePresentModesKHR(vkSurface);
 
     m_format = chooseFormat(availableFormats);
     m_presentMode = choosePresentMode(availablePresentModes);
@@ -103,7 +104,7 @@ Swapchain::Swapchain(LogicalDevice& logicalDevice, PhysicalDevice& physicalDevic
     }
 
     vk::SwapchainCreateInfoKHR createInfo;
-    createInfo.surface = surface.get();
+    createInfo.surface = vkSurface;
     createInfo.minImageCount = imageCount;
     createInfo.imageFormat = m_format.format;
     createInfo.imageColorSpace = m_format.colorSpace;
@@ -118,17 +119,14 @@ Swapchain::Swapchain(LogicalDevice& logicalDevice, PhysicalDevice& physicalDevic
 
     createInfo.oldSwapchain = nullptr;
 
-    m_swapchain = logicalDevice.get().createSwapchainKHR(createInfo);
-
-    m_images = logicalDevice.get().getSwapchainImagesKHR(m_swapchain);
+    m_swapchain = logicalDevice.createSwapchainKHRUnique(createInfo);
+    m_images = logicalDevice.getSwapchainImagesKHR(*m_swapchain);
 
     createImageViews();
 }
 
 Swapchain::~Swapchain() {
-    for (vk::ImageView imageView : m_imageViews) {
-        m_logicalDevice.get().destroyImageView(imageView);
+    for (const auto& imageView : m_imageViews) {
+        m_logicalDevice.destroyImageView(imageView);
     }
-
-    m_logicalDevice.get().destroySwapchainKHR(m_swapchain);
 }

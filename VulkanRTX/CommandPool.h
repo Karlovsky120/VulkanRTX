@@ -8,11 +8,10 @@ class CommandPool {
 public:
     vk::CommandPool& get();
 
-    CommandPool(LogicalDevice& device, uint32_t queueFamilyIndex);
-    ~CommandPool();
+    CommandPool(vk::Device& device, const uint32_t queueFamilyIndex);
 
 private:
-    vk::CommandPool m_commandPool;
+    vk::UniqueCommandPool m_commandPool;
 
-    LogicalDevice& m_logicalDevice;
+    vk::Device& m_logicalDevice;
 };

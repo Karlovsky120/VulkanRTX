@@ -4,19 +4,14 @@
 
 #include <string>
 
-class LogicalDevice;
-class Swapchain;
-class RenderPass;
-
 class PipelineLayout {
 public:
     vk::PipelineLayout& get();
 
-    PipelineLayout(LogicalDevice& logicalDevice);
-    ~PipelineLayout();
+    PipelineLayout(vk::Device& logicalDevice);
 
 private:
-    vk::PipelineLayout m_pipelineLayout;
+    vk::UniquePipelineLayout m_pipelineLayout;
 
-    LogicalDevice& m_logicalDevice;
+    vk::Device& m_logicalDevice;
 };

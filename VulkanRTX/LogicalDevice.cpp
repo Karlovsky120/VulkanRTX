@@ -1,7 +1,9 @@
 #include "LogicalDevice.h"
 
+#include "Buffer.h"
 #include "CommandBuffer.h"
 #include "CommandPool.h"
+#include "DeviceMemory.h"
 #include "Framebuffers.h"
 #include "PhysicalDevice.h"
 #include "Pipeline.h"
@@ -12,39 +14,47 @@
 #include "Swapchain.h"
 
 vk::Device& LogicalDevice::get() {
-    return m_logicalDevice;
+    return *m_logicalDevice;
 }
 
 std::unique_ptr<Swapchain> LogicalDevice::createSwapchain(PhysicalDevice& physicalDevice, Surface& surface) {
-    return std::make_unique<Swapchain>(*this, physicalDevice, surface);
+    return std::make_unique<Swapchain>(*m_logicalDevice, physicalDevice.get(), surface);
 }
 
-std::unique_ptr<RenderPass> LogicalDevice::createRenderPass(Swapchain& swapchain) {
-    return std::make_unique<RenderPass>(*this, swapchain);
+std::unique_ptr<RenderPass> LogicalDevice::createRenderPass(vk::SurfaceFormatKHR& surfaceFormat) {
+    return std::make_unique<RenderPass>(*m_logicalDevice, surfaceFormat);
 }
 
 std::unique_ptr<ShaderModule> LogicalDevice::createShaderModule(const std::string shaderPath) {
-    return std::make_unique<ShaderModule>(*this, shaderPath);
+    return std::make_unique<ShaderModule>(*m_logicalDevice, shaderPath);
 }
 
 std::unique_ptr<PipelineLayout> LogicalDevice::createPipelineLayout() {
-    return std::make_unique<PipelineLayout>(*this);
+    return std::make_unique<PipelineLayout>(*m_logicalDevice);
 }
 
 std::unique_ptr<Pipeline> LogicalDevice::createPipeline(PipelineLayout& pipelineLayout, RenderPass& renderPass, Swapchain& swapchain) {
-    return std::make_unique<Pipeline>(*this, pipelineLayout, renderPass, swapchain);
+    return std::make_unique<Pipeline>(*this, pipelineLayout.get(), renderPass.get(), swapchain.getExtent());
 }
 
-std::unique_ptr<Framebuffers> LogicalDevice::createFramebuffers(Swapchain& swapchain, RenderPass& renderPass) {
-    return std::make_unique<Framebuffers>(*this, swapchain, renderPass);
+std::unique_ptr<Framebuffers> LogicalDevice::createFramebuffers(RenderPass& renderPass, Swapchain& swapchain) {
+    return std::make_unique<Framebuffers>(*m_logicalDevice, renderPass.get(), swapchain);
 }
 
 std::unique_ptr<CommandPool> LogicalDevice::createCommandPool(uint32_t queueFamilyIndex) {
-    return std::make_unique<CommandPool>(*this, queueFamilyIndex);
+    return std::make_unique<CommandPool>(*m_logicalDevice, queueFamilyIndex);
 }
 
 std::unique_ptr<CommandBuffer> LogicalDevice::createCommandBuffer(CommandPool& commandPool) {
-    return std::make_unique<CommandBuffer>(*this, commandPool);
+    return std::make_unique<CommandBuffer>(*m_logicalDevice, commandPool.get());
+}
+
+std::unique_ptr<Buffer> LogicalDevice::createBuffer(uint32_t size, vk::BufferUsageFlags usageFlags, vk::MemoryPropertyFlags memoryFlags) {
+    return std::make_unique<Buffer>(*m_logicalDevice, size, usageFlags, memoryFlags);
+}
+
+std::unique_ptr<DeviceMemory> LogicalDevice::allocateDeviceMemory(uint32_t memoryType) {
+    return std::make_unique<DeviceMemory>(*m_logicalDevice, memoryType);
 }
 
 vk::Queue& LogicalDevice::getGraphicsQueue() {
@@ -55,20 +65,28 @@ vk::Queue& LogicalDevice::getPresentQueue() {
     return m_presentQueue;
 }
 
-uint32_t LogicalDevice::getGraphicsQueueIndex() {
+vk::Queue& LogicalDevice::getTransferQueue() {
+    return m_transferQueue;
+}
+
+const uint32_t LogicalDevice::getGraphicsQueueIndex() const {
     return m_graphicsQueueIndex;
 }
 
-LogicalDevice::LogicalDevice(PhysicalDevice& physicalDevice, Surface& surface) :
-    m_physicalDevice(physicalDevice),
+const uint32_t LogicalDevice::getTransferQueueIndex() const {
+    return m_transferQueueIndex;
+}
+
+LogicalDevice::LogicalDevice(PhysicalDevice& physicalDevice, vk::SurfaceKHR& surface) :
+    m_physicalDevice(physicalDevice.get()),
     m_surface(surface) {
 
-    auto queueFamilyProperties = physicalDevice.get().getQueueFamilyProperties();
+    auto queueFamilyProperties = m_physicalDevice.getQueueFamilyProperties();
 
     uint32_t queuesFound = 0;
 
     uint32_t i = 0;
-    for (auto queueFamilyProperty : queueFamilyProperties) {
+    for (auto& queueFamilyProperty : queueFamilyProperties) {
         if (queueFamilyProperty.queueFlags & vk::QueueFlagBits::eGraphics) {
             m_graphicsQueueIndex = i;
             ++queuesFound;
@@ -77,7 +95,7 @@ LogicalDevice::LogicalDevice(PhysicalDevice& physicalDevice, Surface& surface) :
     }
 
     i = 0;
-    for (auto queueFamilyProperty : queueFamilyProperties) {
+    for (auto& queueFamilyProperty : queueFamilyProperties) {
         if (queueFamilyProperty.queueFlags & vk::QueueFlagBits::eTransfer) {
             m_transferQueueIndex = i;
             ++queuesFound;
@@ -86,8 +104,8 @@ LogicalDevice::LogicalDevice(PhysicalDevice& physicalDevice, Surface& surface) :
     }
 
     i = 0;
-    for (auto queueFamilyProperty : queueFamilyProperties) {
-        if (physicalDevice.get().getSurfaceSupportKHR(i, surface.get())) {
+    for (auto& queueFamilyProperty : queueFamilyProperties) {
+        if (m_physicalDevice.getSurfaceSupportKHR(i, m_surface)) {
             m_presentQueueIndex = i;
             ++queuesFound;
             break;
@@ -139,13 +157,9 @@ LogicalDevice::LogicalDevice(PhysicalDevice& physicalDevice, Surface& surface) :
     deviceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size());
     deviceCreateInfo.ppEnabledExtensionNames = deviceExtensions.data();
 
-    m_logicalDevice = physicalDevice.get().createDevice(deviceCreateInfo);;
+    m_logicalDevice = m_physicalDevice.createDeviceUnique(deviceCreateInfo);;
 
-    m_graphicsQueue = m_logicalDevice.getQueue(m_graphicsQueueIndex, 0);
-    m_transferQueue = m_logicalDevice.getQueue(m_transferQueueIndex, 0);
-    m_presentQueue = m_logicalDevice.getQueue(m_presentQueueIndex, 0);
-}
-
-LogicalDevice::~LogicalDevice() {
-    m_logicalDevice.destroy();
+    m_graphicsQueue = m_logicalDevice->getQueue(m_graphicsQueueIndex, 0);
+    m_transferQueue = m_logicalDevice->getQueue(m_transferQueueIndex, 0);
+    m_presentQueue = m_logicalDevice->getQueue(m_presentQueueIndex, 0);
 }

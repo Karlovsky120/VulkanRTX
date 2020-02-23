@@ -2,8 +2,6 @@
 
 #include <vulkan/vulkan.hpp>
 
-#include <vector>
-
 class CommandPool;
 class LogicalDevice;
 class Swapchain;
@@ -12,15 +10,19 @@ class CommandBuffer {
 public:
     vk::CommandBuffer& get();
 
-    CommandBuffer(LogicalDevice& device, CommandPool& commandPool);
-    ~CommandBuffer();
+    CommandBuffer(vk::Device& logicalDevice, vk::CommandPool& commandPool);
 
     void begin();
     void beginRenderPass(vk::RenderPass& renderPass, vk::Framebuffer& framebuffer, Swapchain& swapchain);
 
-private:
-    vk::CommandBuffer m_commandBuffer;
+    void submit(vk::Queue& submitQueue,
+                vk::Fence& fence,
+                std::vector<vk::Semaphore> waitSemaphores,
+                std::vector<vk::Semaphore> signalSemaphores);
 
-    CommandPool& m_commandPool;
-    LogicalDevice& m_logicalDevice;
+private:
+    vk::UniqueCommandBuffer m_commandBuffer;
+
+    vk::CommandPool& m_commandPool;
+    vk::Device& m_logicalDevice;
 };

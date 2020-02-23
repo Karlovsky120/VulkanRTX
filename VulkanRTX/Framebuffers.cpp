@@ -5,14 +5,14 @@
 #include "Swapchain.h"
 
 vk::Framebuffer& Framebuffers::get(uint32_t index) {
-    return m_framebuffers[index];
+    return *m_framebuffers[index];
 }
 
 vk::Framebuffer& Framebuffers::getNext() {
-    return m_framebuffers[m_currentIndex++];
+    return *m_framebuffers[m_currentIndex++];
 }
 
-Framebuffers::Framebuffers(LogicalDevice& logicalDevice, Swapchain& swapchain, RenderPass& renderPass) :
+Framebuffers::Framebuffers(vk::Device& logicalDevice, vk::RenderPass& renderPass, Swapchain& swapchain) :
     m_logicalDevice(logicalDevice) {
     std::vector<vk::ImageView> swapchainImageViews = swapchain.getImageViews();
 
@@ -24,19 +24,13 @@ Framebuffers::Framebuffers(LogicalDevice& logicalDevice, Swapchain& swapchain, R
         };
 
         vk::FramebufferCreateInfo framebufferInfo;
-        framebufferInfo.renderPass = renderPass.get();
+        framebufferInfo.renderPass = renderPass;
         framebufferInfo.attachmentCount = 1;
         framebufferInfo.pAttachments = attachments;
         framebufferInfo.width = swapchain.getExtent().width;
         framebufferInfo.height = swapchain.getExtent().height;
         framebufferInfo.layers = 1;
 
-        m_framebuffers[i] = logicalDevice.get().createFramebuffer(framebufferInfo);
-    }
-}
-
-Framebuffers::~Framebuffers() {
-    for (auto framebuffer : m_framebuffers) {
-        m_logicalDevice.get().destroyFramebuffer(framebuffer);
+        m_framebuffers[i] = m_logicalDevice.createFramebufferUnique(framebufferInfo);
     }
 }

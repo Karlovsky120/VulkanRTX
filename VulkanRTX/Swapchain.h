@@ -13,14 +13,14 @@ public:
     vk::SwapchainKHR& get();
 
     vk::Extent2D& getExtent();
-    vk::SurfaceFormatKHR getFormat();
+    vk::SurfaceFormatKHR& getFormat();
     std::vector<vk::ImageView> getImageViews();
 
-    Swapchain(LogicalDevice& logicalDevice, PhysicalDevice& physicalDevice, Surface& surface);
+    Swapchain(vk::Device& logicalDevice, vk::PhysicalDevice& physicalDevice, Surface& surface);
     ~Swapchain();
 
 private:
-    vk::SwapchainKHR m_swapchain;
+    vk::UniqueSwapchainKHR m_swapchain;
 
     std::vector<vk::Image> m_images;
     std::vector<vk::ImageView> m_imageViews;
@@ -36,5 +36,5 @@ private:
     void createImageViews();
 
     Surface& m_surface;
-    LogicalDevice& m_logicalDevice;
+    vk::Device& m_logicalDevice;
 };

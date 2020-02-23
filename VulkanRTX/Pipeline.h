@@ -5,20 +5,19 @@
 #include <string>
 
 class LogicalDevice;
-class PipelineLayout;
-class RenderPass;
-class Swapchain;
 
 class Pipeline {
 public:
     vk::Pipeline& get();
 
-    Pipeline(LogicalDevice& logicalDevice, PipelineLayout& pipelineLayout, RenderPass& renderPass, Swapchain& swapchain);
-    ~Pipeline();
+    Pipeline(LogicalDevice& logicalDevice,
+             vk::PipelineLayout& pipelineLayout,
+             vk::RenderPass& renderPass,
+             vk::Extent2D& extent);
 
 private:
-    vk::Pipeline m_pipeline;
+    vk::UniquePipeline m_pipeline;
 
-    RenderPass& m_renderPass;
-    LogicalDevice& m_logicalDevice;
+    vk::RenderPass& m_renderPass;
+    vk::Device& m_logicalDevice;
 };

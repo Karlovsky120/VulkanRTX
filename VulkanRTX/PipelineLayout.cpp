@@ -1,12 +1,10 @@
 #include "PipelineLayout.h"
 
-#include "LogicalDevice.h"
-
 vk::PipelineLayout& PipelineLayout::get() {
-    return m_pipelineLayout;
+    return *m_pipelineLayout;
 }
 
-PipelineLayout::PipelineLayout(LogicalDevice& logicalDevice) :
+PipelineLayout::PipelineLayout(vk::Device& logicalDevice) :
     m_logicalDevice(logicalDevice) {
 
     vk::PipelineLayoutCreateInfo pipelineLayoutInfo;
@@ -15,9 +13,5 @@ PipelineLayout::PipelineLayout(LogicalDevice& logicalDevice) :
     pipelineLayoutInfo.pushConstantRangeCount = 0;
     pipelineLayoutInfo.pPushConstantRanges = nullptr;
 
-    m_pipelineLayout = logicalDevice.get().createPipelineLayout(pipelineLayoutInfo);
-}
-
-PipelineLayout::~PipelineLayout() {
-    m_logicalDevice.get().destroyPipelineLayout(m_pipelineLayout);
+    m_pipelineLayout = logicalDevice.createPipelineLayoutUnique(pipelineLayoutInfo);
 }

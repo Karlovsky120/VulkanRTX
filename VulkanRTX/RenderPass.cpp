@@ -4,14 +4,14 @@
 #include "Swapchain.h"
 
 vk::RenderPass& RenderPass::get() {
-    return m_renderPass;
+    return *m_renderPass;
 }
 
-RenderPass::RenderPass(LogicalDevice& logicalDevice, Swapchain& swapchain) :
+RenderPass::RenderPass(vk::Device& logicalDevice, vk::SurfaceFormatKHR& surfaceFormat) :
     m_logicalDevice(logicalDevice) {
 
     vk::AttachmentDescription colorAttachment;
-    colorAttachment.format = swapchain.getFormat().format;
+    colorAttachment.format = surfaceFormat.format;
     colorAttachment.samples = vk::SampleCountFlagBits::e1;
 
     colorAttachment.loadOp = vk::AttachmentLoadOp::eClear;
@@ -46,9 +46,5 @@ RenderPass::RenderPass(LogicalDevice& logicalDevice, Swapchain& swapchain) :
     renderPassInfo.dependencyCount = 1;
     renderPassInfo.pDependencies = &dependency;
 
-    m_renderPass = logicalDevice.get().createRenderPass(renderPassInfo);
-}
-
-RenderPass::~RenderPass() {
-    m_logicalDevice.get().destroyRenderPass(m_renderPass);
+    m_renderPass = logicalDevice.createRenderPassUnique(renderPassInfo);
 }

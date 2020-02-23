@@ -3,13 +3,11 @@
 #include <fstream>
 #include <vector>
 
-#include "LogicalDevice.h"
-
 vk::ShaderModule& ShaderModule::get() {
-    return m_shaderModule;
+    return *m_shaderModule;
 }
 
-ShaderModule::ShaderModule(LogicalDevice& logicalDevice, const std::string shaderPath) :
+ShaderModule::ShaderModule(vk::Device& logicalDevice, const std::string shaderPath) :
     m_logicalDevice(logicalDevice) {
 
     std::ifstream file(shaderPath, std::ios::ate | std::ios::binary);
@@ -31,9 +29,5 @@ ShaderModule::ShaderModule(LogicalDevice& logicalDevice, const std::string shade
     createInfo.codeSize = fileSize;
     createInfo.pCode = reinterpret_cast<const uint32_t*>(code.data());
 
-    m_shaderModule = logicalDevice.get().createShaderModule(createInfo);
-}
-
-ShaderModule::~ShaderModule() {
-    m_logicalDevice.get().destroyShaderModule(m_shaderModule);
+    m_shaderModule = logicalDevice.createShaderModuleUnique(createInfo);
 }

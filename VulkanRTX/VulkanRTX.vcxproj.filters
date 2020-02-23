@@ -60,6 +60,18 @@
     <ClCompile Include="PipelineLayout.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="VertexInputDescription.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Buffer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DeviceMemory.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MemoryAllocator.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="RTXApplication.h">
@@ -99,6 +111,18 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="PipelineLayout.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="VertexInputDescription.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Buffer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="DeviceMemory.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MemoryAllocator.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

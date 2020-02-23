@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|x64">
@@ -103,8 +103,10 @@ for %%f in (*.vert *.tesc *.tese *.geom *.frag *.comp) do %VK_SDK_PATH%\Bin\glsl
   <ItemGroup>
     <ClCompile Include="CommandBuffer.cpp" />
     <ClCompile Include="CommandPool.cpp" />
+    <ClCompile Include="DeviceMemory.cpp" />
     <ClCompile Include="Framebuffers.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="MemoryAllocator.cpp" />
     <ClCompile Include="PhysicalDevice.cpp" />
     <ClCompile Include="PipelineLayout.cpp" />
     <ClCompile Include="RTXApplication.cpp" />
@@ -115,11 +117,15 @@ for %%f in (*.vert *.tesc *.tese *.geom *.frag *.comp) do %VK_SDK_PATH%\Bin\glsl
     <ClCompile Include="ShaderModule.cpp" />
     <ClCompile Include="Surface.cpp" />
     <ClCompile Include="Swapchain.cpp" />
+    <ClCompile Include="Buffer.cpp" />
+    <ClCompile Include="VertexInputDescription.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CommandBuffer.h" />
     <ClInclude Include="CommandPool.h" />
+    <ClInclude Include="DeviceMemory.h" />
     <ClInclude Include="Framebuffers.h" />
+    <ClInclude Include="MemoryAllocator.h" />
     <ClInclude Include="PhysicalDevice.h" />
     <ClInclude Include="PipelineLayout.h" />
     <ClInclude Include="RTXApplication.h" />
@@ -130,6 +136,8 @@ for %%f in (*.vert *.tesc *.tese *.geom *.frag *.comp) do %VK_SDK_PATH%\Bin\glsl
     <ClInclude Include="ShaderModule.h" />
     <ClInclude Include="Surface.h" />
     <ClInclude Include="Swapchain.h" />
+    <ClInclude Include="Buffer.h" />
+    <ClInclude Include="VertexInputDescription.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\fragmentShader.frag">

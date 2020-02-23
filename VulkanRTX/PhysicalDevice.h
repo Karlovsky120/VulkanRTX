@@ -2,7 +2,6 @@
 
 #include <vulkan/vulkan.hpp>
 
-class Instance;
 class LogicalDevice;
 class Surface;
 
@@ -12,16 +11,16 @@ public:
 
     std::unique_ptr<LogicalDevice> createLogicalDevice(Surface& surface);
 
-    PhysicalDevice(Instance& instance);
+    const vk::PhysicalDeviceMemoryProperties& getMemoryProperties() const;
 
-    PhysicalDevice(const PhysicalDevice&) = delete;
-    PhysicalDevice& operator=(const PhysicalDevice&) = delete;
+    PhysicalDevice(vk::Instance& instance);
 
 private:
     vk::PhysicalDevice m_physicalDevice;
 
     vk::PhysicalDeviceProperties m_deviceProperties;
     vk::PhysicalDeviceFeatures m_deviceFeatures;
+    vk::PhysicalDeviceMemoryProperties m_deviceMemoryProperties;
 
-    Instance& m_instance;
+    vk::Instance& m_instance;
 };
