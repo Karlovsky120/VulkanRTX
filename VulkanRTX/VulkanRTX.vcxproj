@@ -101,6 +101,7 @@ for %%f in (*.vert *.tesc *.tese *.geom *.frag *.comp) do %VK_SDK_PATH%\Bin\glsl
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Camera.cpp" />
     <ClCompile Include="CommandBuffer.cpp" />
     <ClCompile Include="CommandPool.cpp" />
     <ClCompile Include="DescriptorPool.cpp" />
@@ -124,6 +125,7 @@ for %%f in (*.vert *.tesc *.tese *.geom *.frag *.comp) do %VK_SDK_PATH%\Bin\glsl
     <ClCompile Include="VertexInputDescription.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Camera.h" />
     <ClInclude Include="CommandBuffer.h" />
     <ClInclude Include="CommandPool.h" />
     <ClInclude Include="DescriptorPool.h" />

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Buffer.h"
+#include "Camera.h"
 #include "CommandBuffer.h"
 #include "CommandPool.h"
 #include "DescriptorPool.h"
@@ -19,7 +20,9 @@
 
 #include <vulkan/vulkan.hpp>
 
+#include <chrono>
 #include <memory>
+#include <string>
 
 struct GLFWwindow;
 
@@ -34,6 +37,12 @@ private:
     const uint32_t HEIGHT = 720;
 
     const uint32_t MAX_FRAMES_IN_FLIGHT = 2;
+    std::string windowTitle = "Vulkan shenanigans";
+
+    Camera camera;
+
+    std::chrono::time_point<std::chrono::high_resolution_clock> time;
+    uint32_t skip;
 
     GLFWwindow* window;
 
@@ -69,6 +78,7 @@ private:
 
     void initVulkan();
     void initWindow();
+    void initOther();
     void mainLoop();
     void drawFrame();
 

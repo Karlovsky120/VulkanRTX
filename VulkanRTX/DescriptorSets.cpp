@@ -4,7 +4,6 @@ vk::DescriptorSet& DescriptorSets::get(uint32_t index) {
 	return *m_descriptorSets[index];
 }
 
-
 DescriptorSets::DescriptorSets(vk::Device& logicalDevice,
 							   vk::DescriptorPool& descriptorPool,
 							   std::vector<vk::DescriptorSetLayout> setLayouts) {

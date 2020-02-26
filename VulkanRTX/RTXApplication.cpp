@@ -10,6 +10,7 @@
 void RTXApplication::run() {
     initWindow();
     initVulkan();
+    initOther();
     mainLoop();
 }
 
@@ -139,6 +140,11 @@ void RTXApplication::initVulkan() {
     }
 }
 
+void RTXApplication::initOther() {
+    //ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+    camera = Camera(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0001f, 0.0f), 90.0f, 1.7777f, 0.1f, 10.0f);
+}
+
 void RTXApplication::createSwapchainHierarchy() {
     swapchain = logicalDevice->createSwapchain(*physicalDevice, *surface);
     renderPass = logicalDevice->createRenderPass(swapchain->getFormat());
@@ -220,16 +226,25 @@ void RTXApplication::mainLoop() {
 }
 
 void RTXApplication::updateUniformBuffer(uint32_t bufferIndex) {
-    static auto startTime = std::chrono::high_resolution_clock::now();
+    //static auto startTime = std::chrono::high_resolution_clock::now();
 
     auto currentTime = std::chrono::high_resolution_clock::now();
-    float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
+    float period = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - time).count();
+
+    time = currentTime;
+
+    ++skip;
+    if (skip > 20) {
+        windowTitle = "Vulkan shenaningans FPS: " + std::to_string(1.0f / period);
+        skip = 0;
+    }
+
+    glfwSetWindowTitle(window, windowTitle.c_str());
 
     UniformBufferObject ubo = {};
-    ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-    ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-    ubo.proj = glm::perspective(glm::radians(45.0f), swapchain->getExtent().width / (float)swapchain->getExtent().height, 0.1f, 10.0f);
-    ubo.proj[1][1] *= -1;
+    ubo.model = glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+    ubo.view = camera.getViewMatrix();
+    ubo.proj = camera.getProjectionMatrix();
 
     uniformBuffers[bufferIndex]->copyToBuffer(ubo);
 }
