@@ -21,7 +21,7 @@ public:
 	vk::Buffer& getIndexBuffer();
 
 	void translate(glm::vec3 offset);
-	void rotate(glm::quat rotation);
+	void rotate(glm::vec3 rotation);
 	void scale(glm::vec3 scale);
 
 	glm::mat4 getMeshMatrix();

@@ -34,7 +34,7 @@ public:
     ~RTXApplication();
 
 private:
-    const uint32_t WIDTH = 1280;
+    const uint32_t WIDTH = 720; // 1280;
     const uint32_t HEIGHT = 720;
 
     const uint32_t MAX_FRAMES_IN_FLIGHT = 2;
@@ -44,6 +44,7 @@ private:
 
     std::chrono::time_point<std::chrono::high_resolution_clock> time;
     uint32_t skip;
+    float frameTime;
 
     GLFWwindow* window;
 
@@ -74,6 +75,8 @@ private:
 
     std::unique_ptr<Mesh> object;
 
+    bool disableInput = false;
+
     size_t currentFrame = 0;
     bool framebufferResized = false;
 
@@ -91,6 +94,7 @@ private:
     void recreateSwapchainHierarchy();
 
     static void framebufferSizeCallback(GLFWwindow* window, int width, int height);
+    static void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
 
     template <class T>
     void stageDataUploadToGPU(std::unique_ptr<Buffer>& hostBuffer,

@@ -1,5 +1,7 @@
 #include "Mesh.h"
 
+#include <iostream>
+#include <glm/gtx/string_cast.hpp>
 
 Mesh::Mesh(vk::Device& logicalDevice,
 		   std::vector<float> vertices,
@@ -61,8 +63,8 @@ void Mesh::translate(glm::vec3 offset) {
 	m_position += offset;
 }
 
-void Mesh::rotate(glm::quat rotation) {
-	m_rotation = m_rotation * rotation;
+void Mesh::rotate(glm::vec3 rotation) {
+	m_rotation = m_rotation * glm::quat(rotation);
 }
 
 void Mesh::scale(glm::vec3 scale) {
@@ -70,11 +72,11 @@ void Mesh::scale(glm::vec3 scale) {
 }
 
 glm::mat4 Mesh::getMeshMatrix() {
-	glm::mat4 meshMatrix(1.0f);
+	glm::mat4 identity(1.0f);
 
-	meshMatrix = glm::scale(meshMatrix, m_scale);
-	meshMatrix = glm::mat4_cast(m_rotation) * meshMatrix;
-	meshMatrix = glm::translate(meshMatrix, m_position);
+	glm::mat4 scale = glm::scale(identity, m_scale);
+	glm::mat4 rotate = glm::mat4_cast(m_rotation);
+	glm::mat4 translate = glm::translate(identity, m_position);
 
-	return meshMatrix;
+	return translate * rotate * scale;
 }

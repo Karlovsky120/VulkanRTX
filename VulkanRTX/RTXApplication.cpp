@@ -31,17 +31,18 @@ void RTXApplication::initVulkan() {
     std::vector<vk::BufferCopy> bufferCopies(2);
 
     const std::vector<float> vertices = {
-        -0.5f, -0.5f, 1.0f, 0.0f, 0.0f,
-        0.5f, -0.5f, 0.0f, 1.0f, 0.0f,
-        0.5f, 0.5f, 0.0f, 0.0f, 1.0f,
-        -0.5f, 0.5f, 1.0f, 1.0f, 1.0f
+        -0.25f, -0.25f, 0.0f, 1.0f, 0.0f, 0.0f,
+        0.25f, 0.25f, 0.0f, 0.0f, 1.0f, 0.0f,
+        -0.25f, 0.25f, 0.0f, 0.0f, 0.0f, 1.0f,
+        0.25f, -0.25f, 0.0f, 1.0f, 1.0f, 1.0f
     };
 
     const std::vector<uint16_t> indices = {
-        0, 1, 2, 2, 3, 0
+        0, 1, 2, 0, 3, 1
     };
 
     object = std::make_unique<Mesh>(logicalDevice->get(), vertices, indices);
+    object->translate(glm::vec3(0.0f, 0.0f, 1.5f));
 
     transferBuffer->begin();
     object->recordUploadToGPU(transferBuffer->get());
@@ -125,7 +126,7 @@ void RTXApplication::initVulkan() {
 }
 
 void RTXApplication::initOther() {
-    camera = Camera(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0001f, 0.0f), 90.0f, 1.7777f, 0.1f, 10.0f);
+    camera = Camera(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f), 90.0f, 1.0f, 0.1f, 100.0f);
 }
 
 void RTXApplication::createSwapchainHierarchy() {
@@ -192,6 +193,7 @@ void RTXApplication::initWindow() {
 
     glfwSetWindowUserPointer(window, this);
     glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
+    glfwSetKeyCallback(window, keyCallback);
 }
 
 void RTXApplication::framebufferSizeCallback(GLFWwindow* window, int width, int height) {
@@ -199,8 +201,49 @@ void RTXApplication::framebufferSizeCallback(GLFWwindow* window, int width, int 
     app->framebufferResized = true;
 }
 
+void RTXApplication::keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
+    auto app = reinterpret_cast<RTXApplication*>(glfwGetWindowUserPointer(window));
+    if (!app->disableInput) {
+        app->disableInput = true;
+        
+        Camera& camera = app->camera;
+        Mesh& object = *app->object;
+
+        float frameTime = app->frameTime;
+
+        switch (key) {
+
+        case GLFW_KEY_W:
+            camera.translate(2 * frameTime * glm::vec3(0.0f, 0.0f, 1.0f));
+            break;
+        case GLFW_KEY_A:
+            camera.translate(2 * frameTime * glm::vec3(-1.0f, 0.0f, 0.0f));
+            break;
+        case GLFW_KEY_S:
+            camera.translate(2 * frameTime * glm::vec3(0.0f, 0.0f, -1.0f));
+            break;
+        case GLFW_KEY_D:
+            camera.translate(2 * frameTime * glm::vec3(1.0f, 0.0f, 0.0f));
+            break;
+
+        case GLFW_KEY_SPACE:
+            camera.translate(2 * frameTime * glm::vec3(0.0f, -1.0f, 0.0f));
+            break;
+        case GLFW_KEY_C: 
+            camera.translate(2 * frameTime * glm::vec3(0.0f, 1.0f, 0.0f));
+            break;
+        }
+    }
+}
+
 void RTXApplication::mainLoop() {
     while (!glfwWindowShouldClose(window)) {
+        auto currentTime = std::chrono::high_resolution_clock::now();
+        frameTime = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - time).count();
+
+        time = currentTime;
+
+        disableInput = false;
         glfwPollEvents();
         drawFrame();
     }
@@ -209,23 +252,17 @@ void RTXApplication::mainLoop() {
 }
 
 void RTXApplication::updateUniformBuffer(uint32_t bufferIndex) {
-    auto currentTime = std::chrono::high_resolution_clock::now();
-    float period = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - time).count();
-
-    time = currentTime;
-
     ++skip;
     if (skip > 20) {
-        windowTitle = "Vulkan shenaningans FPS: " + std::to_string(1.0f / period);
+        windowTitle = "Vulkan shenaningans FPS: " + std::to_string(1.0f / frameTime);
         skip = 0;
     }
 
     glfwSetWindowTitle(window, windowTitle.c_str());
 
-    object->rotate(glm::vec3(0.0f, 0.0f, period));
+    object->rotate(glm::vec3(0.0f, 2*frameTime, 0.0f));
 
     UniformBufferObject ubo = {};
-    glm::mat4 model = glm::rotate(glm::mat4(1.0f), glm::radians(0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
     ubo.model = object->getMeshMatrix();
     ubo.view = camera.getViewMatrix();
     ubo.proj = camera.getProjectionMatrix();

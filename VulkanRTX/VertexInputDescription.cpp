@@ -21,7 +21,7 @@ VertexInputDescription::VertexInputDescription() {
 
 	m_attributeDescriptions[0].binding = 0;
 	m_attributeDescriptions[0].location = 0;
-	m_attributeDescriptions[0].format = vk::Format::eR32G32Sfloat;
+	m_attributeDescriptions[0].format = vk::Format::eR32G32B32Sfloat;
 	m_attributeDescriptions[0].offset = offsetof(Vertex, m_pos);
 
 	m_attributeDescriptions[1].binding = 0;

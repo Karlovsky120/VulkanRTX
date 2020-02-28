@@ -24,5 +24,7 @@ private:
 	glm::quat m_rotation;
 	glm::mat4 m_projection;
 
+	//const glm::vec3 forward = glm::vec3(0.0f, 0.0f, -1.0f);
+
 };
 

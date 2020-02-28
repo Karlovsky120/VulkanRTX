@@ -18,7 +18,7 @@ private:
 	std::vector<vk::VertexInputAttributeDescription> m_attributeDescriptions;
 
 	struct Vertex {
-		glm::vec2 m_pos;
+		glm::vec3 m_pos;
 		glm::vec3 m_color;
 	};
 };
