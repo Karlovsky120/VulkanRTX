@@ -31,18 +31,35 @@ void RTXApplication::initVulkan() {
     std::vector<vk::BufferCopy> bufferCopies(2);
 
     const std::vector<float> vertices = {
-        -0.25f, -0.25f, 0.0f, 1.0f, 0.0f, 0.0f,
+        -1, -1, -1, 0, 0, 1,
+        1, -1, -1, 0, 1, 0,
+        1, 1, -1, 1, 0, 0,
+        -1, 1, -1, 0, 1, 1,
+        -1, -1, 1, 1, 1, 0,
+        1, -1, 1, 1, 0, 1,
+        1, 1, 1, 0, 0, 0,
+        -1, 1, 1, 1, 1, 1
+
+
+        /*-0.25f, -0.25f, 0.0f, 1.0f, 0.0f, 0.0f,
         0.25f, 0.25f, 0.0f, 0.0f, 1.0f, 0.0f,
         -0.25f, 0.25f, 0.0f, 0.0f, 0.0f, 1.0f,
-        0.25f, -0.25f, 0.0f, 1.0f, 1.0f, 1.0f
+        0.25f, -0.25f, 0.0f, 1.0f, 1.0f, 1.0f*/
     };
 
     const std::vector<uint16_t> indices = {
-        0, 1, 2, 0, 3, 1
+        0, 1, 3, 3, 1, 2,
+        1, 5, 2, 2, 5, 6,
+        5, 4, 6, 6, 4, 7,
+        4, 0, 7, 7, 0, 3,
+        3, 2, 7, 7, 2, 6,
+        4, 5, 0, 0, 5, 1
+        
+        //0, 1, 2, 0, 3, 1
     };
 
     object = std::make_unique<Mesh>(logicalDevice->get(), vertices, indices);
-    object->translate(glm::vec3(0.0f, 0.0f, 1.5f));
+    object->translate(glm::vec3(0.0f, 0.0f, 2.5f));
 
     transferBuffer->begin();
     object->recordUploadToGPU(transferBuffer->get());
@@ -108,7 +125,7 @@ void RTXApplication::initVulkan() {
         commandBuffers[i]->get().bindVertexBuffers(0, object->getVertexBuffer(), offset);
         commandBuffers[i]->get().bindIndexBuffer(object->getIndexBuffer(), 0, vk::IndexType::eUint16);
         commandBuffers[i]->get().bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipelineLayout->get(), 0, descriptorSets->get(i), {nullptr});
-        commandBuffers[i]->get().drawIndexed(6, 1, 0, 0, 0);
+        commandBuffers[i]->get().drawIndexed(36, 1, 0, 0, 0);
         commandBuffers[i]->get().endRenderPass();
         commandBuffers[i]->get().end();
     }
@@ -149,7 +166,7 @@ void RTXApplication::createSwapchainHierarchy() {
         commandBuffers[i]->get().bindVertexBuffers(0, object->getVertexBuffer(), offset);
         commandBuffers[i]->get().bindIndexBuffer(object->getIndexBuffer(), 0, vk::IndexType::eUint16);
         commandBuffers[i]->get().bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipelineLayout->get(), 0, descriptorSets->get(i), {0});
-        commandBuffers[i]->get().drawIndexed(6, 1, 0, 0, 0);
+        commandBuffers[i]->get().drawIndexed(36, 1, 0, 0, 0);
         commandBuffers[i]->get().endRenderPass();
         commandBuffers[i]->get().end();
     }
