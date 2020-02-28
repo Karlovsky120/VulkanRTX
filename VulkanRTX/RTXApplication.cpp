@@ -41,26 +41,10 @@ void RTXApplication::initVulkan() {
         0, 1, 2, 2, 3, 0
     };
 
-    std::unique_ptr<Buffer> hostIndexBuffer;
-    stageDataUploadToGPU(hostIndexBuffer, indexBuffer,
-                         bufferCopies[1], vk::BufferUsageFlagBits::eIndexBuffer,
-                         indices);
-
-    std::unique_ptr<Buffer> hostVertexBuffer;
-    stageDataUploadToGPU(hostVertexBuffer, vertexBuffer,
-                         bufferCopies[0], vk::BufferUsageFlagBits::eVertexBuffer,
-                         vertices);
-
-    std::vector<vk::Buffer*> srcBuffers;
-    srcBuffers.push_back(hostVertexBuffer->getPtr());
-    srcBuffers.push_back(hostIndexBuffer->getPtr());
-
-    std::vector<vk::Buffer*> dstBuffers;
-    dstBuffers.push_back(vertexBuffer->getPtr());
-    dstBuffers.push_back(indexBuffer->getPtr());
+    object = std::make_unique<Mesh>(logicalDevice->get(), vertices, indices);
 
     transferBuffer->begin();
-    Buffer::copyBuffersToGPU(transferBuffer->get(), srcBuffers, dstBuffers, bufferCopies);
+    object->recordUploadToGPU(transferBuffer->get());
     transferBuffer->get().end();
 
     vk::SubmitInfo submitInfo;
@@ -120,8 +104,8 @@ void RTXApplication::initVulkan() {
         commandBuffers[i]->get().bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline->get());
 
         vk::DeviceSize offset(0);
-        commandBuffers[i]->get().bindVertexBuffers(0, vertexBuffer->get(), offset);
-        commandBuffers[i]->get().bindIndexBuffer(indexBuffer->get(), 0, vk::IndexType::eUint16);
+        commandBuffers[i]->get().bindVertexBuffers(0, object->getVertexBuffer(), offset);
+        commandBuffers[i]->get().bindIndexBuffer(object->getIndexBuffer(), 0, vk::IndexType::eUint16);
         commandBuffers[i]->get().bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipelineLayout->get(), 0, descriptorSets->get(i), {nullptr});
         commandBuffers[i]->get().drawIndexed(6, 1, 0, 0, 0);
         commandBuffers[i]->get().endRenderPass();
@@ -141,7 +125,6 @@ void RTXApplication::initVulkan() {
 }
 
 void RTXApplication::initOther() {
-    //ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
     camera = Camera(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0001f, 0.0f), 90.0f, 1.7777f, 0.1f, 10.0f);
 }
 
@@ -162,8 +145,8 @@ void RTXApplication::createSwapchainHierarchy() {
         commandBuffers[i]->get().bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline->get());
 
         vk::DeviceSize offset(0);
-        commandBuffers[i]->get().bindVertexBuffers(0, vertexBuffer->get(), offset);
-        commandBuffers[i]->get().bindIndexBuffer(indexBuffer->get(), 0, vk::IndexType::eUint16);
+        commandBuffers[i]->get().bindVertexBuffers(0, object->getVertexBuffer(), offset);
+        commandBuffers[i]->get().bindIndexBuffer(object->getIndexBuffer(), 0, vk::IndexType::eUint16);
         commandBuffers[i]->get().bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipelineLayout->get(), 0, descriptorSets->get(i), {0});
         commandBuffers[i]->get().drawIndexed(6, 1, 0, 0, 0);
         commandBuffers[i]->get().endRenderPass();
@@ -226,8 +209,6 @@ void RTXApplication::mainLoop() {
 }
 
 void RTXApplication::updateUniformBuffer(uint32_t bufferIndex) {
-    //static auto startTime = std::chrono::high_resolution_clock::now();
-
     auto currentTime = std::chrono::high_resolution_clock::now();
     float period = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - time).count();
 
@@ -241,8 +222,11 @@ void RTXApplication::updateUniformBuffer(uint32_t bufferIndex) {
 
     glfwSetWindowTitle(window, windowTitle.c_str());
 
+    object->rotate(glm::vec3(0.0f, 0.0f, period));
+
     UniformBufferObject ubo = {};
-    ubo.model = glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+    glm::mat4 model = glm::rotate(glm::mat4(1.0f), glm::radians(0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+    ubo.model = object->getMeshMatrix();
     ubo.view = camera.getViewMatrix();
     ubo.proj = camera.getProjectionMatrix();
 

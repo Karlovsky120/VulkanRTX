@@ -11,6 +11,7 @@
 #include "Framebuffers.h"
 #include "Instance.h"
 #include "LogicalDevice.h"
+#include "Mesh.h"
 #include "PhysicalDevice.h"
 #include "Pipeline.h"
 #include "PipelineLayout.h"
@@ -60,8 +61,6 @@ private:
     std::unique_ptr<RenderPass> renderPass;
     std::unique_ptr<CommandPool> graphicsCommandPool;
     std::unique_ptr<CommandPool> transferCommandPool;
-    std::unique_ptr<Buffer> vertexBuffer;
-    std::unique_ptr<Buffer> indexBuffer;
 
     std::unique_ptr<CommandBuffer> transferBuffer;
 
@@ -72,6 +71,8 @@ private:
     std::vector<vk::UniqueSemaphore> renderFinishedSemaphores;
     std::vector<vk::UniqueFence> inFlightFences;
     std::vector<vk::Fence> imagesInFlight;
+
+    std::unique_ptr<Mesh> object;
 
     size_t currentFrame = 0;
     bool framebufferResized = false;
