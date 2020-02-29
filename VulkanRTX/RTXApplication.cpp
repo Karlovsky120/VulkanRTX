@@ -39,12 +39,6 @@ void RTXApplication::initVulkan() {
         1, -1, 1, 1, 0, 1,
         1, 1, 1, 0, 0, 0,
         -1, 1, 1, 1, 1, 1
-
-
-        /*-0.25f, -0.25f, 0.0f, 1.0f, 0.0f, 0.0f,
-        0.25f, 0.25f, 0.0f, 0.0f, 1.0f, 0.0f,
-        -0.25f, 0.25f, 0.0f, 0.0f, 0.0f, 1.0f,
-        0.25f, -0.25f, 0.0f, 1.0f, 1.0f, 1.0f*/
     };
 
     const std::vector<uint16_t> indices = {
@@ -54,8 +48,6 @@ void RTXApplication::initVulkan() {
         4, 0, 7, 7, 0, 3,
         3, 2, 7, 7, 2, 6,
         4, 5, 0, 0, 5, 1
-        
-        //0, 1, 2, 0, 3, 1
     };
 
     object = std::make_unique<Mesh>(logicalDevice->get(), vertices, indices);
@@ -140,6 +132,9 @@ void RTXApplication::initVulkan() {
         renderFinishedSemaphores.push_back(logicalDevice->get().createSemaphoreUnique(semaphoreInfo));
         inFlightFences.push_back(logicalDevice->get().createFenceUnique(fenceInfo));
     }
+
+    // Set the initial value for cursor position;
+    glfwGetCursorPos(window, &cursorX, &cursorY);
 }
 
 void RTXApplication::initOther() {
@@ -208,6 +203,9 @@ void RTXApplication::initWindow() {
 
     window = glfwCreateWindow(WIDTH, HEIGHT, "Vulkan shenanigans", nullptr, nullptr);
 
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    glfwSetInputMode(window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
+
     glfwSetWindowUserPointer(window, this);
     glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
     glfwSetKeyCallback(window, keyCallback);
@@ -231,26 +229,47 @@ void RTXApplication::keyCallback(GLFWwindow* window, int key, int scancode, int 
         switch (key) {
 
         case GLFW_KEY_W:
-            camera.translate(2 * frameTime * glm::vec3(0.0f, 0.0f, 1.0f));
+            camera.moveForwards(5 * frameTime);
             break;
         case GLFW_KEY_A:
-            camera.translate(2 * frameTime * glm::vec3(-1.0f, 0.0f, 0.0f));
+            camera.strafeLeft(5 * frameTime);
             break;
         case GLFW_KEY_S:
-            camera.translate(2 * frameTime * glm::vec3(0.0f, 0.0f, -1.0f));
+            camera.moveBackwards(5 * frameTime);
             break;
         case GLFW_KEY_D:
-            camera.translate(2 * frameTime * glm::vec3(1.0f, 0.0f, 0.0f));
+            camera.strafeRight(5 * frameTime);
             break;
 
         case GLFW_KEY_SPACE:
-            camera.translate(2 * frameTime * glm::vec3(0.0f, -1.0f, 0.0f));
+            camera.translate(5 * frameTime * glm::vec3(0.0f, -1.0f, 0.0f));
             break;
-        case GLFW_KEY_C: 
-            camera.translate(2 * frameTime * glm::vec3(0.0f, 1.0f, 0.0f));
+        case GLFW_KEY_C:
+            camera.translate(5 * frameTime * glm::vec3(0.0f, 1.0f, 0.0f));
+            break;
+
+        case GLFW_KEY_Q:
+            camera.rotate(5 * frameTime * glm::vec3(0.0f, 0.0f, 1.0f));
+            break;
+        case GLFW_KEY_E:
+            camera.rotate(5 * frameTime * glm::vec3(0.0f, 0.0f, -1.0f));
             break;
         }
     }
+}
+
+void RTXApplication::processMouse() {
+    double newCursorX;
+    double newCursorY;
+    glfwGetCursorPos(window, &newCursorX, &newCursorY);
+
+    double deltaX = newCursorX - cursorX;
+    double deltaY = newCursorY - cursorY;
+
+    camera.rotate(0.1 * glm::radians(deltaY), -0.1 * glm::radians(deltaX));
+
+    cursorX = newCursorX;
+    cursorY = newCursorY;
 }
 
 void RTXApplication::mainLoop() {
@@ -262,6 +281,7 @@ void RTXApplication::mainLoop() {
 
         disableInput = false;
         glfwPollEvents();
+        processMouse();
         drawFrame();
     }
 
@@ -277,7 +297,7 @@ void RTXApplication::updateUniformBuffer(uint32_t bufferIndex) {
 
     glfwSetWindowTitle(window, windowTitle.c_str());
 
-    object->rotate(glm::vec3(0.0f, 2*frameTime, 0.0f));
+    //object->rotate(glm::vec3(0.0f, 2*frameTime, 0.0f));
 
     UniformBufferObject ubo = {};
     ubo.model = object->getMeshMatrix();

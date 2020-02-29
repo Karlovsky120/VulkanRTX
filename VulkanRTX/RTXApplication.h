@@ -77,6 +77,9 @@ private:
 
     bool disableInput = false;
 
+    double cursorX;
+    double cursorY;
+
     size_t currentFrame = 0;
     bool framebufferResized = false;
 
@@ -85,6 +88,8 @@ private:
     void initOther();
     void mainLoop();
     void drawFrame();
+
+    void processMouse();
 
     void updateUniformBuffer(uint32_t bufferIndex);
 

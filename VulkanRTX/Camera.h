@@ -1,11 +1,18 @@
 #pragma once
 
 #include "glm/gtc/quaternion.hpp"
+#include "glm/gtx/quaternion.hpp"
 
 class Camera {
 public:
 	void translate(glm::vec3 offset);
+	void moveForwards(float amount);
+	void moveBackwards(float amount);
+	void strafeLeft(float amount);
+	void strafeRight(float amount);
+
 	void rotate(glm::vec3 rotation);
+	void rotate(float pitch, float yaw);
 
 	glm::mat4 getCameraMatrix();
 
@@ -24,7 +31,11 @@ private:
 	glm::quat m_rotation;
 	glm::mat4 m_projection;
 
-	//const glm::vec3 forward = glm::vec3(0.0f, 0.0f, -1.0f);
+	glm::vec3 m_forwardVector = glm::vec3(0.0f, 0.0f, -1.0f);
+	glm::vec3 m_rightVector = glm::vec3(-1.0f, 0.0f, 0.0f);
 
+	float m_lastPitch = 0;
+
+	float PI_HALF = glm::pi<float>() / 2 - 0.01f;
 };
 

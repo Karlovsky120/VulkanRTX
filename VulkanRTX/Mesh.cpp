@@ -1,8 +1,5 @@
 #include "Mesh.h"
 
-#include <iostream>
-#include <glm/gtx/string_cast.hpp>
-
 Mesh::Mesh(vk::Device& logicalDevice,
 		   std::vector<float> vertices,
 		   std::vector<uint16_t> indices,

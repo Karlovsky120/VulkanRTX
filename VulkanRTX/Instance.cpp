@@ -24,6 +24,10 @@ std::unique_ptr<Surface> Instance::createSurface(GLFWwindow* window,
 }
 
 Instance::Instance() {
+    if (!glfwRawMouseMotionSupported()) {
+        throw std::runtime_error("Raw mouse motion not supported!");
+    }
+
     vk::ApplicationInfo appInfo;
     appInfo.pApplicationName = "RTX Application";
     appInfo.applicationVersion = VK_MAKE_VERSION(0, 1, 0);
