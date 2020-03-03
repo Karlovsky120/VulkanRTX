@@ -6,7 +6,6 @@
 #include <vector>
 
 class DeviceMemory;
-class PhysicalDevice;
 
 struct AllocId {
 	vk::DeviceMemory* memory;

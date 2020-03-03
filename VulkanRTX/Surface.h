@@ -2,8 +2,6 @@
 
 #include <vulkan/vulkan.hpp>
 
-class Instance;
-
 struct GLFWwindow;
 
 class Surface {

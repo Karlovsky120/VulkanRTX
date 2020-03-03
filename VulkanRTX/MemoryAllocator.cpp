@@ -1,7 +1,6 @@
 #include "MemoryAllocator.h"
 
 #include "DeviceMemory.h"
-#include "PhysicalDevice.h"
 
 bool MemoryAllocator::initialized = false;
 vk::Device* MemoryAllocator::m_logicalDevice;

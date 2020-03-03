@@ -4,8 +4,6 @@
 
 #include <vector>
 
-class LogicalDevice;
-class PhysicalDevice;
 class Surface;
 
 class Swapchain {

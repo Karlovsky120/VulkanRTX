@@ -1,7 +1,5 @@
 #include "Framebuffers.h"
 
-#include "LogicalDevice.h"
-#include "RenderPass.h"
 #include "Swapchain.h"
 
 vk::Framebuffer& Framebuffers::get(uint32_t index) {

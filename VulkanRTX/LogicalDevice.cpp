@@ -166,7 +166,8 @@ LogicalDevice::LogicalDevice(PhysicalDevice& physicalDevice, vk::SurfaceKHR& sur
     deviceCreateInfo.pEnabledFeatures = &deviceFeatures;
 
     const std::vector<const char*> deviceExtensions = {
-        VK_KHR_SWAPCHAIN_EXTENSION_NAME
+        VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+        VK_NV_RAY_TRACING_EXTENSION_NAME
     };
 
     deviceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size());

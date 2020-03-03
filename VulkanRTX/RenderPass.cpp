@@ -1,7 +1,6 @@
 #include "RenderPass.h"
 
 #include "LogicalDevice.h"
-#include "Swapchain.h"
 
 vk::RenderPass& RenderPass::get() {
     return *m_renderPass;

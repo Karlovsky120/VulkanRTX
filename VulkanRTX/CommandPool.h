@@ -2,8 +2,6 @@
 
 #include <vulkan/vulkan.hpp>
 
-class LogicalDevice;
-
 class CommandPool {
 public:
     vk::CommandPool& get();

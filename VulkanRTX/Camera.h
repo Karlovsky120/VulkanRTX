@@ -35,9 +35,5 @@ private:
 
 	glm::vec3 m_forwardVector = glm::vec3(0.0f, 0.0f, -1.0f);
 	glm::vec3 m_rightVector = glm::vec3(-1.0f, 0.0f, 0.0f);
-
-	float m_lastPitch = 0;
-
-	float PI_HALF = glm::pi<float>() / 2 - 0.01f;
 };
 

@@ -1,7 +1,5 @@
 #include "Swapchain.h"
 
-#include "LogicalDevice.h"
-#include "PhysicalDevice.h"
 #include "Surface.h"
 
 #include <GLFW/glfw3.h>
@@ -119,8 +117,8 @@ Swapchain::Swapchain(vk::Device& logicalDevice, vk::PhysicalDevice& physicalDevi
 
     createInfo.oldSwapchain = nullptr;
 
-    m_swapchain = logicalDevice.createSwapchainKHRUnique(createInfo);
-    m_images = logicalDevice.getSwapchainImagesKHR(*m_swapchain);
+    m_swapchain = m_logicalDevice.createSwapchainKHRUnique(createInfo);
+    m_images = m_logicalDevice.getSwapchainImagesKHR(*m_swapchain);
 
     createImageViews();
 }

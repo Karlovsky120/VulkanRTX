@@ -1,7 +1,5 @@
 #include "Surface.h"
 
-#include "Instance.h"
-
 #include <GLFW/glfw3.h>
 
 vk::SurfaceKHR& Surface::get() {

@@ -2,8 +2,6 @@
 
 #include <vulkan/vulkan.hpp>
 
-#include <string>
-
 class PipelineLayout {
 public:
     vk::PipelineLayout& get();

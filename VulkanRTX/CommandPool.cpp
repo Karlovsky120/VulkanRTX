@@ -1,7 +1,5 @@
 #include "CommandPool.h"
 
-#include "LogicalDevice.h"
-
 vk::CommandPool& CommandPool::get() {
     return *m_commandPool;
 }

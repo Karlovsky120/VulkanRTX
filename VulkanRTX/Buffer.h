@@ -2,11 +2,7 @@
 
 #include <vulkan/vulkan.hpp>
 
-#include "LogicalDevice.h"
 #include "MemoryAllocator.h"
-
-class CommandBuffer;
-class Queue;
 
 class Buffer {
 public:

@@ -2,9 +2,6 @@
 
 #include <vulkan/vulkan.hpp>
 
-class LogicalDevice;
-class Swapchain;
-
 class RenderPass {
 public:
     vk::RenderPass& get();

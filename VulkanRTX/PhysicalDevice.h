@@ -21,6 +21,7 @@ private:
     vk::PhysicalDeviceProperties m_deviceProperties;
     vk::PhysicalDeviceFeatures m_deviceFeatures;
     vk::PhysicalDeviceMemoryProperties m_deviceMemoryProperties;
+    vk::PhysicalDeviceRayTracingPropertiesNV m_rayTracingProperties;
 
     vk::Instance& m_instance;
 };

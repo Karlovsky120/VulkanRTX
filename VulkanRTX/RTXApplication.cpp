@@ -53,7 +53,8 @@ void RTXApplication::initVulkan() {
     object = std::make_unique<Mesh>(logicalDevice->get(), vertices, indices);
     object->translate(glm::vec3(0.0f, 0.0f, 2.5f));
 
-    transferBuffer->begin();
+    vk::CommandBufferBeginInfo beginInfo;
+    transferBuffer->get().begin(beginInfo);
     object->recordUploadToGPU(transferBuffer->get());
     transferBuffer->get().end();
 
@@ -109,8 +110,23 @@ void RTXApplication::initVulkan() {
         logicalDevice->get().updateDescriptorSets(1, &descriptorWrite, 0, nullptr);
 
         commandBuffers[i] = logicalDevice->createCommandBuffer(*graphicsCommandPool);
-        commandBuffers[i]->begin();
-        commandBuffers[i]->beginRenderPass(renderPass->get(), framebuffers->getNext(), *swapchain);
+
+        vk::CommandBufferBeginInfo beginInfo;
+        commandBuffers[i]->get().begin(beginInfo);
+
+        vk::RenderPassBeginInfo renderPassInfo;
+        renderPassInfo.renderPass = renderPass->get();
+        renderPassInfo.framebuffer = framebuffers->getNext();
+
+        renderPassInfo.renderArea.offset = {0, 0};
+        renderPassInfo.renderArea.extent = swapchain->getExtent();
+
+        vk::ClearValue clearColor = vk::ClearColorValue(std::array<float, 4>({0.0f, 0.0f, 0.0f, 1.0f}));
+        renderPassInfo.clearValueCount = 1;
+        renderPassInfo.pClearValues = &clearColor;
+
+        commandBuffers[i]->get().beginRenderPass(renderPassInfo, vk::SubpassContents::eInline);
+
         commandBuffers[i]->get().bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline->get());
 
         vk::DeviceSize offset(0);
@@ -153,8 +169,23 @@ void RTXApplication::createSwapchainHierarchy() {
 
     for (size_t i = 0; i < imageCount; ++i) {
         commandBuffers[i] = logicalDevice->createCommandBuffer(*graphicsCommandPool);
-        commandBuffers[i]->begin();
-        commandBuffers[i]->beginRenderPass(renderPass->get(), framebuffers->getNext(), *swapchain);
+
+        vk::CommandBufferBeginInfo beginInfo;
+        commandBuffers[i]->get().begin(beginInfo);
+
+        vk::RenderPassBeginInfo renderPassInfo;
+        renderPassInfo.renderPass = renderPass->get();
+        renderPassInfo.framebuffer = framebuffers->getNext();
+
+        renderPassInfo.renderArea.offset = {0, 0};
+        renderPassInfo.renderArea.extent = swapchain->getExtent();
+
+        vk::ClearValue clearColor = vk::ClearColorValue(std::array<float, 4>({0.0f, 0.0f, 0.0f, 1.0f}));
+        renderPassInfo.clearValueCount = 1;
+        renderPassInfo.pClearValues = &clearColor;
+
+        commandBuffers[i]->get().beginRenderPass(renderPassInfo, vk::SubpassContents::eInline);
+
         commandBuffers[i]->get().bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline->get());
 
         vk::DeviceSize offset(0);
@@ -256,7 +287,7 @@ void RTXApplication::processKeyboard() {
         translateVector.y += frameTime;
     }
 
-    if (glm::length(glm::abs(translateVector)) > 0.0000001) {
+    if (glm::length2(translateVector) > 0.0000001f) {
         camera.translateOriented(glm::normalize(translateVector) * 0.025f);
     }
 }

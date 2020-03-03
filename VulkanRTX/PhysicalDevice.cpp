@@ -30,6 +30,8 @@ PhysicalDevice::PhysicalDevice(vk::Instance& instance) :
         m_deviceProperties = m_physicalDevice.getProperties();
         m_deviceFeatures = m_physicalDevice.getFeatures();
         m_deviceMemoryProperties = m_physicalDevice.getMemoryProperties();
+        m_rayTracingProperties =
+            m_physicalDevice.getProperties2<vk::PhysicalDeviceProperties2, vk::PhysicalDeviceRayTracingPropertiesNV>().get<vk::PhysicalDeviceRayTracingPropertiesNV>();
 
         if (m_deviceProperties.deviceType == vk::PhysicalDeviceType::eDiscreteGpu) {
             m_physicalDevice = currentPhysicalDevice;
