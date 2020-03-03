@@ -208,54 +208,11 @@ void RTXApplication::initWindow() {
 
     glfwSetWindowUserPointer(window, this);
     glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
-    glfwSetKeyCallback(window, keyCallback);
 }
 
 void RTXApplication::framebufferSizeCallback(GLFWwindow* window, int width, int height) {
     auto app = reinterpret_cast<RTXApplication*>(glfwGetWindowUserPointer(window));
     app->framebufferResized = true;
-}
-
-void RTXApplication::keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
-    auto app = reinterpret_cast<RTXApplication*>(glfwGetWindowUserPointer(window));
-    if (!app->disableInput) {
-        app->disableInput = true;
-        
-        Camera& camera = app->camera;
-        Mesh& object = *app->object;
-
-        float frameTime = app->frameTime;
-
-        switch (key) {
-
-        case GLFW_KEY_W:
-            camera.moveForwards(5 * frameTime);
-            break;
-        case GLFW_KEY_A:
-            camera.strafeLeft(5 * frameTime);
-            break;
-        case GLFW_KEY_S:
-            camera.moveBackwards(5 * frameTime);
-            break;
-        case GLFW_KEY_D:
-            camera.strafeRight(5 * frameTime);
-            break;
-
-        case GLFW_KEY_SPACE:
-            camera.translate(5 * frameTime * glm::vec3(0.0f, -1.0f, 0.0f));
-            break;
-        case GLFW_KEY_C:
-            camera.translate(5 * frameTime * glm::vec3(0.0f, 1.0f, 0.0f));
-            break;
-
-        case GLFW_KEY_Q:
-            camera.rotate(5 * frameTime * glm::vec3(0.0f, 0.0f, 1.0f));
-            break;
-        case GLFW_KEY_E:
-            camera.rotate(5 * frameTime * glm::vec3(0.0f, 0.0f, -1.0f));
-            break;
-        }
-    }
 }
 
 void RTXApplication::processMouse() {
@@ -272,6 +229,38 @@ void RTXApplication::processMouse() {
     cursorY = newCursorY;
 }
 
+void RTXApplication::processKeyboard() {
+    glm::vec3 translateVector = glm::vec3(0.0f);
+
+    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
+        translateVector.z += frameTime;
+    }
+
+    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
+        translateVector.z -= frameTime;
+    }
+
+    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
+        translateVector.x -= frameTime;
+    }
+
+    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
+        translateVector.x += frameTime;
+    }
+
+    if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) {
+        translateVector.y -= frameTime;
+    }
+
+    if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS) {
+        translateVector.y += frameTime;
+    }
+
+    if (glm::length(glm::abs(translateVector)) > 0.0000001) {
+        camera.translateOriented(glm::normalize(translateVector) * 0.025f);
+    }
+}
+
 void RTXApplication::mainLoop() {
     while (!glfwWindowShouldClose(window)) {
         auto currentTime = std::chrono::high_resolution_clock::now();
@@ -282,6 +271,7 @@ void RTXApplication::mainLoop() {
         disableInput = false;
         glfwPollEvents();
         processMouse();
+        processKeyboard();
         drawFrame();
     }
 

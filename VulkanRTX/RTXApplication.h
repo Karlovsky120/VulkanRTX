@@ -90,6 +90,7 @@ private:
     void drawFrame();
 
     void processMouse();
+    void processKeyboard();
 
     void updateUniformBuffer(uint32_t bufferIndex);
 
@@ -99,7 +100,6 @@ private:
     void recreateSwapchainHierarchy();
 
     static void framebufferSizeCallback(GLFWwindow* window, int width, int height);
-    static void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
 
     template <class T>
     void stageDataUploadToGPU(std::unique_ptr<Buffer>& hostBuffer,

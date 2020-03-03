@@ -6,6 +6,8 @@
 class Camera {
 public:
 	void translate(glm::vec3 offset);
+	void translateOriented(glm::vec3 offset);
+
 	void moveForwards(float amount);
 	void moveBackwards(float amount);
 	void strafeLeft(float amount);

@@ -6,6 +6,10 @@ void Camera::translate(glm::vec3 offset) {
 	m_position -= offset;
 }
 
+void Camera::translateOriented(glm::vec3 offset) {
+	m_position += offset.z * m_forwardVector + offset.y * glm::vec3(0.0f, -1.0f, 0.0f) + offset.x * m_rightVector;
+}
+
 void Camera::moveForwards(float amount) {
 	m_position += amount * m_forwardVector;
 }
