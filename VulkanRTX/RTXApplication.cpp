@@ -2,6 +2,7 @@
 
 #include <GLFW/glfw3.h>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/transform.hpp>
 
 #include <chrono>
@@ -133,6 +134,7 @@ void RTXApplication::initVulkan() {
         commandBuffers[i]->get().bindVertexBuffers(0, object->getVertexBuffer(), offset);
         commandBuffers[i]->get().bindIndexBuffer(object->getIndexBuffer(), 0, vk::IndexType::eUint16);
         commandBuffers[i]->get().bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipelineLayout->get(), 0, descriptorSets->get(i), {nullptr});
+
         commandBuffers[i]->get().drawIndexed(36, 1, 0, 0, 0);
         commandBuffers[i]->get().endRenderPass();
         commandBuffers[i]->get().end();
@@ -309,6 +311,23 @@ void RTXApplication::mainLoop() {
     logicalDevice->get().waitIdle();
 }
 
+void RTXApplication::updatePushConstants(vk::CommandBuffer& cmdBuffer) {
+    vk::CommandBufferBeginInfo beginInfo;
+    cmdBuffer.begin(beginInfo);
+    cmdBuffer.pushConstants(pipelineLayout->get(), vk::ShaderStageFlagBits::eVertex, 0, sizeof(glm::mat4), glm::value_ptr(camera.getCameraMatrix()));
+    cmdBuffer.end();
+
+    vk::SubmitInfo submitInfo;
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &cmdBuffer;
+
+    vk::FenceCreateInfo fenceInfo;
+    vk::UniqueFence uploadFence = logicalDevice->get().createFenceUnique(fenceInfo);
+
+    logicalDevice->getTransferQueue().submit(submitInfo, *uploadFence);
+    logicalDevice->get().waitForFences(*uploadFence, true, UINT64_MAX);
+}
+
 void RTXApplication::updateUniformBuffer(uint32_t bufferIndex) {
     ++skip;
     if (skip > 20) {
@@ -322,8 +341,6 @@ void RTXApplication::updateUniformBuffer(uint32_t bufferIndex) {
 
     UniformBufferObject ubo = {};
     ubo.model = object->getMeshMatrix();
-    ubo.view = camera.getViewMatrix();
-    ubo.proj = camera.getProjectionMatrix();
 
     uniformBuffers[bufferIndex]->copyToBuffer(ubo);
 }
@@ -350,6 +367,7 @@ void RTXApplication::drawFrame() {
     }
 
     updateUniformBuffer(imageIndex);
+    updatePushConstants(transferBuffer->get());
 
     if (imagesInFlight[imageIndex] != VK_NULL_HANDLE) {
         logicalDevice->get().waitForFences(1, &imagesInFlight[imageIndex], VK_TRUE, UINT64_MAX);

@@ -50,7 +50,7 @@ void Camera::rotate(float pitch, float yaw) {
 }
 
 glm::mat4 Camera::getCameraMatrix() {
-	return m_projection;
+	return m_projection * getViewMatrix();
 }
 
 glm::mat4 Camera::getViewMatrix() {

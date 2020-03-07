@@ -93,6 +93,7 @@ private:
     void processKeyboard();
 
     void updateUniformBuffer(uint32_t bufferIndex);
+    void updatePushConstants(vk::CommandBuffer& cmdBuffer);
 
     void createSwapchainHierarchy();
     void deleteSwapchainHierarchy();
