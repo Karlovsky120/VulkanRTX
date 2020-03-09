@@ -6,7 +6,9 @@ vk::DeviceMemory& DeviceMemory::get() {
 
 // Find first free block with enough space when adjusted for alignment.
 // Any space lost at the start of the block due to alignment is added to the previous block
-std::pair<vk::DeviceMemory*, uint32_t> DeviceMemory::allocateBlock(uint32_t requestedSize, uint32_t alignment) {
+std::pair<vk::DeviceMemory*, uint32_t> DeviceMemory::allocateBlock(
+	size_t requestedSize,
+	size_t alignment) {
 
 	for (auto currentBlock = m_blocks.begin(); currentBlock != m_blocks.end(); ++currentBlock) {
 
@@ -57,7 +59,7 @@ void DeviceMemory::freeBlock(uint32_t freeOffset) {
 	}
 }
 
-DeviceMemory::DeviceMemory(vk::Device& logicalDevice, const uint32_t memoryType) :
+DeviceMemory::DeviceMemory(const vk::Device& logicalDevice, const uint32_t memoryType) :
 	m_logicalDevice(logicalDevice),
 	m_blocks(std::list<MemoryChunk>()) {
 

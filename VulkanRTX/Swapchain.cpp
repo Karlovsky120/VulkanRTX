@@ -1,130 +1,108 @@
 #include "Swapchain.h"
 
-#include "Surface.h"
+void Swapchain::updateSwapchain() {
+	const vk::SwapchainKHR oldSwapchain = *m_swapchain;
 
-#include <GLFW/glfw3.h>
+	vk::SurfaceCapabilitiesKHR surfaceCapabilities = m_physicalDevice.getSurfaceCapabilitiesKHR(m_surface);
+	if (surfaceCapabilities.currentExtent.width != -1) {
+		m_extent = surfaceCapabilities.currentExtent;
+	}
 
-vk::SwapchainKHR& Swapchain::get() {
-    return *m_swapchain;
+	uint32_t imageCount = surfaceCapabilities.minImageCount + 1;
+	if (surfaceCapabilities.maxImageCount > 0 && imageCount > surfaceCapabilities.maxImageCount) {
+		imageCount = surfaceCapabilities.maxImageCount;
+	}
+
+	if (imageCount != m_imageCount) {
+		throw std::runtime_error("Dynamic swapchain image number is not supported");
+	}
+
+	std::vector<vk::SurfaceFormatKHR> surfaceFormats = m_physicalDevice.getSurfaceFormatsKHR(m_surface);
+
+	m_colorFormat = surfaceFormats[0].format;
+	m_colorSpace = surfaceFormats[0].colorSpace;
+	for (const auto& availableFormat : surfaceFormats) {
+		if (availableFormat.format == vk::Format::eB8G8R8A8Srgb && availableFormat.colorSpace == vk::ColorSpaceKHR::eSrgbNonlinear) {
+			m_colorFormat = vk::Format::eB8G8R8A8Srgb;
+			m_colorSpace = vk::ColorSpaceKHR::eSrgbNonlinear;
+			break;
+		}
+	}
+
+	std::vector<vk::PresentModeKHR> presentModes = m_physicalDevice.getSurfacePresentModesKHR(m_surface);
+	vk::PresentModeKHR swapchainPresentMode = vk::PresentModeKHR::eFifo;
+	for (const auto& presentMode : presentModes) {
+		if (presentMode == vk::PresentModeKHR::eMailbox) {
+			swapchainPresentMode = vk::PresentModeKHR::eMailbox;
+			break;
+		}
+	}
+
+	m_createInfo.minImageCount = imageCount;
+	m_createInfo.imageFormat = m_colorFormat;
+	m_createInfo.imageColorSpace = m_colorSpace;
+	m_createInfo.imageExtent = { m_extent.width, m_extent.height };
+	m_createInfo.preTransform = surfaceCapabilities.currentTransform;
+	m_createInfo.oldSwapchain = oldSwapchain;
+
+	m_swapchain = m_logicalDevice.createSwapchainKHRUnique(m_createInfo);
+
+	if (oldSwapchain) {
+		m_imageViews.clear();
+	}
+
+	m_imageViewCreateInfo.format = m_colorFormat;
+
+	m_images = m_logicalDevice.getSwapchainImagesKHR(*m_swapchain);
+	for (vk::Image& image : m_images) {
+		m_imageViewCreateInfo.image = image;
+		m_imageViews.push_back(m_logicalDevice.createImageViewUnique(m_imageViewCreateInfo));
+	}
 }
 
-vk::Extent2D& Swapchain::getExtent() {
-    return m_extent;
+void Swapchain::updateFramebuffers(vk::RenderPass& renderPass) {
+	m_framebuffers.clear();
+
+	vk::FramebufferCreateInfo createInfo;
+	createInfo.renderPass = renderPass;
+	createInfo.attachmentCount = 1;
+	createInfo.width = m_extent.width;
+	createInfo.height = m_extent.height;
+	createInfo.layers = 1;
+
+	for (vk::UniqueImageView& imageView : m_imageViews) {
+		createInfo.pAttachments = &*imageView;
+		m_framebuffers.push_back(m_logicalDevice.createFramebufferUnique(createInfo));
+	}
 }
 
-vk::SurfaceFormatKHR& Swapchain::getFormat() {
-    return m_format;
-}
+Swapchain::Swapchain(vk::PhysicalDevice& physicalDevice,
+	vk::SurfaceKHR& surface,
+	vk::Device& logicalDevice,
+	vk::Queue& presentQueue) :
+	m_physicalDevice(physicalDevice),
+	m_surface(surface),
+	m_logicalDevice(logicalDevice),
+	m_presentQueue(presentQueue) {
 
-std::vector<vk::ImageView> Swapchain::getImageViews() {
-    return m_imageViews;
-}
+	m_createInfo.surface = m_surface;
+	m_createInfo.imageUsage = vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferDst;
+	m_createInfo.imageArrayLayers = 1;
+	m_createInfo.imageSharingMode = vk::SharingMode::eExclusive;
+	m_createInfo.compositeAlpha = vk::CompositeAlphaFlagBitsKHR::eOpaque;
+	m_createInfo.clipped = VK_TRUE;
 
-vk::SurfaceFormatKHR Swapchain::chooseFormat(std::vector<vk::SurfaceFormatKHR>& availableFormats) {
-    for (const auto& availableFormat : availableFormats) {
-        if (availableFormat.format == vk::Format::eB8G8R8A8Srgb && availableFormat.colorSpace == vk::ColorSpaceKHR::eSrgbNonlinear) {
-            return availableFormat;
-        }
-    }
+	m_imageViewCreateInfo.viewType = vk::ImageViewType::e2D;
+	m_imageViewCreateInfo.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
+	m_imageViewCreateInfo.subresourceRange.levelCount = 1;
+	m_imageViewCreateInfo.subresourceRange.layerCount = 1;
 
-    return availableFormats[0];
-}
+	vk::SurfaceCapabilitiesKHR surfaceCapabilities = m_physicalDevice.getSurfaceCapabilitiesKHR(m_surface);
 
-vk::PresentModeKHR Swapchain::choosePresentMode(std::vector<vk::PresentModeKHR>& availablePresentModes) {
-    for (const auto& availablePresentMode : availablePresentModes) {
-        if (availablePresentMode == vk::PresentModeKHR::eMailbox) {
-            m_presentMode = availablePresentMode;
-        }
-    }
+	m_imageCount = surfaceCapabilities.minImageCount + 1;
+	if (surfaceCapabilities.maxImageCount > 0 && m_imageCount > surfaceCapabilities.maxImageCount) {
+		m_imageCount = surfaceCapabilities.maxImageCount;
+	}
 
-    return vk::PresentModeKHR::eFifo;
-}
-
-vk::Extent2D Swapchain::chooseExtent(vk::SurfaceCapabilitiesKHR& capabilities) {
-    if (capabilities.currentExtent.width != UINT32_MAX) {
-        return capabilities.currentExtent;
-    }
-
-    int width;
-    int height;
-    glfwGetFramebufferSize(m_surface.getWindow(), &width, &height);
-
-    vk::Extent2D actualExtent = {
-        static_cast<uint32_t>(width),
-        static_cast<uint32_t>(height)
-    };
-
-    actualExtent.width = (std::max)(capabilities.minImageExtent.width, (std::min)(capabilities.maxImageExtent.width, actualExtent.width));
-    actualExtent.height = (std::max)(capabilities.minImageExtent.height, (std::min)(capabilities.maxImageExtent.height, actualExtent.height));
-
-    return actualExtent;
-}
-
-void Swapchain::createImageViews() {
-    for (size_t i = 0; i < m_images.size(); ++i) {
-        vk::ImageViewCreateInfo createInfo;
-        createInfo.image = m_images[i];
-        createInfo.viewType = vk::ImageViewType::e2D;
-        createInfo.format = m_format.format;
-
-        createInfo.components.r = vk::ComponentSwizzle::eIdentity;
-        createInfo.components.g = vk::ComponentSwizzle::eIdentity;
-        createInfo.components.b = vk::ComponentSwizzle::eIdentity;
-        createInfo.components.a = vk::ComponentSwizzle::eIdentity;
-
-        createInfo.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
-        createInfo.subresourceRange.baseMipLevel = 0;
-        createInfo.subresourceRange.levelCount = 1;
-        createInfo.subresourceRange.baseArrayLayer = 0;
-        createInfo.subresourceRange.layerCount = 1;
-
-        m_imageViews.push_back(m_logicalDevice.createImageView(createInfo));
-    }
-}
-
-Swapchain::Swapchain(vk::Device& logicalDevice, vk::PhysicalDevice& physicalDevice, Surface& surface) :
-    m_logicalDevice(logicalDevice),
-    m_surface(surface) {
-
-    vk::SurfaceKHR vkSurface = surface.get();
-    vk::SurfaceCapabilitiesKHR capabilities = physicalDevice.getSurfaceCapabilitiesKHR(vkSurface);
-
-    std::vector<vk::SurfaceFormatKHR> availableFormats = physicalDevice.getSurfaceFormatsKHR(vkSurface);
-    std::vector<vk::PresentModeKHR> availablePresentModes = physicalDevice.getSurfacePresentModesKHR(vkSurface);
-
-    m_format = chooseFormat(availableFormats);
-    m_presentMode = choosePresentMode(availablePresentModes);
-    m_extent = chooseExtent(capabilities);
-
-    uint32_t imageCount = capabilities.minImageCount + 1;
-    if (capabilities.maxImageCount > 0 && imageCount > capabilities.maxImageCount) {
-        imageCount = capabilities.maxImageCount;
-    }
-
-    vk::SwapchainCreateInfoKHR createInfo;
-    createInfo.surface = vkSurface;
-    createInfo.minImageCount = imageCount;
-    createInfo.imageFormat = m_format.format;
-    createInfo.imageColorSpace = m_format.colorSpace;
-    createInfo.imageExtent = m_extent;
-    createInfo.imageArrayLayers = 1;
-    createInfo.imageUsage = vk::ImageUsageFlagBits::eColorAttachment;
-    createInfo.imageSharingMode = vk::SharingMode::eExclusive;
-    createInfo.preTransform = capabilities.currentTransform;
-    createInfo.compositeAlpha = vk::CompositeAlphaFlagBitsKHR::eOpaque;
-    createInfo.presentMode = m_presentMode;
-    createInfo.clipped = VK_TRUE;
-
-    createInfo.oldSwapchain = nullptr;
-
-    m_swapchain = m_logicalDevice.createSwapchainKHRUnique(createInfo);
-    m_images = m_logicalDevice.getSwapchainImagesKHR(*m_swapchain);
-
-    createImageViews();
-}
-
-Swapchain::~Swapchain() {
-    for (const auto& imageView : m_imageViews) {
-        m_logicalDevice.destroyImageView(imageView);
-    }
+	updateSwapchain();
 }

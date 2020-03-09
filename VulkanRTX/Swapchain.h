@@ -4,35 +4,37 @@
 
 #include <vector>
 
-class Surface;
-
 class Swapchain {
 public:
-    vk::SwapchainKHR& get();
+	vk::UniqueSwapchainKHR m_swapchain;
+	std::vector<vk::UniqueFramebuffer> m_framebuffers;
+	
+	void updateSwapchain();
+	void updateFramebuffers(vk::RenderPass& renderPass);
 
-    vk::Extent2D& getExtent();
-    vk::SurfaceFormatKHR& getFormat();
-    std::vector<vk::ImageView> getImageViews();
+	Swapchain(vk::PhysicalDevice& physicalDevice,
+		vk::SurfaceKHR& surface,
+		vk::Device& logicalDevice,
+		vk::Queue& presentQueue);
 
-    Swapchain(vk::Device& logicalDevice, vk::PhysicalDevice& physicalDevice, Surface& surface);
-    ~Swapchain();
+	vk::Extent2D m_extent;
+	vk::Format m_colorFormat{ vk::Format::eUndefined };
+
+	uint32_t m_imageCount;
 
 private:
-    vk::UniqueSwapchainKHR m_swapchain;
+	vk::PhysicalDevice& m_physicalDevice;
+	vk::SurfaceKHR& m_surface;
+	vk::Device& m_logicalDevice;
+	vk::Queue& m_presentQueue;
+	uint32_t m_presentQueueIndex;
 
-    std::vector<vk::Image> m_images;
-    std::vector<vk::ImageView> m_imageViews;
+	std::vector<vk::Image> m_images;
+	std::vector<vk::UniqueImageView> m_imageViews;
 
-    vk::Extent2D m_extent;
-    vk::SurfaceFormatKHR m_format;
-    vk::PresentModeKHR m_presentMode;
+	vk::ColorSpaceKHR m_colorSpace{ vk::ColorSpaceKHR::eSrgbNonlinear };
 
-    vk::SurfaceFormatKHR chooseFormat(std::vector<vk::SurfaceFormatKHR>& availableFormats);
-    vk::PresentModeKHR choosePresentMode(std::vector<vk::PresentModeKHR>& availablePresentModes);
-    vk::Extent2D chooseExtent(vk::SurfaceCapabilitiesKHR& surfaceCapabilites);
-
-    void createImageViews();
-
-    Surface& m_surface;
-    vk::Device& m_logicalDevice;
+	vk::SwapchainCreateInfoKHR m_createInfo;
+	vk::ImageViewCreateInfo m_imageViewCreateInfo;
 };
+

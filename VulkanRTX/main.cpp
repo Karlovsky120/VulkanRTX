@@ -1,7 +1,8 @@
 #include "RTXApplication.h"
 
+#include <vulkan/vulkan.hpp>
+
 #include <iostream>
-#include <stdexcept>
 
 int main() {
     RTXApplication app;

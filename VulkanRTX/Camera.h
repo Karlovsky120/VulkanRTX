@@ -16,6 +16,8 @@ public:
 	void rotate(glm::vec3 rotation);
 	void rotate(float pitch, float yaw);
 
+	void updateProjectionMatrix(float aspect);
+
 	glm::mat4 getCameraMatrix();
 
 	glm::mat4 getViewMatrix();
@@ -29,6 +31,11 @@ public:
 		   float zFar = 10.0f);
 
 private:
+	float m_fov;
+	float m_aspect;
+	float m_zNear;
+	float m_zFar;
+
 	glm::vec3 m_position;
 	glm::quat m_rotation;
 	glm::mat4 m_projection;

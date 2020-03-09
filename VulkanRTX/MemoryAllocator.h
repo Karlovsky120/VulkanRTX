@@ -16,21 +16,33 @@ struct AllocId {
 
 class MemoryAllocator {
 public:
-	static void init(vk::PhysicalDevice* physicalDevice, vk::Device* logicalDevice);
-	static void deinit();
+	static void init(
+		vk::Device& logicalDevice,
+		const vk::PhysicalDeviceMemoryProperties& m_memoryProperties);
+	static MemoryAllocator* getMemoryAllocator();
 
-	static AllocId allocate(vk::MemoryRequirements& requirements, vk::MemoryPropertyFlags memoryFlags);
-	static void free(AllocId& allocId);
+	AllocId allocate(vk::MemoryRequirements& requirements,
+		vk::MemoryPropertyFlags memoryFlags);
+
+	void free(AllocId& allocId);
+	void freeAllMemory();
+
+	static void destroy();
+
+	MemoryAllocator(MemoryAllocator const&) = delete;
+	void operator=(MemoryAllocator const&) = delete;
 
 private:
-	static bool initialized;
+	MemoryAllocator(vk::Device& logicalDevice,
+		const vk::PhysicalDeviceMemoryProperties& memoryProperties);
 
-	static vk::PhysicalDeviceMemoryProperties m_memoryProperties;
+	uint32_t findMemoryType(uint32_t typeFilter,
+		vk::MemoryPropertyFlags propertyFlags);
 
-	static uint32_t findMemoryType(uint32_t typeFilter, vk::MemoryPropertyFlags propertyFlags);
+	std::map<uint32_t, std::vector<DeviceMemory>> m_memoryTable;
+	const vk::PhysicalDeviceMemoryProperties& m_memoryProperties;
+	const vk::Device& m_logicalDevice;
 
-	static std::map<uint32_t, std::vector<DeviceMemory>> m_memoryTable;
-
-	static vk::Device* m_logicalDevice;
+	static MemoryAllocator* instance;
 };
 

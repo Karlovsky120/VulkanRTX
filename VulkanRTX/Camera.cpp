@@ -49,6 +49,11 @@ void Camera::rotate(float pitch, float yaw) {
 	m_rightVector = glm::normalize(glm::cross(m_forwardVector, glm::vec3(0.0f, -1.0f, 0.0f)));
 }
 
+void Camera::updateProjectionMatrix(float aspect) {
+	m_aspect = aspect;
+	m_projection = glm::scale(glm::perspective(glm::radians(m_fov), m_aspect, m_zNear, m_zFar), glm::vec3(1.0f, 1.0f, -1.0f));
+}
+
 glm::mat4 Camera::getCameraMatrix() {
 	return m_projection * getViewMatrix();
 }
@@ -73,8 +78,12 @@ Camera::Camera(glm::vec3 position,
 			   float zNear,
 			   float zFar) :
 	m_position(position),
-	m_rotation(rotation) {
+	m_rotation(rotation),
+	m_fov(fov),
+	m_aspect(aspect),
+	m_zNear(zNear),
+	m_zFar(zFar) {
 
 	// Perspective matrix flips the Z coordinate, so it needs to be flipped back.
-	m_projection = glm::scale(glm::perspective(glm::radians(fov), aspect, zNear, zFar), glm::vec3(1.0f, 1.0f, -1.0f));
+	m_projection = glm::scale(glm::perspective(glm::radians(m_fov), m_aspect, m_zNear, m_zFar), glm::vec3(1.0f, 1.0f, -1.0f));
 }

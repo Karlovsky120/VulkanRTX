@@ -1,6 +1,5 @@
 #include "Buffer.h"
 
-#include "LogicalDevice.h"
 #include "MemoryAllocator.h"
 
 vk::Buffer& Buffer::get() {
@@ -15,22 +14,27 @@ const vk::MemoryRequirements& Buffer::getMemoryRequirements() const {
 	return m_memoryRequirements;
 }
 
-Buffer::Buffer(vk::Device& logicalDevice, const uint32_t size, const vk::BufferUsageFlags usageFlags, const vk::MemoryPropertyFlags memoryFlags) :
+Buffer::Buffer(
+	vk::Device& logicalDevice,
+	const vk::DeviceSize size,
+	const vk::BufferUsageFlags usageFlags,
+	const vk::MemoryPropertyFlags memoryFlags) :
+
 	m_logicalDevice(logicalDevice),
 	m_memoryFlags(memoryFlags) {
 
 	vk::BufferCreateInfo bufferInfo;
-	bufferInfo.size = vk::DeviceSize(size);
+	bufferInfo.size = size;
 	bufferInfo.usage = usageFlags;
 	bufferInfo.sharingMode = vk::SharingMode::eExclusive;
 
-	m_buffer = logicalDevice.createBufferUnique(bufferInfo);
+	m_buffer = m_logicalDevice.createBufferUnique(bufferInfo);
 
-	m_memoryRequirements = logicalDevice.getBufferMemoryRequirements(*m_buffer);
+	m_memoryRequirements = m_logicalDevice.getBufferMemoryRequirements(*m_buffer);
 
-	m_allocId = MemoryAllocator::allocate(m_memoryRequirements, memoryFlags);
+	m_allocId = MemoryAllocator::getMemoryAllocator()->allocate(m_memoryRequirements, m_memoryFlags);
 
-	logicalDevice.bindBufferMemory(*m_buffer, *m_allocId.memory, m_allocId.offset);
+	m_logicalDevice.bindBufferMemory(*m_buffer, *m_allocId.memory, m_allocId.offset);
 }
 
 void Buffer::copyBuffersToGPU(vk::CommandBuffer& commandBuffer,
@@ -41,4 +45,8 @@ void Buffer::copyBuffersToGPU(vk::CommandBuffer& commandBuffer,
 	for (int i = 0; i < bufferCopies.size(); ++i) {
 		commandBuffer.copyBuffer(*src[i], *dst[i], bufferCopies[i]);
 	}
+}
+
+Buffer::~Buffer() {
+	MemoryAllocator::getMemoryAllocator()->free(m_allocId);
 }

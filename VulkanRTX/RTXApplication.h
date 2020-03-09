@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Buffer.h"
-#include "Camera.h"
+/*#include "Buffer.h"
+
 #include "CommandBuffer.h"
 #include "CommandPool.h"
 #include "DescriptorPool.h"
@@ -11,15 +11,20 @@
 #include "Framebuffers.h"
 #include "Instance.h"
 #include "LogicalDevice.h"
-#include "Mesh.h"
 #include "PhysicalDevice.h"
-#include "Pipeline.h"
+
 #include "PipelineLayout.h"
 #include "RenderPass.h"
-#include "Surface.h"
+#include "Surface.h"*/
+
+#include "Camera.h"
+#include "Mesh.h"
+#include "Pipeline.h"
 #include "Swapchain.h"
+#include "VulkanContext.h"
 
 #include <vulkan/vulkan.hpp>
+#include <glm/mat4x4.hpp>
 
 #include <chrono>
 #include <memory>
@@ -34,8 +39,32 @@ public:
     ~RTXApplication();
 
 private:
-    const uint32_t WIDTH = 720; // 1280;
-    const uint32_t HEIGHT = 720;
+    struct UniformBufferObject {
+        glm::mat4 model;
+    };
+
+    struct SwapchainFrameInfo {
+        vk::UniqueDescriptorSet descriptorSet;
+        vk::DescriptorBufferInfo descriptorBufferInfo;
+        vk::WriteDescriptorSet writeDescriptorSet;
+        vk::UniqueCommandBuffer frameBuffer;
+        vk::CommandBufferBeginInfo beginInfo;
+        vk::RenderPassBeginInfo renderPassBeginInfo;
+        vk::ClearValue clearColor;
+        vk::Fence imageInUse = vk::Fence();
+    };
+
+    std::vector<vk::UniqueDescriptorSet> swapchainDescriptorSets;
+    std::vector<vk::UniqueCommandBuffer> swapchainCmdBuffers;
+
+    struct InFlightFrameInfo {
+        vk::UniqueSemaphore imageAvailableSemaphore;
+        vk::UniqueSemaphore renderCompleteSemaphore;
+        vk::UniqueFence inFlightFence;
+    };
+
+    int windowWidth = 1280;
+    int windowHeight = 720;
 
     const uint32_t MAX_FRAMES_IN_FLIGHT = 2;
     std::string windowTitle = "Vulkan shenanigans";
@@ -43,84 +72,60 @@ private:
     Camera camera;
 
     std::chrono::time_point<std::chrono::high_resolution_clock> time;
-    uint32_t skip;
+    float skip;
     float frameTime;
+    const float velocity = 4.0f;
 
     GLFWwindow* window;
 
-    std::unique_ptr<Instance> instance;
-    std::unique_ptr<Surface> surface;
-    std::unique_ptr<PhysicalDevice> physicalDevice;
-    std::unique_ptr<LogicalDevice> logicalDevice;
+    VulkanContext vkCtx;
     std::unique_ptr<Swapchain> swapchain;
-    std::unique_ptr<DescriptorSetLayout> descriptorSetLayout;
-    std::unique_ptr<DescriptorPool> descriptorPool;
-    std::unique_ptr<DescriptorSets> descriptorSets;
-    std::unique_ptr<PipelineLayout> pipelineLayout;
     std::unique_ptr<Pipeline> pipeline;
-    std::unique_ptr<Framebuffers> framebuffers;
-    std::unique_ptr<RenderPass> renderPass;
-    std::unique_ptr<CommandPool> graphicsCommandPool;
-    std::unique_ptr<CommandPool> transferCommandPool;
 
-    std::unique_ptr<CommandBuffer> transferBuffer;
+    std::unique_ptr<Buffer> uniformBuffer;
 
-    std::vector<std::unique_ptr<Buffer>> uniformBuffers;
-    std::vector<std::unique_ptr<CommandBuffer>> commandBuffers;
+    vk::UniqueDescriptorSetLayout descriptorSetLayout;
+    vk::UniqueDescriptorPool descriptorPool;
 
-    std::vector<vk::UniqueSemaphore> imageAvailableSemaphores;
-    std::vector<vk::UniqueSemaphore> renderFinishedSemaphores;
-    std::vector<vk::UniqueFence> inFlightFences;
-    std::vector<vk::Fence> imagesInFlight;
+    vk::UniqueCommandPool graphicsCmdPool;
+
+    vk::UniqueCommandPool transferCmdPool;
+    vk::UniqueCommandBuffer transferCmdBuffer;
+
+    std::vector<SwapchainFrameInfo> swapchainFrameInfos;
+    std::vector<InFlightFrameInfo> inFlightFrameInfos;
 
     std::unique_ptr<Mesh> object;
 
-    bool disableInput = false;
+    vk::UniqueSemaphore flushStagingSemaphore;
 
     double cursorX;
     double cursorY;
 
-    size_t currentFrame = 0;
+    uint32_t currentFrame = 0;
     bool framebufferResized = false;
 
     void initVulkan();
     void initWindow();
     void initOther();
     void mainLoop();
-    void drawFrame();
 
+    void flushStagingBuffers();
+    void generateSwapchainFrameInfo(const uint32_t index);
+
+    void updateSwapchainStack();
+    void updateSwapchainFrameInfo(const uint32_t index);
+    void recordCommandBuffer(const uint32_t index);
+
+    void resetCommandBuffer(const uint32_t index);
+
+    void calculateTime();
+    void updateFPS();
     void processMouse();
     void processKeyboard();
-
-    void updateUniformBuffer(uint32_t bufferIndex);
-    void updatePushConstants(vk::CommandBuffer& cmdBuffer);
-
-    void createSwapchainHierarchy();
-    void deleteSwapchainHierarchy();
-
-    void recreateSwapchainHierarchy();
+    uint32_t acquireNextImage();
+    void updateUniformBuffer();
+    void drawFrame(const uint32_t swapchainIndex);
 
     static void framebufferSizeCallback(GLFWwindow* window, int width, int height);
-
-    template <class T>
-    void stageDataUploadToGPU(std::unique_ptr<Buffer>& hostBuffer,
-                              std::unique_ptr<Buffer>& deviceBuffer,
-                              vk::BufferCopy& bufferCopy,
-                              vk::BufferUsageFlags usageFlags,
-                              const std::vector<T>& data) {
-
-        uint32_t sizeInBytes = data.size() * sizeof(T);
-
-        hostBuffer = logicalDevice->createBuffer(sizeInBytes,
-                                                 usageFlags | vk::BufferUsageFlagBits::eTransferSrc,
-                                                 vk::MemoryPropertyFlagBits::eHostVisible);
-        hostBuffer->copyToBuffer(data);
-        deviceBuffer = logicalDevice->createBuffer(sizeInBytes,
-                                                   usageFlags | vk::BufferUsageFlagBits::eTransferDst,
-                                                   vk::MemoryPropertyFlagBits::eDeviceLocal);
-
-        bufferCopy.srcOffset = 0;
-        bufferCopy.srcOffset = 0;
-        bufferCopy.size = sizeInBytes;
-    }
 };

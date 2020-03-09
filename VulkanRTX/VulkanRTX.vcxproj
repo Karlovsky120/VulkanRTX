@@ -141,53 +141,29 @@ for %%f in (*.vert *.tesc *.tese *.geom *.frag *.comp) do %VK_SDK_PATH%\Bin\glsl
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Buffer.cpp" />
     <ClCompile Include="Camera.cpp" />
-    <ClCompile Include="CommandBuffer.cpp" />
-    <ClCompile Include="CommandPool.cpp" />
-    <ClCompile Include="DescriptorPool.cpp" />
     <ClCompile Include="DescriptorSets.cpp" />
-    <ClCompile Include="DescriptorSetLayout.cpp" />
     <ClCompile Include="DeviceMemory.cpp" />
-    <ClCompile Include="Framebuffers.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MemoryAllocator.cpp" />
     <ClCompile Include="Mesh.cpp" />
-    <ClCompile Include="PhysicalDevice.cpp" />
-    <ClCompile Include="PipelineLayout.cpp" />
-    <ClCompile Include="RTXApplication.cpp" />
-    <ClCompile Include="LogicalDevice.cpp" />
-    <ClCompile Include="Instance.cpp" />
     <ClCompile Include="Pipeline.cpp" />
-    <ClCompile Include="RenderPass.cpp" />
-    <ClCompile Include="ShaderModule.cpp" />
-    <ClCompile Include="Surface.cpp" />
+    <ClCompile Include="RTXApplication.cpp" />
     <ClCompile Include="Swapchain.cpp" />
-    <ClCompile Include="Buffer.cpp" />
-    <ClCompile Include="VertexInputDescription.cpp" />
+    <ClCompile Include="VulkanContext.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Buffer.h" />
     <ClInclude Include="Camera.h" />
-    <ClInclude Include="CommandBuffer.h" />
-    <ClInclude Include="CommandPool.h" />
-    <ClInclude Include="DescriptorPool.h" />
     <ClInclude Include="DescriptorSets.h" />
-    <ClInclude Include="DescriptorSetLayout.h" />
     <ClInclude Include="DeviceMemory.h" />
-    <ClInclude Include="Framebuffers.h" />
     <ClInclude Include="MemoryAllocator.h" />
     <ClInclude Include="Mesh.h" />
-    <ClInclude Include="PhysicalDevice.h" />
-    <ClInclude Include="PipelineLayout.h" />
-    <ClInclude Include="RTXApplication.h" />
-    <ClInclude Include="LogicalDevice.h" />
-    <ClInclude Include="Instance.h" />
     <ClInclude Include="Pipeline.h" />
-    <ClInclude Include="RenderPass.h" />
-    <ClInclude Include="ShaderModule.h" />
-    <ClInclude Include="Surface.h" />
+    <ClInclude Include="RTXApplication.h" />
     <ClInclude Include="Swapchain.h" />
-    <ClInclude Include="Buffer.h" />
-    <ClInclude Include="VertexInputDescription.h" />
+    <ClInclude Include="VulkanContext.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\fragmentShader.frag">

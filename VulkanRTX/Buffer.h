@@ -20,7 +20,7 @@ public:
 	void copyToBuffer(std::vector<T> data) {
 		assert(m_memoryFlags & vk::MemoryPropertyFlagBits::eHostVisible);
 
-		uint32_t sizeInBytes = data.size() * sizeof(T);
+		uint32_t sizeInBytes = static_cast<uint32_t>(data.size() * sizeof(T));
 
 		void* bufferData = m_logicalDevice.mapMemory(*m_allocId.memory,
 													 m_allocId.offset,
@@ -37,15 +37,17 @@ public:
 							std::vector<vk::BufferCopy>& bufferCopies);
 
 	Buffer(vk::Device& logicalDevice,
-		   const uint32_t size,
+		   const vk::DeviceSize size,
 		   const vk::BufferUsageFlags usageFlags,
 		   const vk::MemoryPropertyFlags memoryFlags);
 
+	~Buffer();
+
 private:
 	vk::UniqueBuffer m_buffer;
+	AllocId m_allocId;
 
 	vk::MemoryPropertyFlags m_memoryFlags;
-	AllocId m_allocId;
 	vk::MemoryRequirements m_memoryRequirements;
 
 	vk::Device& m_logicalDevice;

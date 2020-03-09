@@ -5,8 +5,8 @@
 #include <list>
 
 struct MemoryChunk {
-	uint32_t offset;
-	uint32_t size;
+	size_t offset;
+	size_t size;
 	bool free;
 };
 
@@ -14,9 +14,12 @@ class DeviceMemory {
 public:
 	vk::DeviceMemory& get();
 
-	DeviceMemory(vk::Device& logicalDevice, const uint32_t memoryType);
+	DeviceMemory(const vk::Device& logicalDevice, const uint32_t memoryType);
 
-	std::pair<vk::DeviceMemory*, uint32_t> allocateBlock(uint32_t size, uint32_t alignment);
+	std::pair<vk::DeviceMemory*, uint32_t> allocateBlock(
+		size_t size,
+		size_t alignment);
+
 	void freeBlock(uint32_t offset);
 
 private:
@@ -30,6 +33,6 @@ private:
 
 	std::list<MemoryChunk> m_blocks;
 
-	vk::Device& m_logicalDevice;
+	const vk::Device& m_logicalDevice;
 };
 
