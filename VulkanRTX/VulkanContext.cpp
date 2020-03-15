@@ -264,7 +264,7 @@ vk::UniqueCommandPool VulkanContext::createCommandPool(const uint32_t queueFamil
     return m_logicalDevice->createCommandPoolUnique(poolInfo);
 }
 
-std::vector<vk::UniqueCommandBuffer> VulkanContext::createCommandBuffer(
+std::vector<vk::UniqueCommandBuffer> VulkanContext::createCommandBuffers(
     vk::CommandPool& commandPool,
     const uint32_t count) const {
 
@@ -274,6 +274,11 @@ std::vector<vk::UniqueCommandBuffer> VulkanContext::createCommandBuffer(
     allocInfo.commandBufferCount = count;
 
     return m_logicalDevice->allocateCommandBuffersUnique(allocInfo);
+}
+
+vk::UniqueCommandBuffer VulkanContext::createCommandBuffer(
+    vk::CommandPool& commandPool) const {
+    return std::move(createCommandBuffers(commandPool, 1)[0]);
 }
 
 vk::UniqueSemaphore VulkanContext::createTimelineSemaphore(const uint32_t initialValue) const {

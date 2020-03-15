@@ -28,9 +28,11 @@ public:
         const std::vector<vk::DescriptorSetLayout>& setLayouts) const;
 
     vk::UniqueCommandPool createCommandPool(const uint32_t queueFamilyIndex) const;
-    std::vector<vk::UniqueCommandBuffer> createCommandBuffer(
+    std::vector<vk::UniqueCommandBuffer> createCommandBuffers(
         vk::CommandPool& commandPool,
         const uint32_t count) const;
+    vk::UniqueCommandBuffer createCommandBuffer(
+        vk::CommandPool& commandPool) const;
 
     vk::UniqueSemaphore createTimelineSemaphore(const uint32_t initialValue = 0) const;
 

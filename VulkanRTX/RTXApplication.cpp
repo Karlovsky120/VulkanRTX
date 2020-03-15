@@ -38,7 +38,7 @@ void RTXApplication::initVulkan() {
 
     swapchain->updateFramebuffers(*pipeline->m_renderPass);
 
-    transferCmdBuffer = std::move(vkCtx.createCommandBuffer(*vkCtx.m_transferPool, 1)[0]);
+    transferCmdBuffer = vkCtx.createCommandBuffer(*vkCtx.m_transferPool);
 
     const std::vector<float> vertices = {
         -1, -1, -1, 0, 0, 1,
@@ -77,7 +77,7 @@ void RTXApplication::initVulkan() {
     
     std::vector<vk::DescriptorSetLayout> layouts(swapchain->m_imageCount, *descriptorSetLayout);
     std::vector<vk::UniqueDescriptorSet> descriptorSets = vkCtx.createDescriptorSets(*descriptorPool, layouts);
-    std::vector<vk::UniqueCommandBuffer> cmdBuffers = vkCtx.createCommandBuffer(*vkCtx.m_graphicsPool, swapchainFrameInfos.size());
+    std::vector<vk::UniqueCommandBuffer> cmdBuffers = vkCtx.createCommandBuffers(*vkCtx.m_graphicsPool, swapchainFrameInfos.size());
 
     for (size_t i = 0; i < swapchainFrameInfos.size(); ++i) {
         swapchainFrameInfos[i].descriptorSet = std::move(descriptorSets[i]);
