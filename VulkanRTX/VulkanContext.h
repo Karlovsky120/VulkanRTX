@@ -54,6 +54,8 @@ public:
     vk::Queue m_transferQueue;
     vk::Queue m_presentQueue;
 
+    bool m_rayTracingSupported = false;
+
 #ifdef ENABLE_VALIDATION
 private:
     vk::DebugUtilsMessengerEXT m_debugMessenger;

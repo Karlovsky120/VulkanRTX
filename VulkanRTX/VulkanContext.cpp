@@ -87,12 +87,23 @@ void VulkanContext::createPhysicalDevice() {
         m_deviceProperties = m_physicalDevice.getProperties();
         m_deviceFeatures = m_physicalDevice.getFeatures();
         m_deviceMemoryProperties = m_physicalDevice.getMemoryProperties();
-        m_rayTracingProperties =
-            m_physicalDevice.getProperties2<vk::PhysicalDeviceProperties2,
-            vk::PhysicalDeviceRayTracingPropertiesNV>().get<vk::PhysicalDeviceRayTracingPropertiesNV>();
+
+        std::vector<vk::ExtensionProperties> extensionProperties = m_physicalDevice.enumerateDeviceExtensionProperties();
+
+        bool rayTracingSupported = false;
+        for (vk::ExtensionProperties extensionProperty : extensionProperties) {
+            if (extensionProperty.extensionName == VK_NV_RAY_TRACING_EXTENSION_NAME) {
+                rayTracingSupported = true;
+                m_rayTracingProperties =
+                    m_physicalDevice.getProperties2<vk::PhysicalDeviceProperties2,
+                    vk::PhysicalDeviceRayTracingPropertiesNV>().get<vk::PhysicalDeviceRayTracingPropertiesNV>();
+                break;
+            }
+        }
 
         if (m_deviceProperties.deviceType == vk::PhysicalDeviceType::eDiscreteGpu) {
             m_physicalDevice = currentPhysicalDevice;
+            m_rayTracingSupported = rayTracingSupported;
             break;
         }
     }
@@ -172,10 +183,13 @@ void VulkanContext::createLogicalDevice() {
     deviceCreateInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
     deviceCreateInfo.pNext = &deviceFeatures;
 
-    const std::vector<const char*> deviceExtensions = {
+    std::vector<const char*> deviceExtensions = {
         VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-        VK_NV_RAY_TRACING_EXTENSION_NAME
     };
+
+    if (m_rayTracingSupported) {
+        deviceExtensions.push_back(VK_NV_RAY_TRACING_EXTENSION_NAME);
+    }
 
     deviceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size());
     deviceCreateInfo.ppEnabledExtensionNames = deviceExtensions.data();
