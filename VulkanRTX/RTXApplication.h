@@ -87,9 +87,6 @@ private:
     vk::UniqueDescriptorSetLayout descriptorSetLayout;
     vk::UniqueDescriptorPool descriptorPool;
 
-    vk::UniqueCommandPool graphicsCmdPool;
-
-    vk::UniqueCommandPool transferCmdPool;
     vk::UniqueCommandBuffer transferCmdBuffer;
 
     std::vector<SwapchainFrameInfo> swapchainFrameInfos;

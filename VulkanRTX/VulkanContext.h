@@ -17,6 +17,7 @@ public:
     void createSurface(GLFWwindow* window);
     void createPhysicalDevice();
     void createLogicalDevice();
+    void createCommandPools();
 
     void initContext(GLFWwindow* window);
 
@@ -53,6 +54,9 @@ public:
     vk::Queue m_graphicsQueue;
     vk::Queue m_transferQueue;
     vk::Queue m_presentQueue;
+
+    vk::UniqueCommandPool m_transferPool;
+    vk::UniqueCommandPool m_graphicsPool;
 
     bool m_rayTracingSupported = false;
 

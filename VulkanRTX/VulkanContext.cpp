@@ -203,11 +203,17 @@ void VulkanContext::createLogicalDevice() {
     m_presentQueue = m_logicalDevice->getQueue(m_presentQueueIndex, 0);
 }
 
+void VulkanContext::createCommandPools() {
+    m_transferPool = createCommandPool(m_transferQueueIndex);
+    m_graphicsPool = createCommandPool(m_graphicsQueueIndex);
+}
+
 void VulkanContext::initContext(GLFWwindow* window) {
     createInstance();
     createSurface(window);
     createPhysicalDevice();
     createLogicalDevice();
+    createCommandPools();
 }
 
 vk::UniqueDescriptorPool VulkanContext::createDescriptorPool(const uint32_t descriptorSetCount) const {

@@ -38,8 +38,7 @@ void RTXApplication::initVulkan() {
 
     swapchain->updateFramebuffers(*pipeline->m_renderPass);
 
-    transferCmdPool = vkCtx.createCommandPool(vkCtx.m_transferQueueIndex);
-    transferCmdBuffer = std::move(vkCtx.createCommandBuffer(*transferCmdPool, 1)[0]);
+    transferCmdBuffer = std::move(vkCtx.createCommandBuffer(*vkCtx.m_transferPool, 1)[0]);
 
     const std::vector<float> vertices = {
         -1, -1, -1, 0, 0, 1,
@@ -73,13 +72,12 @@ void RTXApplication::initVulkan() {
         vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
 
     descriptorPool = vkCtx.createDescriptorPool(swapchain->m_imageCount);
-    graphicsCmdPool = vkCtx.createCommandPool(vkCtx.m_graphicsQueueIndex);
 
     swapchainFrameInfos.resize(swapchain->m_imageCount);
     
     std::vector<vk::DescriptorSetLayout> layouts(swapchain->m_imageCount, *descriptorSetLayout);
     std::vector<vk::UniqueDescriptorSet> descriptorSets = vkCtx.createDescriptorSets(*descriptorPool, layouts);
-    std::vector<vk::UniqueCommandBuffer> cmdBuffers = vkCtx.createCommandBuffer(*graphicsCmdPool, swapchainFrameInfos.size());
+    std::vector<vk::UniqueCommandBuffer> cmdBuffers = vkCtx.createCommandBuffer(*vkCtx.m_graphicsPool, swapchainFrameInfos.size());
 
     for (size_t i = 0; i < swapchainFrameInfos.size(); ++i) {
         swapchainFrameInfos[i].descriptorSet = std::move(descriptorSets[i]);
