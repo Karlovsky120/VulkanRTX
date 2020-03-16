@@ -8,14 +8,13 @@
 
 class Mesh {
 public:
-	Mesh(vk::Device& logicalDevice,
-		 std::vector<float> vertices,
-		 std::vector<uint16_t> indices,
-		 glm::vec3 position = glm::vec3(0.0f),
-		 glm::vec3 rotation = glm::vec3(0.0f),
-		 glm::vec3 scale = glm::vec3(1.0f));
-
-	void recordUploadToGPU(vk::CommandBuffer& transferBuffer);
+	Mesh(
+		vk::Device& logicalDevice,
+		std::vector<float> vertices,
+		std::vector<uint16_t> indices,
+		glm::vec3 position = glm::vec3(0.0f),
+		glm::vec3 rotation = glm::vec3(0.0f),
+		glm::vec3 scale = glm::vec3(1.0f));
 
 	vk::Buffer& getVertexBuffer();
 	uint32_t getVertextCount();
@@ -29,8 +28,6 @@ public:
 	glm::mat4 getMeshMatrix();
 
 private:
-	Buffer m_hostVertexBuffer;
-	Buffer m_hostIndexBuffer;
 	Buffer m_deviceVertexBuffer;
 	Buffer m_deviceIndexBuffer;
 	std::vector<float> m_vertices;

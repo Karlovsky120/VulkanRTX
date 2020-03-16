@@ -19,7 +19,7 @@ public:
 	static void init(
 		vk::Device& logicalDevice,
 		const vk::PhysicalDeviceMemoryProperties& m_memoryProperties);
-	static MemoryAllocator* getMemoryAllocator();
+	static MemoryAllocator* get();
 
 	AllocId allocate(vk::MemoryRequirements& requirements,
 		vk::MemoryPropertyFlags memoryFlags);

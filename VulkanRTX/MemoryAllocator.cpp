@@ -9,18 +9,18 @@ void MemoryAllocator::init(
     instance = new MemoryAllocator(logicalDevice, memoryProperties);
 }
 
-MemoryAllocator* MemoryAllocator::getMemoryAllocator() {
+MemoryAllocator* MemoryAllocator::get() {
     return instance;
 }
 
 AllocId MemoryAllocator::allocate(vk::MemoryRequirements& requirements, vk::MemoryPropertyFlags memoryFlags) {
-    uint32_t hostMemoryType = findMemoryType(requirements.memoryTypeBits, memoryFlags);
+    uint32_t deviceMemoryType = findMemoryType(requirements.memoryTypeBits, memoryFlags);
 
-    auto it = m_memoryTable.find(hostMemoryType);
+    auto it = m_memoryTable.find(deviceMemoryType);
 
     if (it == m_memoryTable.end()) {
-        m_memoryTable.insert(std::pair<uint32_t, std::vector<DeviceMemory>>(hostMemoryType, std::vector<DeviceMemory>()));
-        it = m_memoryTable.find(hostMemoryType);
+        m_memoryTable.insert(std::pair<uint32_t, std::vector<DeviceMemory>>(deviceMemoryType, std::vector<DeviceMemory>()));
+        it = m_memoryTable.find(deviceMemoryType);
     }
 
     std::vector<DeviceMemory>& deviceMemories = it->second;
@@ -31,16 +31,16 @@ AllocId MemoryAllocator::allocate(vk::MemoryRequirements& requirements, vk::Memo
     for (auto deviceMemory = deviceMemories.begin(); deviceMemory != deviceMemories.end(); ++deviceMemory) {
         memoryData = deviceMemory->allocateBlock(requirements.size, requirements.alignment);
         if (memoryData.second != -1) {
-            return AllocId{memoryData.first, requirements.memoryTypeBits, chunkIndex, memoryData.second};
+            return AllocId{memoryData.first, deviceMemoryType, chunkIndex, memoryData.second};
         }
         ++chunkIndex;
     }
 
-    deviceMemories.push_back(DeviceMemory(m_logicalDevice, hostMemoryType));
+    deviceMemories.push_back(DeviceMemory(m_logicalDevice, deviceMemoryType));
 
     memoryData = deviceMemories.back().allocateBlock(requirements.size, requirements.alignment);
 
-    return AllocId{memoryData.first, requirements.memoryTypeBits, chunkIndex, memoryData.second};
+    return AllocId{memoryData.first, deviceMemoryType, chunkIndex, memoryData.second};
 }
 
 void MemoryAllocator::free(AllocId& allocId) {

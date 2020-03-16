@@ -209,17 +209,11 @@ void VulkanContext::createLogicalDevice() {
     m_presentQueue = m_logicalDevice->getQueue(m_presentQueueIndex, 0);
 }
 
-void VulkanContext::createCommandPools() {
-    m_transferPool = createCommandPool(m_transferQueueIndex);
-    m_graphicsPool = createCommandPool(m_graphicsQueueIndex);
-}
-
 void VulkanContext::initContext(GLFWwindow* window) {
     createInstance();
     createSurface(window);
     createPhysicalDevice();
     createLogicalDevice();
-    createCommandPools();
 }
 
 vk::UniqueDescriptorPool VulkanContext::createDescriptorPool(const uint32_t descriptorSetCount) const {
@@ -260,31 +254,6 @@ std::vector<vk::UniqueDescriptorSet> VulkanContext::createDescriptorSets(
     allocInfo.pSetLayouts = setLayouts.data();
 
     return  m_logicalDevice->allocateDescriptorSetsUnique(allocInfo);
-}
-
-vk::UniqueCommandPool VulkanContext::createCommandPool(const uint32_t queueFamilyIndex) const {
-    vk::CommandPoolCreateInfo poolInfo;
-    poolInfo.queueFamilyIndex = queueFamilyIndex;
-    poolInfo.flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer;
-
-    return m_logicalDevice->createCommandPoolUnique(poolInfo);
-}
-
-std::vector<vk::UniqueCommandBuffer> VulkanContext::createCommandBuffers(
-    vk::CommandPool& commandPool,
-    const uint32_t count) const {
-
-    vk::CommandBufferAllocateInfo allocInfo;
-    allocInfo.commandPool = commandPool;
-    allocInfo.level = vk::CommandBufferLevel::ePrimary;
-    allocInfo.commandBufferCount = count;
-
-    return m_logicalDevice->allocateCommandBuffersUnique(allocInfo);
-}
-
-vk::UniqueCommandBuffer VulkanContext::createCommandBuffer(
-    vk::CommandPool& commandPool) const {
-    return std::move(createCommandBuffers(commandPool, 1)[0]);
 }
 
 vk::UniqueSemaphore VulkanContext::createTimelineSemaphore(const uint32_t initialValue) const {

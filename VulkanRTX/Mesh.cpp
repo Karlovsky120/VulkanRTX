@@ -1,5 +1,7 @@
 #include "Mesh.h"
 
+#include "CmdBufferAllocator.h"
+
 Mesh::Mesh(vk::Device& logicalDevice,
 		   std::vector<float> vertices,
 		   std::vector<uint16_t> indices,
@@ -11,14 +13,6 @@ Mesh::Mesh(vk::Device& logicalDevice,
 	m_position(position),
 	m_rotation(rotation),
 	m_scale(scale),
-	m_hostVertexBuffer(logicalDevice,
-					   sizeof(float) * vertices.size(),
-		               vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eTransferSrc,
-					   vk::MemoryPropertyFlagBits::eHostVisible),
-	m_hostIndexBuffer(logicalDevice,
-					  sizeof(uint16_t) * indices.size(),
-		              vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eTransferSrc,
-					  vk::MemoryPropertyFlagBits::eHostVisible),
 	m_deviceVertexBuffer(logicalDevice,
 						 sizeof(float) * vertices.size(),
 						 vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer,
@@ -28,24 +22,8 @@ Mesh::Mesh(vk::Device& logicalDevice,
 						 vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eIndexBuffer,
 						 vk::MemoryPropertyFlagBits::eDeviceLocal) {
 
-	m_hostVertexBuffer.copyToBuffer(vertices);
-	m_hostIndexBuffer.copyToBuffer(indices);
-}
-
-void Mesh::recordUploadToGPU(vk::CommandBuffer& transferBuffer) {
-	vk::BufferCopy bufferCopy;
-
-	bufferCopy.size = sizeof(float) * m_vertices.size();
-	bufferCopy.srcOffset = 0;
-	bufferCopy.dstOffset = 0;
-
-	transferBuffer.copyBuffer(m_hostVertexBuffer.get(), m_deviceVertexBuffer.get(), bufferCopy);
-
-	bufferCopy.size = sizeof(uint16_t) * m_indices.size();
-	bufferCopy.srcOffset = 0;
-	bufferCopy.dstOffset = 0;
-
-	transferBuffer.copyBuffer(m_hostIndexBuffer.get(), m_deviceIndexBuffer.get(), bufferCopy);
+	m_deviceVertexBuffer.uploadToDeviceLocal(vertices);
+	m_deviceIndexBuffer.uploadToDeviceLocal(indices);
 }
 
 vk::Buffer& Mesh::getVertexBuffer() {
@@ -53,7 +31,7 @@ vk::Buffer& Mesh::getVertexBuffer() {
 }
 
 uint32_t Mesh::getVertextCount() {
-	return m_vertices.size();
+	return static_cast<uint32_t>(m_vertices.size());
 }
 
 vk::Buffer& Mesh::getIndexBuffer() {
@@ -61,7 +39,7 @@ vk::Buffer& Mesh::getIndexBuffer() {
 }
 
 uint32_t Mesh::getIndexCount() {
-	return m_indices.size();
+	return static_cast<uint32_t>(m_indices.size());
 }
 
 void Mesh::translate(glm::vec3 offset) {

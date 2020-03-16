@@ -2,6 +2,7 @@
 
 #include "Buffer.h"
 #include "MemoryAllocator.h"
+#include "CmdBufferAllocator.h"
 
 #include <GLFW/glfw3.h>
 #include <glm/gtc/matrix_transform.hpp>
@@ -24,6 +25,7 @@ void RTXApplication::initVulkan() {
     vkCtx.initContext(window);
 
     MemoryAllocator::init(*vkCtx.m_logicalDevice, vkCtx.m_deviceMemoryProperties);
+    CmdBufferAllocator::init(&vkCtx);
 
     swapchain = std::make_unique<Swapchain>(
         vkCtx.m_physicalDevice,
@@ -38,7 +40,7 @@ void RTXApplication::initVulkan() {
 
     swapchain->updateFramebuffers(*pipeline->m_renderPass);
 
-    transferCmdBuffer = vkCtx.createCommandBuffer(*vkCtx.m_transferPool);
+    transferCmdBuffer = CmdBufferAllocator::get()->getTransferBuffer();
 
     const std::vector<float> vertices = {
         -1, -1, -1, 0, 0, 1,
@@ -63,8 +65,6 @@ void RTXApplication::initVulkan() {
     object = std::make_unique<Mesh>(*vkCtx.m_logicalDevice, vertices, indices);
     object->translate(glm::vec3(0.0f, 0.0f, 2.5f));
 
-    flushStagingBuffers();
-
     uniformBuffer = std::make_unique<Buffer>(
         *vkCtx.m_logicalDevice,
         sizeof(UniformBufferObject),
@@ -77,9 +77,10 @@ void RTXApplication::initVulkan() {
     
     std::vector<vk::DescriptorSetLayout> layouts(swapchain->m_imageCount, *descriptorSetLayout);
     std::vector<vk::UniqueDescriptorSet> descriptorSets = vkCtx.createDescriptorSets(*descriptorPool, layouts);
-    std::vector<vk::UniqueCommandBuffer> cmdBuffers = vkCtx.createCommandBuffers(*vkCtx.m_graphicsPool, swapchainFrameInfos.size());
+    std::vector<vk::UniqueCommandBuffer> cmdBuffers =
+        CmdBufferAllocator::get()->getGraphicsBuffers(static_cast<uint32_t>(swapchainFrameInfos.size()));
 
-    for (size_t i = 0; i < swapchainFrameInfos.size(); ++i) {
+    for (uint32_t i = 0; i < swapchainFrameInfos.size(); ++i) {
         swapchainFrameInfos[i].descriptorSet = std::move(descriptorSets[i]);
         swapchainFrameInfos[i].frameBuffer = std::move(cmdBuffers[i]);
 
@@ -141,21 +142,6 @@ void RTXApplication::mainLoop() {
     vkCtx.m_logicalDevice->waitIdle();
 }
 
-void RTXApplication::flushStagingBuffers() {
-    vk::CommandBufferBeginInfo beginInfo;
-    transferCmdBuffer->begin(beginInfo);
-    object->recordUploadToGPU(*transferCmdBuffer);
-    transferCmdBuffer->end();
-
-    vk::SubmitInfo submitInfo;
-    submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &*transferCmdBuffer;
-
-    vkCtx.m_transferQueue.submit(submitInfo, nullptr);
-
-    vkCtx.m_logicalDevice->waitIdle();
-}
-
 void RTXApplication::generateSwapchainFrameInfo(const uint32_t index) {
     SwapchainFrameInfo& frameInfo = swapchainFrameInfos[index];
 
@@ -183,7 +169,7 @@ void RTXApplication::updateSwapchainStack() {
 
     camera.updateProjectionMatrix(windowWidth / (float)windowHeight);
 
-    for (size_t i = 0; i < swapchainFrameInfos.size(); ++i) {
+    for (uint32_t i = 0; i < swapchainFrameInfos.size(); ++i) {
         resetCommandBuffer(i);
     }
 
@@ -197,7 +183,7 @@ void RTXApplication::updateSwapchainStack() {
     swapchain->updateFramebuffers(*pipeline->m_renderPass);
 
     // Update command buffers to use the updated objects
-    for (size_t i = 0; i < swapchainFrameInfos.size(); ++i) {
+    for (uint32_t i = 0; i < swapchainFrameInfos.size(); ++i) {
 
         // Update info structures
         updateSwapchainFrameInfo(i);
@@ -282,7 +268,7 @@ void RTXApplication::processMouse() {
     double deltaX = newCursorX - cursorX;
     double deltaY = newCursorY - cursorY;
 
-    camera.rotate(0.1 * glm::radians(deltaY), -0.1 * glm::radians(deltaX));
+    camera.rotate(0.1f * glm::radians(deltaY), -0.1f * glm::radians(deltaX));
 
     cursorX = newCursorX;
     cursorY = newCursorY;
@@ -362,7 +348,7 @@ void RTXApplication::updateUniformBuffer() {
     UniformBufferObject ubo;
     ubo.model = object->getMeshMatrix();
 
-    uniformBuffer->copyToBuffer(ubo);
+    uniformBuffer->uploadToHostLocal(ubo);
 }
 
 void RTXApplication::drawFrame(const uint32_t swapchainIndex) {

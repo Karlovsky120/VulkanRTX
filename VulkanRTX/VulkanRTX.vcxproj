@@ -143,6 +143,7 @@ for %%f in (*.vert *.tesc *.tese *.geom *.frag *.comp) do %VK_SDK_PATH%\Bin\glsl
   <ItemGroup>
     <ClCompile Include="Buffer.cpp" />
     <ClCompile Include="Camera.cpp" />
+    <ClCompile Include="CmdBufferAllocator.cpp" />
     <ClCompile Include="DeviceMemory.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MemoryAllocator.cpp" />
@@ -155,6 +156,7 @@ for %%f in (*.vert *.tesc *.tese *.geom *.frag *.comp) do %VK_SDK_PATH%\Bin\glsl
   <ItemGroup>
     <ClInclude Include="Buffer.h" />
     <ClInclude Include="Camera.h" />
+    <ClInclude Include="CmdBufferAllocator.h" />
     <ClInclude Include="DeviceMemory.h" />
     <ClInclude Include="MemoryAllocator.h" />
     <ClInclude Include="Mesh.h" />

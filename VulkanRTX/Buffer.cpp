@@ -29,24 +29,12 @@ Buffer::Buffer(
 	bufferInfo.sharingMode = vk::SharingMode::eExclusive;
 
 	m_buffer = m_logicalDevice.createBufferUnique(bufferInfo);
-
+	
 	m_memoryRequirements = m_logicalDevice.getBufferMemoryRequirements(*m_buffer);
-
-	m_allocId = MemoryAllocator::getMemoryAllocator()->allocate(m_memoryRequirements, m_memoryFlags);
-
+	m_allocId = MemoryAllocator::get()->allocate(m_memoryRequirements, m_memoryFlags);
 	m_logicalDevice.bindBufferMemory(*m_buffer, *m_allocId.memory, m_allocId.offset);
 }
 
-void Buffer::copyBuffersToGPU(vk::CommandBuffer& commandBuffer,
-						 std::vector<vk::Buffer*>& src,
-						 std::vector<vk::Buffer*>& dst,
-						 std::vector<vk::BufferCopy>& bufferCopies) {
-
-	for (int i = 0; i < bufferCopies.size(); ++i) {
-		commandBuffer.copyBuffer(*src[i], *dst[i], bufferCopies[i]);
-	}
-}
-
 Buffer::~Buffer() {
-	MemoryAllocator::getMemoryAllocator()->free(m_allocId);
+	MemoryAllocator::get()->free(m_allocId);
 }

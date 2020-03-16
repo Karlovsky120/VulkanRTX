@@ -90,7 +90,6 @@ private:
     void initOther();
     void mainLoop();
 
-    void flushStagingBuffers();
     void generateSwapchainFrameInfo(const uint32_t index);
 
     void updateSwapchainStack();
