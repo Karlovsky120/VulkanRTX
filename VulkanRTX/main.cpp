@@ -1,7 +1,5 @@
 #include "RTXApplication.h"
 
-#include <vulkan/vulkan.hpp>
-
 #include <iostream>
 
 int main() {

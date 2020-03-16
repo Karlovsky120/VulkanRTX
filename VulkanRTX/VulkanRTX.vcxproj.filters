@@ -48,9 +48,6 @@
     <ClCompile Include="Pipeline.cpp">
       <Filter>Source Files\Vulkan</Filter>
     </ClCompile>
-    <ClCompile Include="DescriptorSets.cpp">
-      <Filter>Source Files\Vulkan</Filter>
-    </ClCompile>
     <ClCompile Include="Swapchain.cpp">
       <Filter>Source Files\Vulkan</Filter>
     </ClCompile>
@@ -80,13 +77,13 @@
     <ClInclude Include="Pipeline.h">
       <Filter>Header Files\Vulkan</Filter>
     </ClInclude>
-    <ClInclude Include="DescriptorSets.h">
-      <Filter>Header Files\Vulkan</Filter>
-    </ClInclude>
     <ClInclude Include="Swapchain.h">
       <Filter>Header Files\Vulkan</Filter>
     </ClInclude>
     <ClInclude Include="Buffer.h">
+      <Filter>Header Files\Vulkan</Filter>
+    </ClInclude>
+    <ClInclude Include="VulkanInclude.h">
       <Filter>Header Files\Vulkan</Filter>
     </ClInclude>
   </ItemGroup>

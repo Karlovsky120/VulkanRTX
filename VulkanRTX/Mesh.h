@@ -4,7 +4,7 @@
 
 #include <glm/vec3.hpp>
 #include <glm/gtx/quaternion.hpp>
-#include <vulkan/vulkan.hpp>
+#include "VulkanInclude.h"
 
 class Mesh {
 public:
@@ -18,7 +18,9 @@ public:
 	void recordUploadToGPU(vk::CommandBuffer& transferBuffer);
 
 	vk::Buffer& getVertexBuffer();
+	uint32_t getVertextCount();
 	vk::Buffer& getIndexBuffer();
+	uint32_t getIndexCount();
 
 	void translate(glm::vec3 offset);
 	void rotate(glm::vec3 rotation);

@@ -1,7 +1,7 @@
 #pragma once
 
 #include <glm/mat4x4.hpp>
-#include <vulkan/vulkan.hpp>
+#include "VulkanInclude.h"
 
 #include <vector>
 
@@ -38,8 +38,8 @@ public:
 
     ~VulkanContext();
 
+    vk::DynamicLoader m_loader;
 	vk::UniqueInstance m_instance;
-	vk::DispatchLoaderDynamic m_loader;
     vk::UniqueSurfaceKHR m_surface;
     vk::PhysicalDevice m_physicalDevice;
     vk::UniqueDevice m_logicalDevice;
@@ -73,6 +73,5 @@ private:
         void* pUserData
     );
 #endif
-
 };
 

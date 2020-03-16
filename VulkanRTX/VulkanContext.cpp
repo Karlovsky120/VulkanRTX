@@ -4,10 +4,16 @@
 
 #include <iostream>
 
+VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE
+
 void VulkanContext::createInstance() {
     if (!glfwRawMouseMotionSupported()) {
         throw std::runtime_error("Raw mouse motion not supported!");
     }
+
+    PFN_vkGetInstanceProcAddr vkGetInstanceProcAddr =
+        m_loader.getProcAddress<PFN_vkGetInstanceProcAddr>("vkGetInstanceProcAddr");
+    VULKAN_HPP_DEFAULT_DISPATCHER.init(vkGetInstanceProcAddr);
 
     vk::ApplicationInfo appInfo;
     appInfo.pApplicationName = "RTX Application";
@@ -56,12 +62,11 @@ void VulkanContext::createInstance() {
 #else
     createInfo.enabledLayerCount = 0;
 #endif
-
     m_instance = vk::createInstanceUnique(createInfo);
-    m_loader = vk::DispatchLoaderDynamic(*m_instance, vkGetInstanceProcAddr);
+    VULKAN_HPP_DEFAULT_DISPATCHER.init(*m_instance);
 
 #ifdef ENABLE_VALIDATION
-    m_debugMessenger = m_instance->createDebugUtilsMessengerEXT(debugCreateInfo, nullptr, m_loader);
+    m_debugMessenger = m_instance->createDebugUtilsMessengerEXT(debugCreateInfo);
 #endif
 }
 
@@ -197,6 +202,7 @@ void VulkanContext::createLogicalDevice() {
     deviceCreateInfo.pNext = &deviceFeatures;
 
     m_logicalDevice = m_physicalDevice.createDeviceUnique(deviceCreateInfo);
+    VULKAN_HPP_DEFAULT_DISPATCHER.init(*m_logicalDevice);
 
     m_graphicsQueue = m_logicalDevice->getQueue(m_graphicsQueueIndex, 0);
     m_transferQueue = m_logicalDevice->getQueue(m_transferQueueIndex, 0);
@@ -308,6 +314,6 @@ VKAPI_ATTR VkBool32 VKAPI_CALL VulkanContext::debugCallback(
 
 VulkanContext::~VulkanContext() {
 #ifdef ENABLE_VALIDATION
-    m_instance->destroyDebugUtilsMessengerEXT(m_debugMessenger, nullptr, m_loader);
+    m_instance->destroyDebugUtilsMessengerEXT(m_debugMessenger);
 #endif
 }

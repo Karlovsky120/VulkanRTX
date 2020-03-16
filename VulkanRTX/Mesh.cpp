@@ -52,8 +52,16 @@ vk::Buffer& Mesh::getVertexBuffer() {
 	return m_deviceVertexBuffer.get();
 }
 
+uint32_t Mesh::getVertextCount() {
+	return m_vertices.size();
+}
+
 vk::Buffer& Mesh::getIndexBuffer() {
 	return m_deviceIndexBuffer.get();
+}
+
+uint32_t Mesh::getIndexCount() {
+	return m_indices.size();
 }
 
 void Mesh::translate(glm::vec3 offset) {

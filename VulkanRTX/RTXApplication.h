@@ -1,29 +1,12 @@
 #pragma once
 
-/*#include "Buffer.h"
-
-#include "CommandBuffer.h"
-#include "CommandPool.h"
-#include "DescriptorPool.h"
-#include "DescriptorSets.h"
-#include "DescriptorSetLayout.h"
-#include "DeviceMemory.h"
-#include "Framebuffers.h"
-#include "Instance.h"
-#include "LogicalDevice.h"
-#include "PhysicalDevice.h"
-
-#include "PipelineLayout.h"
-#include "RenderPass.h"
-#include "Surface.h"*/
-
 #include "Camera.h"
 #include "Mesh.h"
 #include "Pipeline.h"
 #include "Swapchain.h"
 #include "VulkanContext.h"
 
-#include <vulkan/vulkan.hpp>
+#include "VulkanInclude.h"
 #include <glm/mat4x4.hpp>
 
 #include <chrono>
