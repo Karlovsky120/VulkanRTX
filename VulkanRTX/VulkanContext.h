@@ -39,7 +39,7 @@ public:
     vk::PhysicalDeviceProperties m_deviceProperties;
     vk::PhysicalDeviceFeatures m_deviceFeatures;
     vk::PhysicalDeviceMemoryProperties m_deviceMemoryProperties;
-    vk::PhysicalDeviceRayTracingPropertiesNV m_rayTracingProperties;
+    vk::PhysicalDeviceRayTracingPropertiesKHR m_rayTracingProperties;
 
     uint32_t m_graphicsQueueIndex;
     uint32_t m_transferQueueIndex;

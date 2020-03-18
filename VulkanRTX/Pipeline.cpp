@@ -34,7 +34,7 @@ void Pipeline::createPipeline(const vk::Extent2D& extent) {
 	m_pipelineInfo.viewport.minDepth = 0.0f;
 	m_pipelineInfo.viewport.maxDepth = 1.0f;
 
-	m_pipelineInfo.scissor.offset = { 0, 0 };
+	m_pipelineInfo.scissor.offset = vk::Offset2D(0, 0);
 	m_pipelineInfo.scissor.extent = extent;
 
 	m_pipelineInfo.viewportCreateInfo.viewportCount = 1;

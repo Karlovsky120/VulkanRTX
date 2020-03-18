@@ -41,7 +41,7 @@ void Swapchain::updateSwapchain() {
 	m_createInfo.minImageCount = imageCount;
 	m_createInfo.imageFormat = m_colorFormat;
 	m_createInfo.imageColorSpace = m_colorSpace;
-	m_createInfo.imageExtent = { m_extent.width, m_extent.height };
+	m_createInfo.imageExtent = vk::Extent2D(m_extent.width, m_extent.height);
 	m_createInfo.preTransform = surfaceCapabilities.currentTransform;
 	m_createInfo.oldSwapchain = oldSwapchain;
 

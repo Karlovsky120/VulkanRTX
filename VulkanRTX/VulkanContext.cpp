@@ -97,11 +97,11 @@ void VulkanContext::createPhysicalDevice() {
 
         bool rayTracingSupported = false;
         for (vk::ExtensionProperties extensionProperty : extensionProperties) {
-            if (extensionProperty.extensionName == VK_NV_RAY_TRACING_EXTENSION_NAME) {
+            if (extensionProperty.extensionName == VK_KHR_RAY_TRACING_EXTENSION_NAME) {
                 rayTracingSupported = true;
                 m_rayTracingProperties =
                     m_physicalDevice.getProperties2<vk::PhysicalDeviceProperties2,
-                    vk::PhysicalDeviceRayTracingPropertiesNV>().get<vk::PhysicalDeviceRayTracingPropertiesNV>();
+                    vk::PhysicalDeviceRayTracingPropertiesKHR>().get<vk::PhysicalDeviceRayTracingPropertiesKHR>();
                 break;
             }
         }
@@ -193,7 +193,7 @@ void VulkanContext::createLogicalDevice() {
     };
 
     if (m_rayTracingSupported) {
-        deviceExtensions.push_back(VK_NV_RAY_TRACING_EXTENSION_NAME);
+        deviceExtensions.push_back(VK_KHR_RAY_TRACING_EXTENSION_NAME);
     }
 
     deviceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size());

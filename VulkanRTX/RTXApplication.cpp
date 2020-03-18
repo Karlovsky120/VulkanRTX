@@ -162,7 +162,7 @@ void RTXApplication::generateSwapchainFrameInfo(const uint32_t index) {
 
     frameInfo.renderPassBeginInfo.clearValueCount = 1;
     frameInfo.renderPassBeginInfo.pClearValues = &frameInfo.clearColor;
-    frameInfo.renderPassBeginInfo.renderArea.offset = { 0, 0 };
+    frameInfo.renderPassBeginInfo.renderArea.offset = vk::Offset2D(0, 0);
 }
 
 void RTXApplication::updateSwapchainStack() {
