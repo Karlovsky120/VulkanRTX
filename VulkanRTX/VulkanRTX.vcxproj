@@ -149,6 +149,7 @@ for %%f in (*.vert *.tesc *.tese *.geom *.frag *.comp) do %VK_SDK_PATH%\Bin\glsl
     <ClCompile Include="MemoryAllocator.cpp" />
     <ClCompile Include="Mesh.cpp" />
     <ClCompile Include="Pipeline.cpp" />
+    <ClCompile Include="RayTracing.cpp" />
     <ClCompile Include="RTXApplication.cpp" />
     <ClCompile Include="Swapchain.cpp" />
     <ClCompile Include="VulkanContext.cpp" />
@@ -161,6 +162,7 @@ for %%f in (*.vert *.tesc *.tese *.geom *.frag *.comp) do %VK_SDK_PATH%\Bin\glsl
     <ClInclude Include="MemoryAllocator.h" />
     <ClInclude Include="Mesh.h" />
     <ClInclude Include="Pipeline.h" />
+    <ClInclude Include="RayTracing.h" />
     <ClInclude Include="RTXApplication.h" />
     <ClInclude Include="Swapchain.h" />
     <ClInclude Include="VulkanContext.h" />

@@ -103,6 +103,12 @@ void RTXApplication::initVulkan() {
         inFlightFrameInfos[i].inFlightFence = vkCtx->m_logicalDevice->createFenceUnique(fenceCreateInfo);
     }
 
+
+    //Raytracing testing
+    RayTracing rt = RayTracing(vkCtx);
+    vk::UniqueAccelerationStructureKHR bottom = rt.createBottomAccelerationStructure(*object);
+    vk::UniqueAccelerationStructureKHR top = rt.createTopAccelerationStructure(*bottom);
+
     glfwGetCursorPos(window, &cursorX, &cursorY);
 }
 
