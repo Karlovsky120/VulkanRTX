@@ -14,7 +14,10 @@ class DeviceMemory {
 public:
 	vk::DeviceMemory& get();
 
-	DeviceMemory(const vk::Device& logicalDevice, const uint32_t memoryType);
+	DeviceMemory(
+		const vk::Device& logicalDevice,
+		const uint32_t memoryType,
+		const vk::MemoryAllocateFlags flags);
 
 	std::pair<vk::DeviceMemory*, uint32_t> allocateBlock(
 		size_t size,

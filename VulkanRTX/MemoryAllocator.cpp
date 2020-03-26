@@ -3,17 +3,23 @@
 #include "DeviceMemory.h"
 
 void MemoryAllocator::init(
-    vk::Device& logicalDevice,
+    std::shared_ptr<MemoryAllocator>& storage,
+    const vk::Device& logicalDevice,
     const vk::PhysicalDeviceMemoryProperties& memoryProperties) {
 
-    instance = new MemoryAllocator(logicalDevice, memoryProperties);
+    storage = std::make_shared<MemoryAllocator>(logicalDevice, memoryProperties);
+    instance = storage;
 }
 
-MemoryAllocator* MemoryAllocator::get() {
-    return instance;
+std::shared_ptr<MemoryAllocator> MemoryAllocator::get() {
+    return instance.lock();
 }
 
-AllocId MemoryAllocator::allocate(vk::MemoryRequirements& requirements, vk::MemoryPropertyFlags memoryFlags) {
+AllocId MemoryAllocator::allocate(
+    vk::MemoryRequirements& requirements,
+    vk::MemoryPropertyFlags memoryFlags,
+    vk::MemoryAllocateFlags allocateFlags) {
+
     uint32_t deviceMemoryType = findMemoryType(requirements.memoryTypeBits, memoryFlags);
 
     auto it = m_memoryTable.find(deviceMemoryType);
@@ -36,7 +42,7 @@ AllocId MemoryAllocator::allocate(vk::MemoryRequirements& requirements, vk::Memo
         ++chunkIndex;
     }
 
-    deviceMemories.push_back(DeviceMemory(m_logicalDevice, deviceMemoryType));
+    deviceMemories.push_back(DeviceMemory(m_logicalDevice, deviceMemoryType, allocateFlags));
 
     memoryData = deviceMemories.back().allocateBlock(requirements.size, requirements.alignment);
 
@@ -44,9 +50,7 @@ AllocId MemoryAllocator::allocate(vk::MemoryRequirements& requirements, vk::Memo
 }
 
 void MemoryAllocator::free(AllocId& allocId) {
-    if (instance) {
-        m_memoryTable[allocId.type][allocId.chunk].freeBlock(allocId.offset);
-    }
+    m_memoryTable[allocId.type][allocId.chunk].freeBlock(allocId.offset);
 }
 
 void MemoryAllocator::freeAllMemory() {
@@ -57,21 +61,6 @@ void MemoryAllocator::freeAllMemory() {
     }
 }
 
-void MemoryAllocator::destroy() {
-    if (instance) {
-        instance->freeAllMemory();
-        delete instance;
-        instance = nullptr;
-    }
-}
-
-MemoryAllocator*  MemoryAllocator::instance = nullptr;
-
-MemoryAllocator::MemoryAllocator(vk::Device& logicalDevice,
-    const vk::PhysicalDeviceMemoryProperties& memoryProperties) :
-    m_logicalDevice(logicalDevice),
-    m_memoryProperties(memoryProperties) {}
-
 uint32_t MemoryAllocator::findMemoryType(uint32_t typeFilter, vk::MemoryPropertyFlags propertyFlags) {
     for (uint32_t i = 0; i < m_memoryProperties.memoryTypeCount; ++i) {
         if ((typeFilter & (1 << i)) && (m_memoryProperties.memoryTypes[i].propertyFlags & propertyFlags)) {
@@ -80,4 +69,16 @@ uint32_t MemoryAllocator::findMemoryType(uint32_t typeFilter, vk::MemoryProperty
     }
 
     throw std::runtime_error("No suitable memory type found!");
+}
+
+MemoryAllocator::MemoryAllocator(
+    const vk::Device& logicalDevice,
+    const vk::PhysicalDeviceMemoryProperties& memoryProperties) :
+    m_logicalDevice(logicalDevice),
+    m_memoryProperties(memoryProperties) {}
+
+std::weak_ptr<MemoryAllocator> MemoryAllocator::instance;
+
+MemoryAllocator::~MemoryAllocator() {
+    freeAllMemory();
 }

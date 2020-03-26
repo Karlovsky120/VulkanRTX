@@ -54,21 +54,27 @@ public:
 		bufferCopy.srcOffset = 0;
 		bufferCopy.dstOffset = 0;
 
-		vk::UniqueCommandBuffer transferCmdBuffer = CmdBufferAllocator::get()->getTransferBuffer();
+		vk::UniqueCommandBuffer transferCmdBuffer =
+			CmdBufferAllocator::get()->createBufferUnique(*CmdBufferAllocator::get()->m_transferCmdPool);
 
 		vk::CommandBufferBeginInfo beginInfo;
 		transferCmdBuffer->begin(beginInfo);
 		transferCmdBuffer->copyBuffer(hostLocal.get(), *m_buffer, bufferCopy);
 		transferCmdBuffer->end();
 
-		CmdBufferAllocator::get()->submitBuffer(*transferCmdBuffer, true);
+		CmdBufferAllocator::get()->submitBuffer(
+			*transferCmdBuffer,
+			VulkanContext::get()->m_transferQueue,
+			true);
 	}
 
-	Buffer(vk::Device& logicalDevice,
-		   const vk::DeviceSize size,
-		   const vk::BufferUsageFlags usageFlags,
-		   const vk::MemoryPropertyFlags memoryFlags);
-
+	Buffer(
+		vk::Device& logicalDevice,
+		const vk::DeviceSize size,
+		const vk::BufferUsageFlags usageFlags,
+		const vk::MemoryPropertyFlags memoryFlags,
+		const vk::MemoryAllocateFlags memoryAllocateFlags = vk::MemoryAllocateFlags(),
+		const vk::MemoryRequirements memoryRequirements = {0, 0, 0}		);
 	~Buffer();
 
 private:

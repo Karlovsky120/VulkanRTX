@@ -30,7 +30,7 @@ private:
         vk::UniqueDescriptorSet descriptorSet;
         vk::DescriptorBufferInfo descriptorBufferInfo;
         vk::WriteDescriptorSet writeDescriptorSet;
-        vk::UniqueCommandBuffer frameBuffer;
+        vk::CommandBuffer frameBuffer;
         vk::CommandBufferBeginInfo beginInfo;
         vk::RenderPassBeginInfo renderPassBeginInfo;
         vk::ClearValue clearColor;
@@ -38,7 +38,7 @@ private:
     };
 
     std::vector<vk::UniqueDescriptorSet> swapchainDescriptorSets;
-    std::vector<vk::UniqueCommandBuffer> swapchainCmdBuffers;
+    std::vector<vk::CommandBuffer> swapchainCmdBuffers;
 
     struct InFlightFrameInfo {
         vk::UniqueSemaphore imageAvailableSemaphore;
@@ -61,7 +61,10 @@ private:
 
     GLFWwindow* window;
 
-    VulkanContext vkCtx;
+    std::shared_ptr<VulkanContext> vkCtx;
+    std::shared_ptr<MemoryAllocator> memoryAllocator;
+    std::shared_ptr<CmdBufferAllocator> cmdBufferAllocator;
+
     std::unique_ptr<Swapchain> swapchain;
     std::unique_ptr<Pipeline> pipeline;
 
@@ -69,8 +72,6 @@ private:
 
     vk::UniqueDescriptorSetLayout descriptorSetLayout;
     vk::UniqueDescriptorPool descriptorPool;
-
-    vk::UniqueCommandBuffer transferCmdBuffer;
 
     std::vector<SwapchainFrameInfo> swapchainFrameInfos;
     std::vector<InFlightFrameInfo> inFlightFrameInfos;

@@ -25,7 +25,7 @@ std::pair<vk::DeviceMemory*, uint32_t> DeviceMemory::allocateBlock(
 
 			if (currentBlock->size != requestedSize) {
 				uint32_t newBlockSize = currentBlock->size - requestedSize;
-				m_blocks.insert(currentBlock, MemoryChunk{currentBlock->offset + requestedSize, newBlockSize, true});
+				m_blocks.insert(std::next(currentBlock), MemoryChunk{currentBlock->offset + requestedSize, newBlockSize, true});
 			}
 			
 			currentBlock->size = requestedSize;
@@ -40,12 +40,16 @@ std::pair<vk::DeviceMemory*, uint32_t> DeviceMemory::allocateBlock(
 
 void DeviceMemory::freeBlock(uint32_t freeOffset) {
 	for (auto currentBlock = m_blocks.begin(); currentBlock != m_blocks.end(); ++currentBlock) {
-		if (currentBlock->offset = freeOffset) {
-			auto previousBlock = std::prev(currentBlock);
-			if (previousBlock->free) {
-				currentBlock->size += previousBlock->size;
-				currentBlock->offset = previousBlock->offset;
-				m_blocks.erase(previousBlock);
+		if (currentBlock->offset == freeOffset) {
+			currentBlock->free = true;
+
+			if (currentBlock != m_blocks.begin()) {
+				auto previousBlock = std::prev(currentBlock);
+				if (previousBlock->free) {
+					currentBlock->size += previousBlock->size;
+					currentBlock->offset = previousBlock->offset;
+					m_blocks.erase(previousBlock);
+				}
 			}
 
 			auto nextBlock = std::next(currentBlock);
@@ -59,15 +63,19 @@ void DeviceMemory::freeBlock(uint32_t freeOffset) {
 	}
 }
 
-DeviceMemory::DeviceMemory(const vk::Device& logicalDevice, const uint32_t memoryType) :
+DeviceMemory::DeviceMemory(const vk::Device& logicalDevice, const uint32_t memoryType, const vk::MemoryAllocateFlags flags) :
 	m_logicalDevice(logicalDevice),
 	m_blocks(std::list<MemoryChunk>()) {
 
 	m_blocks.insert(m_blocks.begin(), MemoryChunk{0, m_size, true});
 
+	vk::MemoryAllocateFlagsInfo flagInfo;
+	flagInfo.flags = flags;
+
 	vk::MemoryAllocateInfo allocateInfo;
 	allocateInfo.allocationSize = m_size;
 	allocateInfo.memoryTypeIndex = memoryType;
+	allocateInfo.pNext = &flagInfo;
 
 	m_deviceMemory = logicalDevice.allocateMemory(allocateInfo);
 }

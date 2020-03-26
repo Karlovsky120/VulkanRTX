@@ -3,8 +3,18 @@
 #include <GLFW/glfw3.h>
 
 #include <iostream>
+#include <memory>
 
 VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE
+
+void VulkanContext::init(std::shared_ptr<VulkanContext>& storage, GLFWwindow* window) {
+    storage = std::make_shared<VulkanContext>(window);
+    instance = storage;
+}
+
+std::shared_ptr<VulkanContext> VulkanContext::get() {
+    return instance.lock();
+}
 
 void VulkanContext::createInstance() {
     if (!glfwRawMouseMotionSupported()) {
@@ -20,7 +30,7 @@ void VulkanContext::createInstance() {
     appInfo.applicationVersion = VK_MAKE_VERSION(0, 1, 0);
     appInfo.pEngineName = "Nengine";
     appInfo.engineVersion = VK_MAKE_VERSION(0, 1, 0);
-    appInfo.apiVersion = VK_API_VERSION_1_1;
+    appInfo.apiVersion = VK_API_VERSION_1_2;
 
     vk::InstanceCreateInfo createInfo;
     createInfo.pApplicationInfo = &appInfo;
@@ -97,7 +107,7 @@ void VulkanContext::createPhysicalDevice() {
 
         bool rayTracingSupported = false;
         for (vk::ExtensionProperties extensionProperty : extensionProperties) {
-            if (extensionProperty.extensionName == VK_KHR_RAY_TRACING_EXTENSION_NAME) {
+            if (strcmp(extensionProperty.extensionName, VK_KHR_RAY_TRACING_EXTENSION_NAME) == 0) {
                 rayTracingSupported = true;
                 m_rayTracingProperties =
                     m_physicalDevice.getProperties2<vk::PhysicalDeviceProperties2,
@@ -139,6 +149,15 @@ void VulkanContext::createLogicalDevice() {
 
     i = 0;
     for (auto& queueFamilyProperty : queueFamilyProperties) {
+        if (queueFamilyProperty.queueFlags & vk::QueueFlagBits::eCompute) {
+            m_computeQueueIndex = i;
+            ++queuesFound;
+            break;
+        }
+    }
+
+    i = 0;
+    for (auto& queueFamilyProperty : queueFamilyProperties) {
         if (m_physicalDevice.getSurfaceSupportKHR(i, *m_surface)) {
             m_presentQueueIndex = i;
             ++queuesFound;
@@ -146,7 +165,7 @@ void VulkanContext::createLogicalDevice() {
         }
     }
 
-    if (queuesFound < 3) {
+    if (queuesFound < 4) {
         throw std::runtime_error("Couldn't find suitable device queues!");
     }
 
@@ -159,16 +178,31 @@ void VulkanContext::createLogicalDevice() {
     graphicsInfo.pQueuePriorities = &graphicsQueuePriority;
     queueCreateInfos.push_back(graphicsInfo);
 
-    if (m_graphicsQueueIndex != m_transferQueueIndex) {
+    if (m_graphicsQueueIndex != m_computeQueueIndex) {
+
+        vk::DeviceQueueCreateInfo computeInfo;
+        computeInfo.queueFamilyIndex = m_computeQueueIndex;
+        computeInfo.queueCount = 1;
+        float computeQueuePriority = 0.66f;
+        computeInfo.pQueuePriorities = &computeQueuePriority;
+        queueCreateInfos.push_back(computeInfo);
+    }
+
+    if (m_transferQueueIndex != m_graphicsQueueIndex
+        && m_transferQueueIndex != m_computeQueueIndex) {
+
         vk::DeviceQueueCreateInfo transferInfo;
         transferInfo.queueFamilyIndex = m_transferQueueIndex;
         transferInfo.queueCount = 1;
-        float transferQueuePriority = 0.5f;
+        float transferQueuePriority = 0.33f;
         transferInfo.pQueuePriorities = &transferQueuePriority;
         queueCreateInfos.push_back(transferInfo);
     }
 
-    if (m_presentQueueIndex != m_graphicsQueueIndex && m_presentQueueIndex != m_transferQueueIndex) {
+    if (m_presentQueueIndex != m_graphicsQueueIndex
+        && m_presentQueueIndex != m_computeQueueIndex
+        && m_presentQueueIndex != m_transferQueueIndex) {
+
         vk::DeviceQueueCreateInfo presentInfo;
         presentInfo.queueFamilyIndex = m_presentQueueIndex;
         presentInfo.queueCount = 1;
@@ -180,8 +214,12 @@ void VulkanContext::createLogicalDevice() {
     vk::PhysicalDeviceTimelineSemaphoreFeatures timelineSemaphore;
     timelineSemaphore.timelineSemaphore = true;
 
+    vk::PhysicalDeviceBufferDeviceAddressFeaturesKHR deviceAddress;
+    deviceAddress.bufferDeviceAddress = true;
+    deviceAddress.pNext = &timelineSemaphore;
+
     vk::PhysicalDeviceFeatures2 deviceFeatures;
-    deviceFeatures.pNext = &timelineSemaphore;
+    deviceFeatures.pNext = &deviceAddress;
 
     vk::DeviceCreateInfo deviceCreateInfo;
     deviceCreateInfo.pQueueCreateInfos = queueCreateInfos.data();
@@ -205,6 +243,7 @@ void VulkanContext::createLogicalDevice() {
     VULKAN_HPP_DEFAULT_DISPATCHER.init(*m_logicalDevice);
 
     m_graphicsQueue = m_logicalDevice->getQueue(m_graphicsQueueIndex, 0);
+    m_computeQueue = m_logicalDevice->getQueue(m_computeQueueIndex, 0);
     m_transferQueue = m_logicalDevice->getQueue(m_transferQueueIndex, 0);
     m_presentQueue = m_logicalDevice->getQueue(m_presentQueueIndex, 0);
 }
@@ -280,6 +319,12 @@ VKAPI_ATTR VkBool32 VKAPI_CALL VulkanContext::debugCallback(
     return VK_FALSE;
 }
 #endif
+
+VulkanContext::VulkanContext(GLFWwindow* window) {
+    initContext(window);
+}
+
+std::weak_ptr<VulkanContext> VulkanContext::instance;
 
 VulkanContext::~VulkanContext() {
 #ifdef ENABLE_VALIDATION

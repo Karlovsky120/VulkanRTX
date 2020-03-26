@@ -17,8 +17,10 @@ public:
 		glm::vec3 scale = glm::vec3(1.0f));
 
 	vk::Buffer& getVertexBuffer();
+	Buffer& getVertexBufferObject();
 	uint32_t getVertextCount();
 	vk::Buffer& getIndexBuffer();
+	Buffer& getIndexBufferObject();
 	uint32_t getIndexCount();
 
 	void translate(glm::vec3 offset);

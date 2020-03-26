@@ -14,13 +14,21 @@ Mesh::Mesh(vk::Device& logicalDevice,
 	m_rotation(rotation),
 	m_scale(scale),
 	m_deviceVertexBuffer(logicalDevice,
-						 sizeof(float) * vertices.size(),
-						 vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer,
-						 vk::MemoryPropertyFlagBits::eDeviceLocal),
+		sizeof(float) * vertices.size(),
+		vk::BufferUsageFlagBits::eTransferDst
+		| vk::BufferUsageFlagBits::eVertexBuffer
+		| vk::BufferUsageFlagBits::eRayTracingKHR
+		| vk::BufferUsageFlagBits::eShaderDeviceAddress, //so it can be used with getBufferAddress()
+		vk::MemoryPropertyFlagBits::eDeviceLocal,
+		vk::MemoryAllocateFlagBits::eDeviceAddress), //so it can be used with getBufferAddress()
 	m_deviceIndexBuffer(logicalDevice,
-						 sizeof(uint16_t)* indices.size(),
-						 vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eIndexBuffer,
-						 vk::MemoryPropertyFlagBits::eDeviceLocal) {
+		sizeof(uint16_t)* indices.size(),
+		vk::BufferUsageFlagBits::eTransferDst
+		| vk::BufferUsageFlagBits::eIndexBuffer
+		| vk::BufferUsageFlagBits::eRayTracingKHR
+		| vk::BufferUsageFlagBits::eShaderDeviceAddress, //so it can be used with getBufferAddress()
+		vk::MemoryPropertyFlagBits::eDeviceLocal,
+		vk::MemoryAllocateFlagBits::eDeviceAddress) { //so it can be used with getBufferAddress()
 
 	m_deviceVertexBuffer.uploadToDeviceLocal(vertices);
 	m_deviceIndexBuffer.uploadToDeviceLocal(indices);
@@ -30,12 +38,20 @@ vk::Buffer& Mesh::getVertexBuffer() {
 	return m_deviceVertexBuffer.get();
 }
 
+Buffer& Mesh::getVertexBufferObject() {
+	return m_deviceVertexBuffer;
+}
+
 uint32_t Mesh::getVertextCount() {
 	return static_cast<uint32_t>(m_vertices.size());
 }
 
 vk::Buffer& Mesh::getIndexBuffer() {
 	return m_deviceIndexBuffer.get();
+}
+
+Buffer& Mesh::getIndexBufferObject() {
+	return m_deviceIndexBuffer;
 }
 
 uint32_t Mesh::getIndexCount() {

@@ -13,6 +13,9 @@ struct UniformBufferObject {
 
 class VulkanContext {
 public:
+    static void init(std::shared_ptr<VulkanContext>& storage, GLFWwindow* window);
+    static std::shared_ptr<VulkanContext> get();
+
     void createInstance();
     void createSurface(GLFWwindow* window);
     void createPhysicalDevice();
@@ -28,8 +31,6 @@ public:
 
     vk::UniqueSemaphore createTimelineSemaphore(const uint32_t initialValue = 0) const;
 
-    ~VulkanContext();
-
     vk::DynamicLoader m_loader;
 	vk::UniqueInstance m_instance;
     vk::UniqueSurfaceKHR m_surface;
@@ -43,16 +44,24 @@ public:
 
     uint32_t m_graphicsQueueIndex;
     uint32_t m_transferQueueIndex;
+    uint32_t m_computeQueueIndex;
     uint32_t m_presentQueueIndex;
 
     vk::Queue m_graphicsQueue;
     vk::Queue m_transferQueue;
+    vk::Queue m_computeQueue;
     vk::Queue m_presentQueue;
 
     bool m_rayTracingSupported = false;
 
-#ifdef ENABLE_VALIDATION
+    VulkanContext(VulkanContext const&) = delete;
+    void operator=(VulkanContext const&) = delete;
+
+    VulkanContext(GLFWwindow* window);
+    ~VulkanContext();
+
 private:
+#ifdef ENABLE_VALIDATION
     vk::DebugUtilsMessengerEXT m_debugMessenger;
 
     static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
@@ -62,5 +71,7 @@ private:
         void* pUserData
     );
 #endif
+
+    static std::weak_ptr<VulkanContext> instance;
 };
 

@@ -1,8 +1,9 @@
 #include "RTXApplication.h"
 
 #include "Buffer.h"
-#include "MemoryAllocator.h"
 #include "CmdBufferAllocator.h"
+#include "MemoryAllocator.h"
+#include "RayTracing.h"
 
 #include <GLFW/glfw3.h>
 #include <glm/gtc/matrix_transform.hpp>
@@ -22,25 +23,28 @@ void RTXApplication::run() {
 
 void RTXApplication::initVulkan() {
 
-    vkCtx.initContext(window);
-
-    MemoryAllocator::init(*vkCtx.m_logicalDevice, vkCtx.m_deviceMemoryProperties);
-    CmdBufferAllocator::init(&vkCtx);
+    VulkanContext::init(vkCtx, window);
+    MemoryAllocator::init(
+        memoryAllocator,
+        *vkCtx->m_logicalDevice,
+        vkCtx->m_deviceMemoryProperties);
+    CmdBufferAllocator::init(cmdBufferAllocator);
 
     swapchain = std::make_unique<Swapchain>(
-        vkCtx.m_physicalDevice,
-        *vkCtx.m_surface,
-        *vkCtx.m_logicalDevice,
-        vkCtx.m_presentQueue);
+        vkCtx->m_physicalDevice,
+        *vkCtx->m_surface,
+        *vkCtx->m_logicalDevice,
+        vkCtx->m_presentQueue);
 
-    descriptorSetLayout = vkCtx.createUniformDescriptorSetLayout();
+    descriptorSetLayout = vkCtx->createUniformDescriptorSetLayout();
 
-    pipeline = std::make_unique<Pipeline>(*vkCtx.m_logicalDevice);
+    pipeline = std::make_unique<Pipeline>(*vkCtx->m_logicalDevice);
     pipeline->initPipeline(swapchain->m_extent, swapchain->m_colorFormat, &*descriptorSetLayout);
 
     swapchain->updateFramebuffers(*pipeline->m_renderPass);
 
-    transferCmdBuffer = CmdBufferAllocator::get()->getTransferBuffer();
+    vk::UniqueCommandBuffer transferCmdBuffer =
+        CmdBufferAllocator::get()->createBufferUnique(*CmdBufferAllocator::get()->m_transferCmdPool);
 
     const std::vector<float> vertices = {
         -1, -1, -1, 0, 0, 1,
@@ -62,23 +66,23 @@ void RTXApplication::initVulkan() {
         4, 5, 0, 0, 5, 1
     };
 
-    object = std::make_unique<Mesh>(*vkCtx.m_logicalDevice, vertices, indices);
+    object = std::make_unique<Mesh>(*vkCtx->m_logicalDevice, vertices, indices);
     object->translate(glm::vec3(0.0f, 0.0f, 2.5f));
 
     uniformBuffer = std::make_unique<Buffer>(
-        *vkCtx.m_logicalDevice,
+        *vkCtx->m_logicalDevice,
         sizeof(UniformBufferObject),
         vk::BufferUsageFlagBits::eUniformBuffer,
         vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
 
-    descriptorPool = vkCtx.createDescriptorPool(swapchain->m_imageCount);
+    descriptorPool = vkCtx->createDescriptorPool(swapchain->m_imageCount);
 
     swapchainFrameInfos.resize(swapchain->m_imageCount);
     
     std::vector<vk::DescriptorSetLayout> layouts(swapchain->m_imageCount, *descriptorSetLayout);
-    std::vector<vk::UniqueDescriptorSet> descriptorSets = vkCtx.createDescriptorSets(*descriptorPool, layouts);
-    std::vector<vk::UniqueCommandBuffer> cmdBuffers =
-        CmdBufferAllocator::get()->getGraphicsBuffers(static_cast<uint32_t>(swapchainFrameInfos.size()));
+    std::vector<vk::UniqueDescriptorSet> descriptorSets = vkCtx->createDescriptorSets(*descriptorPool, layouts);
+    std::vector<vk::CommandBuffer> cmdBuffers =
+        CmdBufferAllocator::get()->createBuffers(*CmdBufferAllocator::get()->m_graphicsCmdPool, static_cast<uint32_t>(swapchainFrameInfos.size()));
 
     for (uint32_t i = 0; i < swapchainFrameInfos.size(); ++i) {
         swapchainFrameInfos[i].descriptorSet = std::move(descriptorSets[i]);
@@ -94,9 +98,9 @@ void RTXApplication::initVulkan() {
     fenceCreateInfo.flags = vk::FenceCreateFlagBits::eSignaled;
 
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
-        inFlightFrameInfos[i].imageAvailableSemaphore = vkCtx.m_logicalDevice->createSemaphoreUnique(semaphoreCreateInfo);
-        inFlightFrameInfos[i].renderCompleteSemaphore = vkCtx.m_logicalDevice->createSemaphoreUnique(semaphoreCreateInfo);
-        inFlightFrameInfos[i].inFlightFence = vkCtx.m_logicalDevice->createFenceUnique(fenceCreateInfo);
+        inFlightFrameInfos[i].imageAvailableSemaphore = vkCtx->m_logicalDevice->createSemaphoreUnique(semaphoreCreateInfo);
+        inFlightFrameInfos[i].renderCompleteSemaphore = vkCtx->m_logicalDevice->createSemaphoreUnique(semaphoreCreateInfo);
+        inFlightFrameInfos[i].inFlightFence = vkCtx->m_logicalDevice->createFenceUnique(fenceCreateInfo);
     }
 
     glfwGetCursorPos(window, &cursorX, &cursorY);
@@ -139,7 +143,7 @@ void RTXApplication::mainLoop() {
         }
     }
 
-    vkCtx.m_logicalDevice->waitIdle();
+    vkCtx->m_logicalDevice->waitIdle();
 }
 
 void RTXApplication::generateSwapchainFrameInfo(const uint32_t index) {
@@ -156,7 +160,7 @@ void RTXApplication::generateSwapchainFrameInfo(const uint32_t index) {
     frameInfo.writeDescriptorSet.descriptorCount = 1;
     frameInfo.writeDescriptorSet.pBufferInfo = &frameInfo.descriptorBufferInfo;
 
-    vkCtx.m_logicalDevice->updateDescriptorSets(1, &frameInfo.writeDescriptorSet, 0, nullptr);
+    vkCtx->m_logicalDevice->updateDescriptorSets(1, &frameInfo.writeDescriptorSet, 0, nullptr);
 
     frameInfo.clearColor = vk::ClearColorValue(std::array<float, 4>({ 0.0f, 0.0f, 0.0f, 1.0f }));
 
@@ -204,7 +208,7 @@ void RTXApplication::updateSwapchainFrameInfo(const uint32_t index) {
 void RTXApplication::recordCommandBuffer(const uint32_t index) {
     SwapchainFrameInfo& frameInfo = swapchainFrameInfos[index];
     
-    vk::CommandBuffer& frameBuffer = *frameInfo.frameBuffer;
+    vk::CommandBuffer& frameBuffer = frameInfo.frameBuffer;
 
     frameBuffer.begin(frameInfo.beginInfo);
     frameBuffer.beginRenderPass(frameInfo.renderPassBeginInfo, vk::SubpassContents::eInline);
@@ -235,12 +239,12 @@ void RTXApplication::resetCommandBuffer(const uint32_t index) {
     SwapchainFrameInfo& frameInfo = swapchainFrameInfos[index];
 
     if (frameInfo.imageInUse != VK_NULL_HANDLE) {
-        vkCtx.m_logicalDevice->waitForFences(
+        vkCtx->m_logicalDevice->waitForFences(
             frameInfo.imageInUse,
             VK_TRUE,
             UINT64_MAX);
     }
-    frameInfo.frameBuffer->reset(vk::CommandBufferResetFlags());
+    frameInfo.frameBuffer.reset(vk::CommandBufferResetFlags());
 }
 
 void RTXApplication::calculateTime() {
@@ -309,13 +313,13 @@ void RTXApplication::processKeyboard() {
 uint32_t RTXApplication::acquireNextImage() {
     InFlightFrameInfo& frameInfo = inFlightFrameInfos[currentFrame];
 
-    vkCtx.m_logicalDevice->waitForFences(*frameInfo.inFlightFence, VK_TRUE, UINT64_MAX);
+    vkCtx->m_logicalDevice->waitForFences(*frameInfo.inFlightFence, VK_TRUE, UINT64_MAX);
 
     uint32_t swapchainIndex;
     vk::Result acquireResult;
 
     try {
-        acquireResult = vkCtx.m_logicalDevice->acquireNextImageKHR(
+        acquireResult = vkCtx->m_logicalDevice->acquireNextImageKHR(
             *swapchain->m_swapchain,
             UINT64_MAX,
             *frameInfo.imageAvailableSemaphore,
@@ -334,7 +338,7 @@ uint32_t RTXApplication::acquireNextImage() {
     SwapchainFrameInfo& swapchainInfo = swapchainFrameInfos[swapchainIndex];
 
     if (swapchainInfo.imageInUse != VK_NULL_HANDLE) {
-        vkCtx.m_logicalDevice->waitForFences(swapchainInfo.imageInUse, VK_TRUE, UINT64_MAX);
+        vkCtx->m_logicalDevice->waitForFences(swapchainInfo.imageInUse, VK_TRUE, UINT64_MAX);
     }
 
     swapchainInfo.imageInUse = *frameInfo.inFlightFence;
@@ -364,14 +368,14 @@ void RTXApplication::drawFrame(const uint32_t swapchainIndex) {
     vk::PipelineStageFlags waitStages[] = { vk::PipelineStageFlagBits::eColorAttachmentOutput };
     submitInfo.pWaitDstStageMask = waitStages;
     submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &*swapchainFrameInfo.frameBuffer;
+    submitInfo.pCommandBuffers = &swapchainFrameInfo.frameBuffer;
 
     vk::Semaphore renderComplete[] = { *flightFrameInfo.renderCompleteSemaphore };
     submitInfo.signalSemaphoreCount = 1;
     submitInfo.pSignalSemaphores = renderComplete;
 
-    vkCtx.m_logicalDevice->resetFences(1, &*flightFrameInfo.inFlightFence);
-    vkCtx.m_graphicsQueue.submit(submitInfo, *flightFrameInfo.inFlightFence);
+    vkCtx->m_logicalDevice->resetFences(1, &*flightFrameInfo.inFlightFence);
+    vkCtx->m_graphicsQueue.submit(submitInfo, *flightFrameInfo.inFlightFence);
 
     vk::PresentInfoKHR presentInfo;
     presentInfo.waitSemaphoreCount = 1;
@@ -385,7 +389,7 @@ void RTXApplication::drawFrame(const uint32_t swapchainIndex) {
     vk::Result presentResult;
 
     try {
-        presentResult = vkCtx.m_presentQueue.presentKHR(presentInfo);
+        presentResult = vkCtx->m_presentQueue.presentKHR(presentInfo);
     }
     catch (vk::OutOfDateKHRError) {
         presentResult = vk::Result::eErrorOutOfDateKHR;
@@ -409,8 +413,6 @@ void RTXApplication::framebufferSizeCallback(GLFWwindow* window, int width, int 
 }
 
 RTXApplication::~RTXApplication() {
-    MemoryAllocator::destroy();
-
     glfwDestroyWindow(window);
     glfwTerminate();
 }
