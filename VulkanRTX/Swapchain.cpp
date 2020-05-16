@@ -60,20 +60,28 @@ void Swapchain::updateSwapchain() {
 	}
 }
 
-void Swapchain::updateFramebuffers(vk::RenderPass& renderPass) {
+void Swapchain::updateFramebuffers(vk::RenderPass& renderPass, vk::ImageView& depthBufferView) {
 	m_framebuffers.clear();
 
 	vk::FramebufferCreateInfo createInfo;
 	createInfo.renderPass = renderPass;
-	createInfo.attachmentCount = 1;
+	createInfo.attachmentCount = 2;
 	createInfo.width = m_extent.width;
 	createInfo.height = m_extent.height;
 	createInfo.layers = 1;
 
+	std::vector<vk::ImageView> imageViews = std::vector<vk::ImageView>(2);
+	imageViews[1] = depthBufferView;
+
 	for (vk::UniqueImageView& imageView : m_imageViews) {
-		createInfo.pAttachments = &*imageView;
+		imageViews[0] = *imageView,
+		createInfo.pAttachments = imageViews.data();
 		m_framebuffers.push_back(m_logicalDevice.createFramebufferUnique(createInfo));
 	}
+}
+
+vk::Image& Swapchain::getImage(uint32_t index) {
+	return m_images[index];
 }
 
 Swapchain::Swapchain(vk::PhysicalDevice& physicalDevice,

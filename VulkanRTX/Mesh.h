@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Buffer.h"
+#include "Vertex.h"
 
 #include <glm/vec3.hpp>
 #include <glm/gtx/quaternion.hpp>
@@ -10,7 +11,8 @@ class Mesh {
 public:
 	Mesh(
 		vk::Device& logicalDevice,
-		std::vector<float> vertices,
+		std::vector<Vertex> vertices,
+		uint32_t vertexStride,
 		std::vector<uint16_t> indices,
 		glm::vec3 position = glm::vec3(0.0f),
 		glm::vec3 rotation = glm::vec3(0.0f),
@@ -18,7 +20,7 @@ public:
 
 	vk::Buffer& getVertexBuffer();
 	Buffer& getVertexBufferObject();
-	uint32_t getVertextCount();
+	uint32_t getVertexCount();
 	vk::Buffer& getIndexBuffer();
 	Buffer& getIndexBufferObject();
 	uint32_t getIndexCount();
@@ -32,8 +34,10 @@ public:
 private:
 	Buffer m_deviceVertexBuffer;
 	Buffer m_deviceIndexBuffer;
-	std::vector<float> m_vertices;
+	std::vector<Vertex> m_vertices;
 	std::vector<uint16_t> m_indices;
+
+	uint32_t m_vertexStride;
 
 	glm::vec3 m_position;
 	glm::quat m_rotation;

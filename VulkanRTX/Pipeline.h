@@ -1,12 +1,10 @@
 #pragma once
 
+#include "Vertex.h"
 #include "VulkanInclude.h"
+
 #include <glm/vec3.hpp>
 
-struct Vertex {
-	glm::vec3 m_pos;
-	glm::vec3 m_color;
-};
 
 class Pipeline {
 public:
@@ -36,6 +34,7 @@ private:
 		std::vector<vk::VertexInputAttributeDescription> attributeDescriptions;
 		vk::PipelineVertexInputStateCreateInfo vertexInputCreateInfo;
 		vk::PipelineInputAssemblyStateCreateInfo inputAssemblyCreateInfo;
+		vk::PipelineDepthStencilStateCreateInfo depthStencilCreateInfo;
 
 		vk::Viewport viewport;
 		vk::Rect2D scissor;
@@ -60,7 +59,9 @@ private:
 
 	struct RenderPassInfo {
 		vk::AttachmentDescription colorAttachment;
+		vk::AttachmentDescription depthAttachment;
 		vk::AttachmentReference colorAttachmentRef;
+		vk::AttachmentReference depthAttachmentRef;
 		vk::SubpassDescription subpass;
 		vk::SubpassDependency dependency;
 		vk::RenderPassCreateInfo renderPassCreateInfo;

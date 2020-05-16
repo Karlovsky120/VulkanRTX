@@ -10,7 +10,8 @@ public:
 	std::vector<vk::UniqueFramebuffer> m_framebuffers;
 	
 	void updateSwapchain();
-	void updateFramebuffers(vk::RenderPass& renderPass);
+	void updateFramebuffers(vk::RenderPass& renderPass, vk::ImageView& depthBufferView);
+	vk::Image& getImage(uint32_t index);
 
 	Swapchain(vk::PhysicalDevice& physicalDevice,
 		vk::SurfaceKHR& surface,

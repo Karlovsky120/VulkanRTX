@@ -2,12 +2,12 @@
 
 #include "VulkanInclude.h"
 
-#include "CmdBufferAllocator.h"
+#include "CommandBuffer.h"
 #include "MemoryAllocator.h"
 
 class Buffer {
 public:
-	AllocId m_allocId;
+	std::unique_ptr<AllocId> m_allocId;
 
 	vk::Buffer& get();
 	vk::Buffer* getPtr();
@@ -15,57 +15,22 @@ public:
 	const vk::MemoryRequirements& getMemoryRequirements() const;
 
 	template <class T>
-	void uploadToHostLocal(T data) {
-		uploadToHostLocal(std::vector<T>{data});
+	void uploadToBuffer(T data) {
+		std::vector<T> dataVector = { data };
+		uploadToBuffer(dataVector);
 	}
 
 	template <class T>
-	void uploadToHostLocal(std::vector<T> data) {
-		assert(m_memoryFlags & vk::MemoryPropertyFlagBits::eHostVisible);
-
-		uint32_t sizeInBytes = static_cast<uint32_t>(data.size() * sizeof(T));
-
-		void* bufferData = m_logicalDevice.mapMemory(*m_allocId.memory,
-													 m_allocId.offset,
-													 sizeInBytes,
-													 vk::MemoryMapFlags());
-
-		memcpy(bufferData, data.data(), sizeInBytes);
-		m_logicalDevice.unmapMemory(*m_allocId.memory);
-	}
-
-	template <class T>
-	void uploadToDeviceLocal(std::vector<T>& data) {
-
-		assert(m_memoryFlags & vk::MemoryPropertyFlagBits::eDeviceLocal);
-
-		uint32_t dataSize = static_cast<uint32_t>(sizeof(T) * data.size());
-
-		Buffer hostLocal = Buffer(
-			m_logicalDevice,
-			dataSize,
-			vk::BufferUsageFlagBits::eTransferSrc,
-			vk::MemoryPropertyFlagBits::eHostVisible);
-
-		hostLocal.uploadToHostLocal(data);
-
-		vk::BufferCopy bufferCopy;
-		bufferCopy.size = dataSize;
-		bufferCopy.srcOffset = 0;
-		bufferCopy.dstOffset = 0;
-
-		vk::UniqueCommandBuffer transferCmdBuffer =
-			CmdBufferAllocator::get()->createBufferUnique(*CmdBufferAllocator::get()->m_transferCmdPool);
-
-		vk::CommandBufferBeginInfo beginInfo;
-		transferCmdBuffer->begin(beginInfo);
-		transferCmdBuffer->copyBuffer(hostLocal.get(), *m_buffer, bufferCopy);
-		transferCmdBuffer->end();
-
-		CmdBufferAllocator::get()->submitBuffer(
-			*transferCmdBuffer,
-			VulkanContext::get()->m_transferQueue,
-			true);
+	void uploadToBuffer(std::vector<T>& data) {
+		if (m_memoryFlags & vk::MemoryPropertyFlagBits::eHostVisible) {
+			uploadToHostVisible(data);
+		}
+		else if (m_memoryFlags & vk::MemoryPropertyFlagBits::eDeviceLocal) {
+			uploadToDeviceLocal(data);
+		}
+		else {
+			throw std::runtime_error("Unhandle Memory property on buffer copy!");
+		}
 	}
 
 	Buffer(
@@ -73,11 +38,45 @@ public:
 		const vk::DeviceSize size,
 		const vk::BufferUsageFlags usageFlags,
 		const vk::MemoryPropertyFlags memoryFlags,
-		const vk::MemoryAllocateFlags memoryAllocateFlags = vk::MemoryAllocateFlags(),
-		const vk::MemoryRequirements memoryRequirements = {0, 0, 0}		);
-	~Buffer();
+		vk::MemoryAllocateFlags memoryAllocateFlags = vk::MemoryAllocateFlags(),
+		const vk::MemoryRequirements memoryRequirements = { 0, 0, 0 });
 
 private:
+	template <class T>
+	void uploadToHostVisible(std::vector<T>& data) {
+		uint32_t sizeInBytes = static_cast<uint32_t>(data.size() * sizeof(T));
+
+		void* bufferData = m_logicalDevice.mapMemory(*m_allocId->memory,
+													 m_allocId->offset,
+													 sizeInBytes,
+													 vk::MemoryMapFlags());
+
+		memcpy(bufferData, data.data(), sizeInBytes);
+		m_logicalDevice.unmapMemory(*m_allocId->memory);
+	}
+
+	template <class T>
+	void uploadToDeviceLocal(std::vector<T>& data) {
+		uint32_t sizeInBytes = static_cast<uint32_t>(data.size() * sizeof(T));
+
+		Buffer hostLocal = Buffer(
+			m_logicalDevice,
+			sizeInBytes,
+			vk::BufferUsageFlagBits::eTransferSrc,
+			vk::MemoryPropertyFlagBits::eHostVisible);
+
+		hostLocal.uploadToHostVisible(data);
+
+		vk::BufferCopy bufferCopy;
+		bufferCopy.size = sizeInBytes;
+		bufferCopy.srcOffset = 0;
+		bufferCopy.dstOffset = 0;
+
+		CommandBuffer transferCmdBuffer = CommandBuffer(PoolType::eTransfer);
+		transferCmdBuffer.get().copyBuffer(hostLocal.get(), *m_buffer, bufferCopy);
+		transferCmdBuffer.submit(true);
+	}
+
 	vk::UniqueBuffer m_buffer;
 
 	vk::MemoryPropertyFlags m_memoryFlags;

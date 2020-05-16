@@ -6,13 +6,7 @@
 #include <vector>
 
 class DeviceMemory;
-
-struct AllocId {
-	vk::DeviceMemory* memory;
-	uint32_t type;
-	uint32_t chunk;
-	uint32_t offset;
-};
+class AllocId;
 
 class MemoryAllocator {
 public:
@@ -23,10 +17,10 @@ public:
 
 	static std::shared_ptr<MemoryAllocator> get();
 
-	AllocId allocate(
+	std::unique_ptr<AllocId> allocate(
 		vk::MemoryRequirements& requirements,
 		vk::MemoryPropertyFlags memoryFlags,
-		vk::MemoryAllocateFlags allocateFlags);
+		vk::MemoryAllocateFlags allocateFlags = vk::MemoryAllocateFlags());
 
 	void free(AllocId& allocId);
 	void freeAllMemory();
@@ -44,10 +38,38 @@ private:
 		uint32_t typeFilter,
 		vk::MemoryPropertyFlags propertyFlags);
 
-	std::map<uint32_t, std::vector<DeviceMemory>> m_memoryTable;
+	std::map<std::pair<uint32_t, vk::MemoryAllocateFlags>, std::vector<DeviceMemory>> m_memoryTable;
 	const vk::PhysicalDeviceMemoryProperties& m_memoryProperties;
 	const vk::Device& m_logicalDevice;
 
 	static std::weak_ptr<MemoryAllocator> instance;
 };
 
+class AllocId {
+public:
+	vk::DeviceMemory* memory;
+	vk::MemoryAllocateFlags allocateFlags;
+	uint32_t type;
+	uint32_t chunk;
+	uint32_t offset;
+
+	AllocId(AllocId const&) = delete;
+	void operator=(AllocId const&) = delete;
+
+	AllocId(
+		vk::DeviceMemory* memory,
+		uint32_t type,
+		vk::MemoryAllocateFlags flags,
+		uint32_t chunk,
+		uint32_t offset) :
+
+		memory(memory),
+		type(type),
+		allocateFlags(flags),
+		chunk(chunk),
+		offset(offset) {}
+
+	~AllocId() {
+		MemoryAllocator::get()->free(*this);
+	}
+};

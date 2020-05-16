@@ -12,12 +12,12 @@ void Pipeline::createPipeline(const vk::Extent2D& extent) {
 	m_pipelineInfo.attributeDescriptions[0].binding = 0;
 	m_pipelineInfo.attributeDescriptions[0].location = 0;
 	m_pipelineInfo.attributeDescriptions[0].format = vk::Format::eR32G32B32Sfloat;
-	m_pipelineInfo.attributeDescriptions[0].offset = offsetof(Vertex, m_pos);
+	m_pipelineInfo.attributeDescriptions[0].offset = offsetof(Vertex, position);
 
 	m_pipelineInfo.attributeDescriptions[1].binding = 0;
 	m_pipelineInfo.attributeDescriptions[1].location = 1;
 	m_pipelineInfo.attributeDescriptions[1].format = vk::Format::eR32G32B32Sfloat;
-	m_pipelineInfo.attributeDescriptions[1].offset = offsetof(Vertex, m_color);
+	m_pipelineInfo.attributeDescriptions[1].offset = offsetof(Vertex, normal);
 
 	m_pipelineInfo.vertexInputCreateInfo.vertexBindingDescriptionCount = 1;
 	m_pipelineInfo.vertexInputCreateInfo.vertexAttributeDescriptionCount = m_pipelineInfo.attributeDescriptions.size();
@@ -26,6 +26,12 @@ void Pipeline::createPipeline(const vk::Extent2D& extent) {
 
 	m_pipelineInfo.inputAssemblyCreateInfo.topology = vk::PrimitiveTopology::eTriangleList;
 	m_pipelineInfo.inputAssemblyCreateInfo.primitiveRestartEnable = VK_FALSE;
+
+	m_pipelineInfo.depthStencilCreateInfo.depthTestEnable = VK_TRUE;
+	m_pipelineInfo.depthStencilCreateInfo.depthWriteEnable = VK_TRUE;
+	m_pipelineInfo.depthStencilCreateInfo.depthCompareOp = vk::CompareOp::eLess;
+	m_pipelineInfo.depthStencilCreateInfo.depthBoundsTestEnable = VK_FALSE;
+	m_pipelineInfo.depthStencilCreateInfo.stencilTestEnable = VK_FALSE;
 
 	m_pipelineInfo.viewport.x = 0.0f;
 	m_pipelineInfo.viewport.y = 0.0f;
@@ -101,10 +107,10 @@ void Pipeline::createPipeline(const vk::Extent2D& extent) {
 
 	m_pipelineInfo.pipelineCreateInfo.pVertexInputState = &m_pipelineInfo.vertexInputCreateInfo;
 	m_pipelineInfo.pipelineCreateInfo.pInputAssemblyState = &m_pipelineInfo.inputAssemblyCreateInfo;
+	m_pipelineInfo.pipelineCreateInfo.pDepthStencilState = &m_pipelineInfo.depthStencilCreateInfo;
 	m_pipelineInfo.pipelineCreateInfo.pViewportState = &m_pipelineInfo.viewportCreateInfo;
 	m_pipelineInfo.pipelineCreateInfo.pRasterizationState = &m_pipelineInfo.rasterizerationCreateInfo;
 	m_pipelineInfo.pipelineCreateInfo.pMultisampleState = &m_pipelineInfo.multisampleCreateInfo;
-	m_pipelineInfo.pipelineCreateInfo.pDepthStencilState = nullptr;
 	m_pipelineInfo.pipelineCreateInfo.pColorBlendState = &m_pipelineInfo.colorBlendCreateInfo;
 	m_pipelineInfo.pipelineCreateInfo.pDynamicState = nullptr;
 
@@ -127,21 +133,32 @@ void Pipeline::createPipeline(const vk::Extent2D& extent) {
 void Pipeline::createRenderPass(const vk::Format& format) {
 	m_renderPassInfo.colorAttachment.format = format;
 	m_renderPassInfo.colorAttachment.samples = vk::SampleCountFlagBits::e1;
-
 	m_renderPassInfo.colorAttachment.loadOp = vk::AttachmentLoadOp::eClear;
 	m_renderPassInfo.colorAttachment.storeOp = vk::AttachmentStoreOp::eStore;
 	m_renderPassInfo.colorAttachment.stencilLoadOp = vk::AttachmentLoadOp::eDontCare;
 	m_renderPassInfo.colorAttachment.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
-
 	m_renderPassInfo.colorAttachment.initialLayout = vk::ImageLayout::eUndefined;
 	m_renderPassInfo.colorAttachment.finalLayout = vk::ImageLayout::ePresentSrcKHR;
 
 	m_renderPassInfo.colorAttachmentRef.attachment = 0;
 	m_renderPassInfo.colorAttachmentRef.layout = vk::ImageLayout::eColorAttachmentOptimal;
 
+	m_renderPassInfo.depthAttachment.format = vk::Format::eD32Sfloat;
+	m_renderPassInfo.depthAttachment.samples = vk::SampleCountFlagBits::e1;
+	m_renderPassInfo.depthAttachment.loadOp = vk::AttachmentLoadOp::eClear;
+	m_renderPassInfo.depthAttachment.storeOp = vk::AttachmentStoreOp::eDontCare;
+	m_renderPassInfo.depthAttachment.stencilLoadOp = vk::AttachmentLoadOp::eDontCare;
+	m_renderPassInfo.depthAttachment.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
+	m_renderPassInfo.depthAttachment.initialLayout = vk::ImageLayout::eUndefined;
+	m_renderPassInfo.depthAttachment.finalLayout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
+
+	m_renderPassInfo.depthAttachmentRef.attachment = 1;
+	m_renderPassInfo.depthAttachmentRef.layout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
+
 	m_renderPassInfo.subpass.pipelineBindPoint = vk::PipelineBindPoint::eGraphics;
 	m_renderPassInfo.subpass.colorAttachmentCount = 1;
 	m_renderPassInfo.subpass.pColorAttachments = &m_renderPassInfo.colorAttachmentRef;
+	m_renderPassInfo.subpass.pDepthStencilAttachment = &m_renderPassInfo.depthAttachmentRef;
 
 	m_renderPassInfo.dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
 	m_renderPassInfo.dependency.dstSubpass = 0;
@@ -149,8 +166,13 @@ void Pipeline::createRenderPass(const vk::Format& format) {
 	m_renderPassInfo.dependency.dstStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
 	m_renderPassInfo.dependency.dstAccessMask = vk::AccessFlagBits::eColorAttachmentRead | vk::AccessFlagBits::eColorAttachmentWrite;
 
-	m_renderPassInfo.renderPassCreateInfo.attachmentCount = 1;
-	m_renderPassInfo.renderPassCreateInfo.pAttachments = &m_renderPassInfo.colorAttachment;
+	std::vector<vk::AttachmentDescription> attachments = {
+		m_renderPassInfo.colorAttachment,
+		m_renderPassInfo.depthAttachment
+	};
+
+	m_renderPassInfo.renderPassCreateInfo.attachmentCount = attachments.size();
+	m_renderPassInfo.renderPassCreateInfo.pAttachments = attachments.data();
 	m_renderPassInfo.renderPassCreateInfo.subpassCount = 1;
 	m_renderPassInfo.renderPassCreateInfo.pSubpasses = &m_renderPassInfo.subpass;
 	m_renderPassInfo.renderPassCreateInfo.dependencyCount = 1;

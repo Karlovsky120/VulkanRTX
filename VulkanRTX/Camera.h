@@ -16,12 +16,16 @@ public:
 	void rotate(glm::vec3 rotation);
 	void rotate(float pitch, float yaw);
 
-	void updateProjectionMatrix(float aspect);
+	void updateProjectionMatrixAspectRatio(float aspect);
+	void updateProjectionMatrixFov(float fov);
+	void adjustFov(float step);
 
 	glm::mat4 getCameraMatrix();
 
 	glm::mat4 getViewMatrix();
 	glm::mat4 getProjectionMatrix();
+
+	glm::vec3 getCameraPosition();
 
 	Camera(glm::vec3 position = glm::vec3(0.0f, 0.0f, 0.0f),
 		   glm::vec3 rotation = glm::vec3(0.0f, 0.0f, 0.0f),
@@ -42,5 +46,7 @@ private:
 
 	glm::vec3 m_forwardVector = glm::vec3(0.0f, 0.0f, -1.0f);
 	glm::vec3 m_rightVector = glm::vec3(-1.0f, 0.0f, 0.0f);
+
+	glm::mat4 calculateProjectionMatrix(float fov, float aspect, float zNear, float zFar);
 };
 
