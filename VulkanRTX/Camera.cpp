@@ -49,9 +49,22 @@ void Camera::rotate(float pitch, float yaw) {
 	m_rightVector = glm::normalize(glm::cross(m_forwardVector, glm::vec3(0.0f, -1.0f, 0.0f)));
 }
 
-void Camera::updateProjectionMatrix(float aspect) {
+void Camera::updateProjectionMatrixAspectRatio(float aspect) {
 	m_aspect = aspect;
-	m_projection = glm::scale(glm::perspective(glm::radians(m_fov), m_aspect, m_zNear, m_zFar), glm::vec3(1.0f, 1.0f, -1.0f));
+#ifdef IN_HOUSE_PROJECTION
+	m_projection = glm::scale(calculateProjectionMatrix(glm::radians(m_fov), m_aspect, m_zNear, m_zFar), glm::vec3(1.0f, -1.0f, -1.0f));
+#else
+	m_projection = glm::scale(glm::perspective(glm::radians(m_fov), m_aspect, m_zNear, m_zFar), glm::vec3(1.0f, -1.0f, -1.0f));
+#endif
+}
+
+void Camera::updateProjectionMatrixFov(float fov) {
+	m_fov = fov;
+	m_projection = glm::scale(glm::perspective(glm::radians(m_fov), m_aspect, m_zNear, m_zFar), glm::vec3(1.0f, -1.0f, -1.0f));
+}
+
+void Camera::adjustFov(float step) {
+	updateProjectionMatrixFov(m_fov + step);
 }
 
 glm::mat4 Camera::getCameraMatrix() {
@@ -71,6 +84,10 @@ glm::mat4 Camera::getProjectionMatrix() {
 	return m_projection;
 }
 
+glm::vec3 Camera::getCameraPosition() {
+	return -m_position;
+}
+
 Camera::Camera(glm::vec3 position,
 			   glm::vec3 rotation,
 			   float fov,
@@ -82,8 +99,12 @@ Camera::Camera(glm::vec3 position,
 	m_fov(fov),
 	m_aspect(aspect),
 	m_zNear(zNear),
-	m_zFar(zFar) {
-
-	// Perspective matrix flips the Z coordinate, so it needs to be flipped back.
-	m_projection = glm::scale(glm::perspective(glm::radians(m_fov), m_aspect, m_zNear, m_zFar), glm::vec3(1.0f, 1.0f, -1.0f));
-}
+	m_zFar(zFar),
+	m_projection(
+		glm::scale(
+			glm::perspective(
+				glm::radians(m_fov),
+				m_aspect,
+				m_zNear,
+				m_zFar),
+		glm::vec3(1.0f, -1.0f, -1.0f))) {}

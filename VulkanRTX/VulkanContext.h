@@ -61,6 +61,11 @@ public:
     ~VulkanContext();
 
 private:
+    uint32_t findTransferQueue(std::vector<vk::QueueFamilyProperties> queueFamilyProperties);
+    uint32_t findComputeQueue(std::vector<vk::QueueFamilyProperties> queueFamilyProperties);
+    uint32_t findGraphicsQueue(std::vector<vk::QueueFamilyProperties> queueFamilyProperties);
+    uint32_t findPresentQueue(uint32_t count, vk::SurfaceKHR surface, vk::PhysicalDevice physicalDevice);
+
 #ifdef ENABLE_VALIDATION
     vk::DebugUtilsMessengerEXT m_debugMessenger;
 

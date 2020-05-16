@@ -63,8 +63,7 @@ void DeviceMemory::freeBlock(uint32_t freeOffset) {
 	}
 }
 
-DeviceMemory::DeviceMemory(const vk::Device& logicalDevice, const uint32_t memoryType, const vk::MemoryAllocateFlags flags) :
-	m_logicalDevice(logicalDevice),
+DeviceMemory::DeviceMemory(const vk::Device& logicalDevice, const uint32_t memoryTypeIndex, const vk::MemoryAllocateFlags flags) :
 	m_blocks(std::list<MemoryChunk>()) {
 
 	m_blocks.insert(m_blocks.begin(), MemoryChunk{0, m_size, true});
@@ -74,7 +73,7 @@ DeviceMemory::DeviceMemory(const vk::Device& logicalDevice, const uint32_t memor
 
 	vk::MemoryAllocateInfo allocateInfo;
 	allocateInfo.allocationSize = m_size;
-	allocateInfo.memoryTypeIndex = memoryType;
+	allocateInfo.memoryTypeIndex = memoryTypeIndex;
 	allocateInfo.pNext = &flagInfo;
 
 	m_deviceMemory = logicalDevice.allocateMemory(allocateInfo);

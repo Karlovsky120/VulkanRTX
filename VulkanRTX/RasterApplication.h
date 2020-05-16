@@ -1,14 +1,12 @@
 #pragma once
 
-#include "AccelerationStructure.h"
 #include "Camera.h"
 #include "Chunk.h"
+#include "CommandBuffer.h"
 #include "Image.h"
 #include "Mesh.h"
 #include "ObjLoader.h"
 #include "Pipeline.h"
-#include "RayTracing.h"
-#include "RTPipeline.h"
 #include "Swapchain.h"
 #include "VulkanContext.h"
 
@@ -21,27 +19,36 @@
 
 struct GLFWwindow;
 
-class RTXApplication {
+class RasterApplication {
 public:
     void run();
 
-    RTXApplication(std::string modelPath);
-    ~RTXApplication();
+    RasterApplication(std::string modelPath);
+    ~RasterApplication();
 
 private:
-    struct UniformBufferData {
-        glm::mat4 viewInv;
-        glm::mat4 projInv;
+    struct UniformBufferObject {
+        glm::mat4 model;
+        glm::vec3 playerPosition;
+        float spacer1;
+        glm::vec3 lightPosition;
+        float spacer2;
+        glm::vec3 lightColor;
+        float spacer3;
     };
 
     struct SwapchainFrameInfo {
-        //vk::UniqueDescriptorSet descriptorSet;
-        //vk::DescriptorBufferInfo descriptorBufferInfo;
-        //vk::WriteDescriptorSet writeDescriptorSet;
-        std::unique_ptr<CommandBuffer> frameBuffer;
-        //vk::CommandBufferBeginInfo beginInfo;
+        vk::UniqueDescriptorSet descriptorSet;
+        vk::DescriptorBufferInfo descriptorBufferInfo;
+        vk::WriteDescriptorSet writeDescriptorSet;
+        std::unique_ptr<CommandBuffer> frameCommandBuffer;
+        vk::CommandBufferBeginInfo beginInfo;
+        vk::RenderPassBeginInfo renderPassBeginInfo;
         vk::Fence imageInUse = vk::Fence();
+        std::unique_ptr<Image> rasterImage;
     };
+
+    std::vector<vk::ClearValue> clearColors;
 
     struct InFlightFrameInfo {
         vk::UniqueSemaphore imageAvailableSemaphore;
@@ -58,9 +65,9 @@ private:
     Camera camera;
 
     std::chrono::time_point<std::chrono::high_resolution_clock> time;
-    float skip;
-    float frameTime;
-    const float velocity = 4.0f; 
+    float skip = 0;
+    float frameTime = 1.0f;
+    const float velocity = 8.0f; 
 
     GLFWwindow* window;
 
@@ -71,36 +78,21 @@ private:
     std::shared_ptr<VulkanContext> vkCtx;
     std::shared_ptr<MemoryAllocator> memoryAllocator;
     std::shared_ptr<CommandPools> commandPools;
-
-    std::shared_ptr<RayTracing> rt;
     
     std::unique_ptr<Swapchain> swapchain;
-
-    std::unique_ptr<AccelerationStructure> blas;
-    std::unique_ptr<AccelerationStructure> tlas;
-
-    std::unique_ptr<RTPipeline> rtPipeline;
-    std::unique_ptr<Buffer> sbt;
-
+    std::unique_ptr<Pipeline> pipeline;
+    
+    std::unique_ptr<Buffer> uniformBuffer;
+    std::unique_ptr<Image> depthBuffer;
+    
+    vk::UniqueDescriptorSetLayout descriptorSetLayout;
     vk::UniqueDescriptorPool descriptorPool;
-    vk::UniqueDescriptorSetLayout descriptorSetLayout;
-    vk::UniqueDescriptorSet descriptorSet;
-
-    std::unique_ptr<Buffer> uniformBuffer;
-    std::unique_ptr<Image> storageImage;
-
-    /*std::unique_ptr<Pipeline> pipeline;
-    
-    std::unique_ptr<Buffer> uniformBuffer;
-    
-    vk::UniqueDescriptorSetLayout descriptorSetLayout;
-    vk::UniqueDescriptorPool descriptorPool;*/
     
     std::vector<SwapchainFrameInfo> swapchainFrameInfos;
     std::vector<InFlightFrameInfo> inFlightFrameInfos;
     
     std::unique_ptr<Mesh> object;
-    glm::vec3 lightPosition = glm::vec3(-20.0f, 20.0f, 0.0f);
+    glm::vec3 lightPosition = glm::vec3(-32.0f, 0.0f, 0.0f);
     glm::vec3 lightColor = glm::vec3(1.0f, 1.0f, 1.0f);
     
     vk::UniqueSemaphore flushStagingSemaphore;
@@ -117,26 +109,20 @@ private:
     void mainLoop();
 
     void generateSwapchainFrameInfo(const uint32_t index);
-    /*void createDepthBuffer();
+    void createDepthBuffer();
 
     void updateSwapchainStack();
-    void updateSwapchainFrameInfo(const uint32_t index);*/
+    void updateSwapchainFrameInfo(const uint32_t index);
     void recordCommandBuffer(const uint32_t index);
 
-    /*void resetCommandBuffer(const uint32_t index);*/
+    void resetCommandBuffer(const uint32_t index);
 
     void calculateTime();
     void updateFPS();
     void processMouse();
     void processKeyboard();
-
-    void updateDescriptorSets(
-        vk::DescriptorSet& descriptorSet,
-        vk::AccelerationStructureKHR& as,
-        vk::ImageView& imageView);
-
     uint32_t acquireNextImage();
-    /*void updatePushConstants();*/
+    void updatePushConstants();
     void drawFrame(const uint32_t swapchainIndex);
 
     static void framebufferSizeCallback(GLFWwindow* window, int width, int height);

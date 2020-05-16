@@ -1,12 +1,13 @@
 #include "RTXApplication.h"
 
 #include "Buffer.h"
-#include "CmdBufferAllocator.h"
 #include "MemoryAllocator.h"
 #include "RayTracing.h"
+#include "Vertex.h"
 
 #include <GLFW/glfw3.h>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtx/rotate_vector.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/transform.hpp>
 #include <glm/gtx/string_cast.hpp>
@@ -28,7 +29,7 @@ void RTXApplication::initVulkan() {
         memoryAllocator,
         *vkCtx->m_logicalDevice,
         vkCtx->m_deviceMemoryProperties);
-    CmdBufferAllocator::init(cmdBufferAllocator);
+    CommandPools::init(commandPools);
 
     swapchain = std::make_unique<Swapchain>(
         vkCtx->m_physicalDevice,
@@ -36,60 +37,44 @@ void RTXApplication::initVulkan() {
         *vkCtx->m_logicalDevice,
         vkCtx->m_presentQueue);
 
-    descriptorSetLayout = vkCtx->createUniformDescriptorSetLayout();
+    /*descriptorSetLayout = vkCtx->createUniformDescriptorSetLayout();
 
     pipeline = std::make_unique<Pipeline>(*vkCtx->m_logicalDevice);
     pipeline->initPipeline(swapchain->m_extent, swapchain->m_colorFormat, &*descriptorSetLayout);
 
-    swapchain->updateFramebuffers(*pipeline->m_renderPass);
+    createDepthBuffer();
 
-    vk::UniqueCommandBuffer transferCmdBuffer =
-        CmdBufferAllocator::get()->createBufferUnique(*CmdBufferAllocator::get()->m_transferCmdPool);
+    clearColors.resize(2);
+    clearColors[0].color = vk::ClearColorValue(std::array<float, 4>({ 0.0f, 0.0f, 0.0f, 1.0f }));
+    clearColors[1].depthStencil = vk::ClearDepthStencilValue(1.0f);
 
-    const std::vector<float> vertices = {
-        -1, -1, -1, 0, 0, 1,
-        1, -1, -1, 0, 1, 0,
-        1, 1, -1, 1, 0, 0,
-        -1, 1, -1, 0, 1, 1,
-        -1, -1, 1, 1, 1, 0,
-        1, -1, 1, 1, 0, 1,
-        1, 1, 1, 0, 0, 0,
-        -1, 1, 1, 1, 1, 1
-    };
+    swapchain->updateFramebuffers(*pipeline->m_renderPass, depthBuffer->getView());*/
 
-    const std::vector<uint16_t> indices = {
-        0, 1, 3, 3, 1, 2,
-        1, 5, 2, 2, 5, 6,
-        5, 4, 6, 6, 4, 7,
-        4, 0, 7, 7, 0, 3,
-        3, 2, 7, 7, 2, 6,
-        4, 5, 0, 0, 5, 1
-    };
+    //objectData = ObjLoader::loadObj(modelPath);
 
-    object = std::make_unique<Mesh>(*vkCtx->m_logicalDevice, vertices, indices);
-    object->translate(glm::vec3(0.0f, 0.0f, 2.5f));
+    chunk = std::make_unique<Chunk>();
+    chunk->generateRandomly();
+    chunk->generateVertices();
+    //chunk.generateGreedyTriangles();
+    chunk->generateGreedyTrianglesMultithreaded();
+    //chunk.generateSimpleTriangles();
 
-    uniformBuffer = std::make_unique<Buffer>(
-        *vkCtx->m_logicalDevice,
-        sizeof(UniformBufferObject),
-        vk::BufferUsageFlagBits::eUniformBuffer,
-        vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
 
-    descriptorPool = vkCtx->createDescriptorPool(swapchain->m_imageCount);
+    object = std::make_unique<Mesh>(*vkCtx->m_logicalDevice, chunk->vertices, sizeof(Vertex), chunk->indices);
+    object->translate(glm::vec3(0.0, -CHUNK_SIZE * 0.5, 0));
+
+    descriptorPool = rt->createDescriptorPool();
+    descriptorSetLayout = rt->createDescriptorSetLayout();
+    descriptorSet = rt->createDescriptorSet(
+        *descriptorPool,
+        *descriptorSetLayout
+    );
 
     swapchainFrameInfos.resize(swapchain->m_imageCount);
-    
-    std::vector<vk::DescriptorSetLayout> layouts(swapchain->m_imageCount, *descriptorSetLayout);
-    std::vector<vk::UniqueDescriptorSet> descriptorSets = vkCtx->createDescriptorSets(*descriptorPool, layouts);
-    std::vector<vk::CommandBuffer> cmdBuffers =
-        CmdBufferAllocator::get()->createBuffers(*CmdBufferAllocator::get()->m_graphicsCmdPool, static_cast<uint32_t>(swapchainFrameInfos.size()));
 
     for (uint32_t i = 0; i < swapchainFrameInfos.size(); ++i) {
-        swapchainFrameInfos[i].descriptorSet = std::move(descriptorSets[i]);
-        swapchainFrameInfos[i].frameBuffer = std::move(cmdBuffers[i]);
-
-        generateSwapchainFrameInfo(i);
-        updateSwapchainFrameInfo(i);
+        swapchainFrameInfos[i].frameBuffer = std::make_unique<CommandBuffer>(PoolType::eCompute);
+        //generateSwapchainFrameInfo(i);
     }
 
     inFlightFrameInfos.resize(MAX_FRAMES_IN_FLIGHT);
@@ -103,11 +88,50 @@ void RTXApplication::initVulkan() {
         inFlightFrameInfos[i].inFlightFence = vkCtx->m_logicalDevice->createFenceUnique(fenceCreateInfo);
     }
 
+    /*descriptorPool = vkCtx->createDescriptorPool(swapchain->m_imageCount);
 
-    //Raytracing testing
-    RayTracing rt = RayTracing(vkCtx);
-    vk::UniqueAccelerationStructureKHR bottom = rt.createBottomAccelerationStructure(*object);
-    vk::UniqueAccelerationStructureKHR top = rt.createTopAccelerationStructure(*bottom);
+    
+    
+    std::vector<vk::DescriptorSetLayout> layouts(swapchain->m_imageCount, *descriptorSetLayout);
+    std::vector<vk::UniqueDescriptorSet> descriptorSets = vkCtx->createDescriptorSets(*descriptorPool, layouts);
+    std::vector<vk::CommandBuffer> cmdBuffers =
+        CmdBufferAllocator::get()->createBuffers(*CmdBufferAllocator::get()->m_graphicsCmdPool, static_cast<uint32_t>(swapchainFrameInfos.size()));
+
+    for (uint32_t i = 0; i < swapchainFrameInfos.size(); ++i) {
+        swapchainFrameInfos[i].descriptorSet = std::move(descriptorSets[i]);
+        swapchainFrameInfos[i].frameBuffer = std::move(cmdBuffers[i]);
+
+        generateSwapchainFrameInfo(i);
+        updateSwapchainFrameInfo(i);
+    }*/
+
+    
+    uniformBuffer = std::make_unique<Buffer>(
+        *vkCtx->m_logicalDevice,
+        sizeof(UniformBufferData),
+        vk::BufferUsageFlagBits::eUniformBuffer,
+        vk::MemoryPropertyFlagBits::eDeviceLocal);
+
+    AccelerationStructures asses;
+    blas = std::make_unique<AccelerationStructure>(asses.createBottomAccelerationStructure(*object));
+    tlas = std::make_unique<AccelerationStructure>(asses.createTopAccelerationStructure(*blas));
+
+    rt = std::make_unique<RayTracing>();
+    storageImage = rt->createStorageImage(windowWidth, windowHeight);
+
+    rtPipeline = std::make_unique<RTPipeline>(*vkCtx->m_logicalDevice);
+    rtPipeline->createPipeline(*descriptorSetLayout);
+
+    sbt = rt->createSBTable(rtPipeline->get());
+
+    updateDescriptorSets(
+        *descriptorSet,
+        *tlas->structure,
+        storageImage->getView());
+
+    for (int i = 0; i < swapchain->m_imageCount; ++i) {
+        recordCommandBuffer(i);
+    }
 
     glfwGetCursorPos(window, &cursorX, &cursorY);
 }
@@ -116,7 +140,7 @@ void RTXApplication::initWindow() {
     glfwInit();
 
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
+    glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 
     window = glfwCreateWindow(windowWidth, windowHeight, "Vulkan shenanigans", nullptr, nullptr);
 
@@ -128,7 +152,7 @@ void RTXApplication::initWindow() {
 }
 
 void RTXApplication::initOther() {
-    camera = Camera(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f), 90.0f, windowWidth / (float)windowHeight, 0.1f, 100.0f);
+    camera = Camera(glm::vec3(0.0f, 0.0f, 2.5f), glm::vec3(0.0f), 90.0f, windowWidth / (float)windowHeight, 0.01f, 100.0f);
 }
 
 void RTXApplication::mainLoop() {
@@ -139,118 +163,46 @@ void RTXApplication::mainLoop() {
         processMouse();
         processKeyboard();
 
-        uint32_t swapchainIndex = acquireNextImage();
+        uint32_t swapchainIndex;
 
-        if (swapchainIndex != -1) {
-            updateUniformBuffer();
+        vk::FenceCreateInfo fenceInfo;
+        vk::UniqueFence fence = vkCtx->m_logicalDevice->createFenceUnique(fenceInfo);
+
+        vkCtx->m_logicalDevice->acquireNextImageKHR(
+            *swapchain->m_swapchain,
+            UINT64_MAX,
+            nullptr,
+            *fence,
+            &swapchainIndex);
+
+        vkCtx->m_logicalDevice->waitForFences(*fence, VK_TRUE, UINT64_MAX);
+
+        swapchainFrameInfos[swapchainIndex].frameBuffer->submit(true);
+
+        /*vk::UniqueSemaphore renderComplete;
+        vk::SemaphoreCreateInfo semaphoreInfo;*/
+
+
+        vk::PresentInfoKHR presentInfo;
+        /*presentInfo.waitSemaphoreCount = 1;
+        presentInfo.pWaitSemaphores = renderComplete;*/
+
+        vk::SwapchainKHR swapchains[] = { *swapchain->m_swapchain };
+        presentInfo.swapchainCount = 1;
+        presentInfo.pSwapchains = swapchains;
+        presentInfo.pImageIndices = &swapchainIndex;
+
+        vk::Result presentResult = vkCtx->m_presentQueue.presentKHR(presentInfo);
+
+        //drawFrame(swapchainIndex);
+
+        /*if (swapchainIndex != -1) {
+            updatePushConstants();
             resetCommandBuffer(swapchainIndex);
             recordCommandBuffer(swapchainIndex);
             drawFrame(swapchainIndex);
-        }
+        }*/
     }
-
-    vkCtx->m_logicalDevice->waitIdle();
-}
-
-void RTXApplication::generateSwapchainFrameInfo(const uint32_t index) {
-    SwapchainFrameInfo& frameInfo = swapchainFrameInfos[index];
-
-    frameInfo.descriptorBufferInfo.buffer = uniformBuffer->get();
-    frameInfo.descriptorBufferInfo.offset = 0;
-    frameInfo.descriptorBufferInfo.range = sizeof(UniformBufferObject);
-
-    frameInfo.writeDescriptorSet.dstSet = *frameInfo.descriptorSet;
-    frameInfo.writeDescriptorSet.dstBinding = 0;
-    frameInfo.writeDescriptorSet.dstArrayElement = 0;
-    frameInfo.writeDescriptorSet.descriptorType = vk::DescriptorType::eUniformBuffer;
-    frameInfo.writeDescriptorSet.descriptorCount = 1;
-    frameInfo.writeDescriptorSet.pBufferInfo = &frameInfo.descriptorBufferInfo;
-
-    vkCtx->m_logicalDevice->updateDescriptorSets(1, &frameInfo.writeDescriptorSet, 0, nullptr);
-
-    frameInfo.clearColor = vk::ClearColorValue(std::array<float, 4>({ 0.0f, 0.0f, 0.0f, 1.0f }));
-
-    frameInfo.renderPassBeginInfo.clearValueCount = 1;
-    frameInfo.renderPassBeginInfo.pClearValues = &frameInfo.clearColor;
-    frameInfo.renderPassBeginInfo.renderArea.offset = vk::Offset2D(0, 0);
-}
-
-void RTXApplication::updateSwapchainStack() {
-
-    camera.updateProjectionMatrix(windowWidth / (float)windowHeight);
-
-    for (uint32_t i = 0; i < swapchainFrameInfos.size(); ++i) {
-        resetCommandBuffer(i);
-    }
-
-    // First update the swapchain according to the surface change
-    swapchain->updateSwapchain();
-
-    // Use new values of the swapchain to update the pipeline and renderpass
-    pipeline->updatePipeline(swapchain->m_colorFormat, swapchain->m_extent);
-
-    // Use the newly created renderpass to update the framebuffers
-    swapchain->updateFramebuffers(*pipeline->m_renderPass);
-
-    // Update command buffers to use the updated objects
-    for (uint32_t i = 0; i < swapchainFrameInfos.size(); ++i) {
-
-        // Update info structures
-        updateSwapchainFrameInfo(i);
-
-        // Rerecord the command buffers
-        recordCommandBuffer(i);
-    }
-}
-
-void RTXApplication::updateSwapchainFrameInfo(const uint32_t index) {
-    SwapchainFrameInfo& frameInfo = swapchainFrameInfos[index];
-
-    frameInfo.renderPassBeginInfo.renderPass = *pipeline->m_renderPass;
-    frameInfo.renderPassBeginInfo.framebuffer = *swapchain->m_framebuffers[index];
-    frameInfo.renderPassBeginInfo.renderArea.extent = swapchain->m_extent;
-}
-
-void RTXApplication::recordCommandBuffer(const uint32_t index) {
-    SwapchainFrameInfo& frameInfo = swapchainFrameInfos[index];
-    
-    vk::CommandBuffer& frameBuffer = frameInfo.frameBuffer;
-
-    frameBuffer.begin(frameInfo.beginInfo);
-    frameBuffer.beginRenderPass(frameInfo.renderPassBeginInfo, vk::SubpassContents::eInline);
-    frameBuffer.pushConstants(
-        *pipeline->m_pipelineLayout,
-        vk::ShaderStageFlagBits::eVertex,
-        0,
-        sizeof(glm::mat4),
-        glm::value_ptr(camera.getCameraMatrix()));
-
-    frameBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, *pipeline->m_pipeline);
-
-    frameBuffer.bindVertexBuffers(0, object->getVertexBuffer(), vk::DeviceSize(0));
-    frameBuffer.bindIndexBuffer(object->getIndexBuffer(), 0, vk::IndexType::eUint16);
-    frameBuffer.bindDescriptorSets(
-        vk::PipelineBindPoint::eGraphics,
-        *pipeline->m_pipelineLayout,
-        0,
-        *frameInfo.descriptorSet,
-        { nullptr });
-
-    frameBuffer.drawIndexed(36, 1, 0, 0, 0);
-    frameBuffer.endRenderPass();
-    frameBuffer.end();
-}
-
-void RTXApplication::resetCommandBuffer(const uint32_t index) {
-    SwapchainFrameInfo& frameInfo = swapchainFrameInfos[index];
-
-    if (frameInfo.imageInUse != VK_NULL_HANDLE) {
-        vkCtx->m_logicalDevice->waitForFences(
-            frameInfo.imageInUse,
-            VK_TRUE,
-            UINT64_MAX);
-    }
-    frameInfo.frameBuffer.reset(vk::CommandBufferResetFlags());
 }
 
 void RTXApplication::calculateTime() {
@@ -278,7 +230,7 @@ void RTXApplication::processMouse() {
     double deltaX = newCursorX - cursorX;
     double deltaY = newCursorY - cursorY;
 
-    camera.rotate(0.1f * glm::radians(deltaY), -0.1f * glm::radians(deltaX));
+    camera.rotate(-0.1f * glm::radians(deltaY), -0.1f * glm::radians(deltaX));
 
     cursorX = newCursorX;
     cursorY = newCursorY;
@@ -304,16 +256,79 @@ void RTXApplication::processKeyboard() {
     }
 
     if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) {
-        translateVector.y -= 1.0f;
-    }
-
-    if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS) {
         translateVector.y += 1.0f;
     }
 
-    if (glm::length2(translateVector) > 0.0000001f) {
+    if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS) {
+        translateVector.y -= 1.0f;
+    }
+
+    if (glm::length(translateVector) > 0.0000001f) {
         camera.translateOriented(glm::normalize(translateVector) * velocity * frameTime);
     }
+}
+
+void RTXApplication::framebufferSizeCallback(GLFWwindow* window, int width, int height) {
+    auto app = reinterpret_cast<RTXApplication*>(glfwGetWindowUserPointer(window));
+    app->framebufferResized = true;
+
+    glfwGetWindowSize(window, &app->windowWidth, &app->windowHeight);
+}
+
+RTXApplication::RTXApplication(std::string modelPath) :
+    modelPath(modelPath) {}
+
+RTXApplication::~RTXApplication() {
+    glfwDestroyWindow(window);
+    glfwTerminate();
+}
+
+void RTXApplication::updateDescriptorSets(
+    vk::DescriptorSet& descriptorSet,
+    vk::AccelerationStructureKHR& as,
+    vk::ImageView& imageView) {
+
+    vk::WriteDescriptorSetAccelerationStructureKHR descriptorSetAccelerationStructureInfo;
+    descriptorSetAccelerationStructureInfo.accelerationStructureCount = 1;
+    descriptorSetAccelerationStructureInfo.pAccelerationStructures = &as;
+
+    vk::WriteDescriptorSet accelerationStructureWrite;
+    accelerationStructureWrite.pNext = &descriptorSetAccelerationStructureInfo;
+    accelerationStructureWrite.dstSet = descriptorSet;
+    accelerationStructureWrite.dstBinding = 0;
+    accelerationStructureWrite.descriptorCount = 1;
+    accelerationStructureWrite.descriptorType = vk::DescriptorType::eAccelerationStructureKHR;
+
+    vk::DescriptorImageInfo imageDescriptorInfo;
+    imageDescriptorInfo.imageView = imageView;
+    imageDescriptorInfo.imageLayout = vk::ImageLayout::eGeneral;
+
+    vk::DescriptorBufferInfo descriptorBufferInfo;
+    descriptorBufferInfo.buffer = uniformBuffer->get();
+    descriptorBufferInfo.range = sizeof(UniformBufferData);
+    descriptorBufferInfo.offset = 0;
+
+    vk::WriteDescriptorSet resultImageWrite;
+    resultImageWrite.dstSet = descriptorSet;
+    resultImageWrite.descriptorType = vk::DescriptorType::eStorageImage;
+    resultImageWrite.dstBinding = 1;
+    resultImageWrite.descriptorCount = 1;
+    resultImageWrite.pImageInfo = &imageDescriptorInfo;
+
+    vk::WriteDescriptorSet uniformBufferWrite;
+    uniformBufferWrite.dstSet = descriptorSet;
+    uniformBufferWrite.descriptorType = vk::DescriptorType::eUniformBuffer;
+    uniformBufferWrite.dstBinding = 2;
+    uniformBufferWrite.descriptorCount = 1;
+    uniformBufferWrite.pBufferInfo = &descriptorBufferInfo;
+
+    std::vector<vk::WriteDescriptorSet> writeDescriptorSets = {
+        accelerationStructureWrite,
+        resultImageWrite,
+        uniformBufferWrite
+    };
+
+    vkCtx->m_logicalDevice->updateDescriptorSets(writeDescriptorSets, nullptr);
 }
 
 uint32_t RTXApplication::acquireNextImage() {
@@ -333,7 +348,7 @@ uint32_t RTXApplication::acquireNextImage() {
             &swapchainIndex);
     }
     catch (vk::OutOfDateKHRError) {
-        updateSwapchainStack();
+        //updateSwapchainStack();
         return -1;
     }
 
@@ -343,7 +358,7 @@ uint32_t RTXApplication::acquireNextImage() {
 
     SwapchainFrameInfo& swapchainInfo = swapchainFrameInfos[swapchainIndex];
 
-    if (swapchainInfo.imageInUse != VK_NULL_HANDLE) {
+    if (swapchainInfo.imageInUse != vk::Fence()) {
         vkCtx->m_logicalDevice->waitForFences(swapchainInfo.imageInUse, VK_TRUE, UINT64_MAX);
     }
 
@@ -352,14 +367,207 @@ uint32_t RTXApplication::acquireNextImage() {
     return swapchainIndex;
 }
 
-void RTXApplication::updateUniformBuffer() {
-    object->rotate(glm::vec3(0.0f, 2 * frameTime, 0.0f));
+
+
+
+
+void RTXApplication::generateSwapchainFrameInfo(const uint32_t index) {
+    /*SwapchainFrameInfo& frameInfo = swapchainFrameInfos[index];
+
+    frameInfo.descriptorBufferInfo.buffer = uniformBuffer->get();
+    frameInfo.descriptorBufferInfo.offset = 0;
+    frameInfo.descriptorBufferInfo.range = sizeof(UniformBufferObject);
+
+    frameInfo.writeDescriptorSet.dstSet = *frameInfo.descriptorSet;
+    frameInfo.writeDescriptorSet.dstBinding = 0;
+    frameInfo.writeDescriptorSet.dstArrayElement = 0;
+    frameInfo.writeDescriptorSet.descriptorType = vk::DescriptorType::eUniformBuffer;
+    frameInfo.writeDescriptorSet.descriptorCount = 1;
+    frameInfo.writeDescriptorSet.pBufferInfo = &frameInfo.descriptorBufferInfo;
+
+    vkCtx->m_logicalDevice->updateDescriptorSets(1, &frameInfo.writeDescriptorSet, 0, nullptr);*/
+}
+
+/*void RTXApplication::createDepthBuffer() {
+    vk::SurfaceCapabilitiesKHR surfaceCapabilities =
+        vkCtx->m_physicalDevice.getSurfaceCapabilitiesKHR(*vkCtx->m_surface);
+
+    vk::Extent2D currentExtent;
+    if (surfaceCapabilities.currentExtent.width != -1) {
+        currentExtent = surfaceCapabilities.currentExtent;
+    }
+
+    depthBuffer = std::make_unique<Image>(
+        *vkCtx->m_logicalDevice,
+        currentExtent.width,
+        currentExtent.height,
+        vk::Format::eD32Sfloat,
+        vk::ImageUsageFlagBits::eDepthStencilAttachment,
+        vk::ImageAspectFlagBits::eDepth);
+}*/
+
+/*void RTXApplication::updateSwapchainStack() {
+
+    camera.updateProjectionMatrixAspectRatio(windowWidth / (float)windowHeight);
+
+    for (uint32_t i = 0; i < swapchainFrameInfos.size(); ++i) {
+        resetCommandBuffer(i);
+    }
+
+    // First update the swapchain according to the surface change
+    swapchain->updateSwapchain();
+
+    // Use new values of the swapchain to update the pipeline and renderpass
+    pipeline->updatePipeline(swapchain->m_colorFormat, swapchain->m_extent);
+
+    // Completely recreate the depth buffer;
+    createDepthBuffer();
+
+    // Use the newly created renderpass to update the framebuffers
+    swapchain->updateFramebuffers(*pipeline->m_renderPass, depthBuffer->getView());
+
+    // Update command buffers to use the updated objects
+    for (uint32_t i = 0; i < swapchainFrameInfos.size(); ++i) {
+
+        // Update info structures
+        updateSwapchainFrameInfo(i);
+
+        // Rerecord the command buffers
+        recordCommandBuffer(i);
+    }
+}*/
+
+/*void RTXApplication::updateSwapchainFrameInfo(const uint32_t index) {
+    SwapchainFrameInfo& frameInfo = swapchainFrameInfos[index];
+
+    frameInfo.renderPassBeginInfo.renderPass = *pipeline->m_renderPass;
+    frameInfo.renderPassBeginInfo.framebuffer = *swapchain->m_framebuffers[index];
+    frameInfo.renderPassBeginInfo.renderArea.extent = swapchain->m_extent;
+}*/
+
+
+void RTXApplication::recordCommandBuffer(const uint32_t index) {
+    CommandBuffer& cmdBuffer = *swapchainFrameInfos[index].frameBuffer;
+
+    /*vk::StridedBufferRegionKHR raygenShaderStbEntry;
+    raygenShaderStbEntry.buffer = sbt->get();
+    raygenShaderStbEntry.offset = static_cast<vk::DeviceSize>(vkCtx->m_rayTracingProperties.shaderGroupHandleSize * INDEX_RAYGEN);
+    raygenShaderStbEntry.size = vkCtx->m_rayTracingProperties.shaderGroupHandleSize;
+
+    vk::StridedBufferRegionKHR missShaderStbEntry;
+    missShaderStbEntry.buffer = sbt->get();
+    missShaderStbEntry.offset = static_cast<vk::DeviceSize>(vkCtx->m_rayTracingProperties.shaderGroupHandleSize * INDEX_MISS);
+    missShaderStbEntry.size = vkCtx->m_rayTracingProperties.shaderGroupHandleSize;
+
+    vk::StridedBufferRegionKHR hitShaderStbEntry;
+    missShaderStbEntry.buffer = sbt->get();
+    missShaderStbEntry.offset = static_cast<vk::DeviceSize>(vkCtx->m_rayTracingProperties.shaderGroupHandleSize * INDEX_CLOSEST_HIT);
+    missShaderStbEntry.size = vkCtx->m_rayTracingProperties.shaderGroupHandleSize;
+
+    vk::StridedBufferRegionKHR callableShaderStbEntry;
+
+    std::vector<vk::DescriptorSet> sets = { *descriptorSet };*/
+
+    /*cmdBuffer.get().bindPipeline(vk::PipelineBindPoint::eRayTracingKHR, rtPipeline->get());
+    cmdBuffer.get().bindDescriptorSets(
+        vk::PipelineBindPoint::eRayTracingKHR,
+        rtPipeline->getLayout(),
+        0,
+        sets,
+        nullptr);
+
+    cmdBuffer.get().traceRaysKHR(
+        &raygenShaderStbEntry,
+        &missShaderStbEntry,
+        &hitShaderStbEntry,
+        &callableShaderStbEntry,
+        windowWidth,
+        windowHeight,
+        1);*/
+
+    vk::ImageSubresourceRange subresourceRange;
+    subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
+    subresourceRange.baseMipLevel = 0;
+    subresourceRange.levelCount = 1;
+    subresourceRange.baseArrayLayer = 0;
+    subresourceRange.layerCount = 1;
+
+    cmdBuffer.setImageLayout(
+        storageImage->get(),
+        vk::ImageLayout::eGeneral,
+        vk::ImageLayout::eTransferSrcOptimal,
+        subresourceRange);
+
+    /*cmdBuffer.setImageLayout(
+        swapchain->getImage(index),
+        vk::ImageLayout::eUndefined,
+        vk::ImageLayout::eTransferDstOptimal,
+        subresourceRange);
+
+    vk::ImageSubresourceLayers subresourceLayers;
+    subresourceLayers.aspectMask = vk::ImageAspectFlagBits::eColor;
+    subresourceLayers.mipLevel = 0;
+    subresourceLayers.baseArrayLayer = 0;
+    subresourceLayers.layerCount = 1;
+
+    vk::ImageCopy copyRegion;
+    copyRegion.srcSubresource = subresourceLayers;
+    copyRegion.srcOffset = vk::Offset3D(0, 0, 0);
+    copyRegion.dstSubresource = subresourceLayers;
+    copyRegion.dstOffset = vk::Offset3D(0, 0, 0);
+    copyRegion.extent = vk::Extent3D(
+        static_cast<uint32_t>(windowWidth),
+        static_cast<uint32_t>(windowHeight),
+        1);
+
+    cmdBuffer.get().copyImage(
+        storageImage->get(),
+        vk::ImageLayout::eTransferSrcOptimal,
+        swapchain->getImage(index),
+        vk::ImageLayout::eTransferDstOptimal,
+        copyRegion);
+
+    cmdBuffer.setImageLayout(
+        swapchain->getImage(index),
+        vk::ImageLayout::eTransferDstOptimal,
+        vk::ImageLayout::ePresentSrcKHR,
+        subresourceRange);
+
+    cmdBuffer.setImageLayout(
+        storageImage->get(),
+        vk::ImageLayout::eTransferSrcOptimal,
+        vk::ImageLayout::eGeneral,
+        subresourceRange);*/
+}
+
+/*void RTXApplication::resetCommandBuffer(const uint32_t index) {
+    SwapchainFrameInfo& frameInfo = swapchainFrameInfos[index];
+
+    if (frameInfo.imageInUse != VK_NULL_HANDLE) {
+        vkCtx->m_logicalDevice->waitForFences(
+            frameInfo.imageInUse,
+            VK_TRUE,
+            UINT64_MAX);
+    }
+    frameInfo.frameBuffer.reset(vk::CommandBufferResetFlags());
+}*/
+
+
+
+
+
+/*void RTXApplication::updatePushConstants() {
+    //object->rotate(glm::vec3(0.0f, -2 * frameTime, 0.0f));
 
     UniformBufferObject ubo;
     ubo.model = object->getMeshMatrix();
+    ubo.playerPosition = camera.getCameraPosition();
+    //lightPosition = glm::rotateY(lightPosition, 2 * frameTime);
+    ubo.lightPosition = lightPosition;
+    ubo.lightColor = lightColor;
 
     uniformBuffer->uploadToHostLocal(ubo);
-}
+}*/
 
 void RTXApplication::drawFrame(const uint32_t swapchainIndex) {
     SwapchainFrameInfo& swapchainFrameInfo = swapchainFrameInfos[swapchainIndex];
@@ -374,14 +582,15 @@ void RTXApplication::drawFrame(const uint32_t swapchainIndex) {
     vk::PipelineStageFlags waitStages[] = { vk::PipelineStageFlagBits::eColorAttachmentOutput };
     submitInfo.pWaitDstStageMask = waitStages;
     submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &swapchainFrameInfo.frameBuffer;
+    submitInfo.pCommandBuffers = &swapchainFrameInfo.frameBuffer->get();
 
     vk::Semaphore renderComplete[] = { *flightFrameInfo.renderCompleteSemaphore };
     submitInfo.signalSemaphoreCount = 1;
     submitInfo.pSignalSemaphores = renderComplete;
 
     vkCtx->m_logicalDevice->resetFences(1, &*flightFrameInfo.inFlightFence);
-    vkCtx->m_graphicsQueue.submit(submitInfo, *flightFrameInfo.inFlightFence);
+    swapchainFrameInfo.frameBuffer->get().end();
+    vkCtx->m_computeQueue.submit(submitInfo, *flightFrameInfo.inFlightFence);
 
     vk::PresentInfoKHR presentInfo;
     presentInfo.waitSemaphoreCount = 1;
@@ -403,22 +612,10 @@ void RTXApplication::drawFrame(const uint32_t swapchainIndex) {
 
     if (presentResult == vk::Result::eErrorOutOfDateKHR || presentResult == vk::Result::eSuboptimalKHR || framebufferResized) {
         framebufferResized = false;
-        updateSwapchainStack();
+        //updateSwapchainStack();
     } else if (presentResult != vk::Result::eSuccess) {
         throw std::runtime_error("Failed to acquire swapchain image!");
     }
 
     currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
-}
-
-void RTXApplication::framebufferSizeCallback(GLFWwindow* window, int width, int height) {
-    auto app = reinterpret_cast<RTXApplication*>(glfwGetWindowUserPointer(window));
-    app->framebufferResized = true;
-
-    glfwGetWindowSize(window, &app->windowWidth, &app->windowHeight);
-}
-
-RTXApplication::~RTXApplication() {
-    glfwDestroyWindow(window);
-    glfwTerminate();
 }

@@ -106,67 +106,132 @@ void VulkanContext::createPhysicalDevice() {
         std::vector<vk::ExtensionProperties> extensionProperties = m_physicalDevice.enumerateDeviceExtensionProperties();
 
         bool rayTracingSupported = false;
+        bool pipelineLibrarySupported = false;
+        bool deferredHostOperationsSupported = false;
+        bool bufferDeviceAddressSUpported = false;
+        bool descriptorIndexingSupported = false;
         for (vk::ExtensionProperties extensionProperty : extensionProperties) {
-            if (strcmp(extensionProperty.extensionName, VK_KHR_RAY_TRACING_EXTENSION_NAME) == 0) {
+            std::string extensionName(extensionProperty.extensionName);
+
+            if (extensionName == VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME) {
+                bufferDeviceAddressSUpported = true;
+            }
+
+            if (extensionName == VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME) {
+                deferredHostOperationsSupported = true;
+            }
+
+            if (extensionName == VK_KHR_PIPELINE_LIBRARY_EXTENSION_NAME) {
+                pipelineLibrarySupported = true;
+            }
+
+            if (extensionName == VK_KHR_RAY_TRACING_EXTENSION_NAME) {
                 rayTracingSupported = true;
                 m_rayTracingProperties =
                     m_physicalDevice.getProperties2<vk::PhysicalDeviceProperties2,
                     vk::PhysicalDeviceRayTracingPropertiesKHR>().get<vk::PhysicalDeviceRayTracingPropertiesKHR>();
-                break;
+            }
+
+            if (extensionName == VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME) {
+                descriptorIndexingSupported = true;
             }
         }
 
         if (m_deviceProperties.deviceType == vk::PhysicalDeviceType::eDiscreteGpu) {
             m_physicalDevice = currentPhysicalDevice;
-            m_rayTracingSupported = rayTracingSupported;
+            m_rayTracingSupported =
+                rayTracingSupported
+                && pipelineLibrarySupported
+                && deferredHostOperationsSupported
+                && bufferDeviceAddressSUpported
+                && descriptorIndexingSupported;
             break;
         }
     }
 }
 
+uint32_t VulkanContext::findTransferQueue(std::vector<vk::QueueFamilyProperties> queueFamilyProperties) {
+    uint32_t candidate = -1;
+
+    uint32_t index = 0;
+    for (auto& queueFamilyProperty : queueFamilyProperties) {
+        if (queueFamilyProperty.queueFlags & vk::QueueFlagBits::eTransfer) {
+            if (!(queueFamilyProperty.queueFlags
+                & vk::QueueFlagBits::eGraphics
+                && queueFamilyProperty.queueFlags
+                & vk::QueueFlagBits::eCompute)) {
+                return index;
+            }
+            candidate = index;
+        }
+        ++index;
+    }
+
+    return candidate;
+}
+
+uint32_t VulkanContext::findComputeQueue(std::vector<vk::QueueFamilyProperties> queueFamilyProperties) {
+    uint32_t candidate = -1;
+
+    uint32_t index = 0;
+    for (auto& queueFamilyProperty : queueFamilyProperties) {
+        if (queueFamilyProperty.queueFlags & vk::QueueFlagBits::eCompute) {
+            if (!(queueFamilyProperty.queueFlags
+                & vk::QueueFlagBits::eGraphics)) {
+                return index;
+            }
+            candidate = index;
+        }
+        ++index;
+    }
+
+    return candidate;
+}
+
+uint32_t VulkanContext::findGraphicsQueue(std::vector<vk::QueueFamilyProperties> queueFamilyProperties) {
+    uint32_t index = 0;
+    for (auto& queueFamilyProperty : queueFamilyProperties) {
+        if (queueFamilyProperty.queueFlags & vk::QueueFlagBits::eGraphics) {
+            return index;
+        }
+        ++index;
+    }
+
+    return -1;
+}
+
+uint32_t VulkanContext::findPresentQueue(uint32_t count, vk::SurfaceKHR surface, vk::PhysicalDevice physicalDevice) {
+    uint32_t index = 0;
+    for (uint32_t i = 0; i < count; ++i) {
+        if (physicalDevice.getSurfaceSupportKHR(i, surface)) {
+            return i;
+        }
+    }
+
+    return -1;
+}
+
 void VulkanContext::createLogicalDevice() {
     auto queueFamilyProperties = m_physicalDevice.getQueueFamilyProperties();
 
-    uint32_t queuesFound = 0;
-
-    uint32_t i = 0;
-    for (auto& queueFamilyProperty : queueFamilyProperties) {
-        if (queueFamilyProperty.queueFlags & vk::QueueFlagBits::eGraphics) {
-            m_graphicsQueueIndex = i;
-            ++queuesFound;
-            break;
-        }
+    m_graphicsQueueIndex = findGraphicsQueue(queueFamilyProperties);
+    if (m_graphicsQueueIndex == -1) {
+        throw std::runtime_error("Couldn't find graphics queue!");
     }
 
-    i = 0;
-    for (auto& queueFamilyProperty : queueFamilyProperties) {
-        if (queueFamilyProperty.queueFlags & vk::QueueFlagBits::eTransfer) {
-            m_transferQueueIndex = i;
-            ++queuesFound;
-            break;
-        }
+    m_computeQueueIndex = findComputeQueue(queueFamilyProperties);
+    if (m_computeQueueIndex == -1) {
+        throw std::runtime_error("Couldn't find compute queue!");
     }
 
-    i = 0;
-    for (auto& queueFamilyProperty : queueFamilyProperties) {
-        if (queueFamilyProperty.queueFlags & vk::QueueFlagBits::eCompute) {
-            m_computeQueueIndex = i;
-            ++queuesFound;
-            break;
-        }
+    m_transferQueueIndex = findTransferQueue(queueFamilyProperties);
+    if (m_transferQueueIndex == -1) {
+        throw std::runtime_error("Couldn't find transfer queue!");
     }
 
-    i = 0;
-    for (auto& queueFamilyProperty : queueFamilyProperties) {
-        if (m_physicalDevice.getSurfaceSupportKHR(i, *m_surface)) {
-            m_presentQueueIndex = i;
-            ++queuesFound;
-            break;
-        }
-    }
-
-    if (queuesFound < 4) {
-        throw std::runtime_error("Couldn't find suitable device queues!");
+    m_presentQueueIndex = findPresentQueue(static_cast<uint32_t>(queueFamilyProperties.size()), *m_surface, m_physicalDevice);
+    if (m_presentQueueIndex == -1) {
+        throw std::runtime_error("Couldn't find present queue!");
     }
 
     std::vector<vk::DeviceQueueCreateInfo> queueCreateInfos;
@@ -178,7 +243,7 @@ void VulkanContext::createLogicalDevice() {
     graphicsInfo.pQueuePriorities = &graphicsQueuePriority;
     queueCreateInfos.push_back(graphicsInfo);
 
-    if (m_graphicsQueueIndex != m_computeQueueIndex) {
+    if (m_computeQueueIndex != m_graphicsQueueIndex) {
 
         vk::DeviceQueueCreateInfo computeInfo;
         computeInfo.queueFamilyIndex = m_computeQueueIndex;
@@ -211,33 +276,37 @@ void VulkanContext::createLogicalDevice() {
         queueCreateInfos.push_back(presentInfo);
     }
 
-    vk::PhysicalDeviceTimelineSemaphoreFeatures timelineSemaphore;
-    timelineSemaphore.timelineSemaphore = true;
-
-    vk::PhysicalDeviceBufferDeviceAddressFeaturesKHR deviceAddress;
-    deviceAddress.bufferDeviceAddress = true;
-    deviceAddress.pNext = &timelineSemaphore;
-
-    vk::PhysicalDeviceFeatures2 deviceFeatures;
-    deviceFeatures.pNext = &deviceAddress;
-
-    vk::DeviceCreateInfo deviceCreateInfo;
-    deviceCreateInfo.pQueueCreateInfos = queueCreateInfos.data();
-    deviceCreateInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
-    deviceCreateInfo.pNext = &deviceFeatures;
-
     std::vector<const char*> deviceExtensions = {
         VK_KHR_SWAPCHAIN_EXTENSION_NAME,
     };
 
+    vk::PhysicalDeviceTimelineSemaphoreFeatures timelineSemaphore;
+    timelineSemaphore.timelineSemaphore = true;
+
     if (m_rayTracingSupported) {
+        vk::PhysicalDeviceRayTracingFeaturesKHR rayTracing;
+        rayTracing.rayTracing = true;
+
+        vk::PhysicalDeviceBufferDeviceAddressFeaturesKHR deviceAddress;
+        deviceAddress.bufferDeviceAddress = true;
+        deviceAddress.pNext = &rayTracing;
+
+        timelineSemaphore.pNext = &deviceAddress;
+
         deviceExtensions.push_back(VK_KHR_RAY_TRACING_EXTENSION_NAME);
+        deviceExtensions.push_back(VK_KHR_PIPELINE_LIBRARY_EXTENSION_NAME);
+        deviceExtensions.push_back(VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME);
+        deviceExtensions.push_back(VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME);
+        deviceExtensions.push_back(VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME);
     }
+
+    vk::DeviceCreateInfo deviceCreateInfo;
+    deviceCreateInfo.pQueueCreateInfos = queueCreateInfos.data();
+    deviceCreateInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
+    deviceCreateInfo.pNext = &timelineSemaphore;
 
     deviceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size());
     deviceCreateInfo.ppEnabledExtensionNames = deviceExtensions.data();
-
-    deviceCreateInfo.pNext = &deviceFeatures;
 
     m_logicalDevice = m_physicalDevice.createDeviceUnique(deviceCreateInfo);
     VULKAN_HPP_DEFAULT_DISPATCHER.init(*m_logicalDevice);

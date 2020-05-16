@@ -15,18 +15,19 @@ std::shared_ptr<MemoryAllocator> MemoryAllocator::get() {
     return instance.lock();
 }
 
-AllocId MemoryAllocator::allocate(
+std::unique_ptr<AllocId> MemoryAllocator::allocate(
     vk::MemoryRequirements& requirements,
     vk::MemoryPropertyFlags memoryFlags,
     vk::MemoryAllocateFlags allocateFlags) {
 
     uint32_t deviceMemoryType = findMemoryType(requirements.memoryTypeBits, memoryFlags);
+    auto memoryId = std::make_pair(deviceMemoryType, allocateFlags);
 
-    auto it = m_memoryTable.find(deviceMemoryType);
+    auto it = m_memoryTable.find(memoryId);
 
     if (it == m_memoryTable.end()) {
-        m_memoryTable.insert(std::pair<uint32_t, std::vector<DeviceMemory>>(deviceMemoryType, std::vector<DeviceMemory>()));
-        it = m_memoryTable.find(deviceMemoryType);
+        m_memoryTable.insert(std::make_pair(memoryId, std::vector<DeviceMemory>()));
+        it = m_memoryTable.find(memoryId);
     }
 
     std::vector<DeviceMemory>& deviceMemories = it->second;
@@ -37,7 +38,7 @@ AllocId MemoryAllocator::allocate(
     for (auto deviceMemory = deviceMemories.begin(); deviceMemory != deviceMemories.end(); ++deviceMemory) {
         memoryData = deviceMemory->allocateBlock(requirements.size, requirements.alignment);
         if (memoryData.second != -1) {
-            return AllocId{memoryData.first, deviceMemoryType, chunkIndex, memoryData.second};
+            return std::make_unique<AllocId>(memoryData.first, deviceMemoryType, allocateFlags, chunkIndex, memoryData.second);
         }
         ++chunkIndex;
     }
@@ -46,11 +47,11 @@ AllocId MemoryAllocator::allocate(
 
     memoryData = deviceMemories.back().allocateBlock(requirements.size, requirements.alignment);
 
-    return AllocId{memoryData.first, deviceMemoryType, chunkIndex, memoryData.second};
+    return std::make_unique<AllocId>(memoryData.first, deviceMemoryType, allocateFlags, chunkIndex, memoryData.second);
 }
 
 void MemoryAllocator::free(AllocId& allocId) {
-    m_memoryTable[allocId.type][allocId.chunk].freeBlock(allocId.offset);
+    m_memoryTable[std::make_pair(allocId.type, allocId.allocateFlags)][allocId.chunk].freeBlock(allocId.offset);
 }
 
 void MemoryAllocator::freeAllMemory() {

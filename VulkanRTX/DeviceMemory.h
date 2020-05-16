@@ -16,7 +16,7 @@ public:
 
 	DeviceMemory(
 		const vk::Device& logicalDevice,
-		const uint32_t memoryType,
+		const uint32_t memoryTypeIndex,
 		const vk::MemoryAllocateFlags flags);
 
 	std::pair<vk::DeviceMemory*, uint32_t> allocateBlock(
@@ -35,7 +35,5 @@ private:
 	const uint32_t m_size = 268435456;
 
 	std::list<MemoryChunk> m_blocks;
-
-	const vk::Device& m_logicalDevice;
 };
 

@@ -1,20 +1,22 @@
 #include "Mesh.h"
 
-#include "CmdBufferAllocator.h"
+#include <fstream>
 
 Mesh::Mesh(vk::Device& logicalDevice,
-		   std::vector<float> vertices,
+		   std::vector<Vertex> vertices,
+		   uint32_t vertexStride,
 		   std::vector<uint16_t> indices,
 		   glm::vec3 position,
 		   glm::vec3 rotation,
 		   glm::vec3 scale) :
 	m_vertices(vertices),
+	m_vertexStride(vertexStride),
 	m_indices(indices),
 	m_position(position),
 	m_rotation(rotation),
 	m_scale(scale),
 	m_deviceVertexBuffer(logicalDevice,
-		sizeof(float) * vertices.size(),
+		sizeof(vertices[0]) * vertices.size(),
 		vk::BufferUsageFlagBits::eTransferDst
 		| vk::BufferUsageFlagBits::eVertexBuffer
 		| vk::BufferUsageFlagBits::eRayTracingKHR
@@ -22,7 +24,7 @@ Mesh::Mesh(vk::Device& logicalDevice,
 		vk::MemoryPropertyFlagBits::eDeviceLocal,
 		vk::MemoryAllocateFlagBits::eDeviceAddress), //so it can be used with getBufferAddress()
 	m_deviceIndexBuffer(logicalDevice,
-		sizeof(uint16_t)* indices.size(),
+		sizeof(indices[0])* indices.size(),
 		vk::BufferUsageFlagBits::eTransferDst
 		| vk::BufferUsageFlagBits::eIndexBuffer
 		| vk::BufferUsageFlagBits::eRayTracingKHR
@@ -30,8 +32,8 @@ Mesh::Mesh(vk::Device& logicalDevice,
 		vk::MemoryPropertyFlagBits::eDeviceLocal,
 		vk::MemoryAllocateFlagBits::eDeviceAddress) { //so it can be used with getBufferAddress()
 
-	m_deviceVertexBuffer.uploadToDeviceLocal(vertices);
-	m_deviceIndexBuffer.uploadToDeviceLocal(indices);
+	m_deviceVertexBuffer.uploadToBuffer(vertices);
+	m_deviceIndexBuffer.uploadToBuffer(indices);
 }
 
 vk::Buffer& Mesh::getVertexBuffer() {
@@ -42,7 +44,7 @@ Buffer& Mesh::getVertexBufferObject() {
 	return m_deviceVertexBuffer;
 }
 
-uint32_t Mesh::getVertextCount() {
+uint32_t Mesh::getVertexCount() {
 	return static_cast<uint32_t>(m_vertices.size());
 }
 

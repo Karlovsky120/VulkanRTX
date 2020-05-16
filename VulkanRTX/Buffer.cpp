@@ -19,12 +19,12 @@ Buffer::Buffer(
 	const vk::DeviceSize size,
 	const vk::BufferUsageFlags usageFlags,
 	const vk::MemoryPropertyFlags memoryFlags,
-	const vk::MemoryAllocateFlags memoryAllocateFlags,
-	const vk::MemoryRequirements memoryRequirments) :
+	vk::MemoryAllocateFlags memoryAllocateFlags,
+	const vk::MemoryRequirements memoryRequirements) :
 
 	m_logicalDevice(logicalDevice),
 	m_memoryFlags(memoryFlags),
-	m_memoryRequirements(memoryRequirments) {
+	m_memoryRequirements(memoryRequirements) {
 
 	vk::BufferCreateInfo bufferInfo;
 	bufferInfo.size = size;
@@ -33,14 +33,14 @@ Buffer::Buffer(
 
 	m_buffer = m_logicalDevice.createBufferUnique(bufferInfo);
 
-	if (memoryRequirments.size == 0) {
+	if (memoryRequirements.size == 0) {
 		m_memoryRequirements = m_logicalDevice.getBufferMemoryRequirements(*m_buffer);
 	}
 
-	m_allocId = MemoryAllocator::get()->allocate(m_memoryRequirements, m_memoryFlags, memoryAllocateFlags);
-	m_logicalDevice.bindBufferMemory(*m_buffer, *m_allocId.memory, m_allocId.offset);
-}
+	if (usageFlags & vk::BufferUsageFlagBits::eShaderDeviceAddress) {
+		memoryAllocateFlags |= vk::MemoryAllocateFlagBits::eDeviceAddress;
+	}
 
-Buffer::~Buffer() {
-	MemoryAllocator::get()->free(m_allocId);
+	m_allocId = MemoryAllocator::get()->allocate(m_memoryRequirements, m_memoryFlags, memoryAllocateFlags);
+	m_logicalDevice.bindBufferMemory(*m_buffer, *m_allocId->memory, m_allocId->offset);
 }

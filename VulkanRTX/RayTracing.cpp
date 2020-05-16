@@ -1,177 +1,101 @@
 #include "RayTracing.h"
-
 #include "Buffer.h"
-#include "CmdBufferAllocator.h"
+#include "CommandBuffer.h"
+#include "Image.h"
+#include "Mesh.h"
+#include "Vertex.h"
 
+#include <fstream>
 #include <vector>
 
-vk::UniqueAccelerationStructureKHR RayTracing::createBottomAccelerationStructure(Mesh& mesh) {
-	vk::AccelerationStructureCreateGeometryTypeInfoKHR geometryTypeInfo;
-	geometryTypeInfo.geometryType = vk::GeometryTypeKHR::eTriangles;
-	geometryTypeInfo.maxPrimitiveCount = mesh.getVertextCount() / 3;
-	geometryTypeInfo.indexType = vk::IndexType::eUint16;
-	geometryTypeInfo.maxVertexCount = mesh.getVertextCount();
-	geometryTypeInfo.vertexFormat = vk::Format::eR32G32B32Sfloat;
-	geometryTypeInfo.allowsTransforms = VK_TRUE;
 
-	vk::AccelerationStructureCreateInfoKHR createInfo;
-	createInfo.type = vk::AccelerationStructureTypeKHR::eBottomLevel;
-	createInfo.flags = vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastTrace;
-	createInfo.maxGeometryCount = 1;
-	createInfo.pGeometryInfos = &geometryTypeInfo;
+std::unique_ptr<Buffer> RayTracing::createSBTable(vk::Pipeline& pipeline) {
+	uint32_t sbTableSize = m_context->m_rayTracingProperties.shaderGroupHandleSize * 3;
 
-	vk::UniqueAccelerationStructureKHR accelerationStructure =
-		m_context->m_logicalDevice->createAccelerationStructureKHRUnique(createInfo);
-
-	float rowMajorAffineTransformation[3][4] =
-	{{1.0f, 0.0f, 0.0f, 0.0f},
-	{0.0f, 1.0f, 0.0f, 0.0f},
-	{0.0f, 0.0f, 1.0f, 0.0f}};
-
-	vk::TransformMatrixKHR transformation;
-	memcpy(transformation.matrix, rowMajorAffineTransformation, 3 * 4 * sizeof(float));
-
-	vk::DeviceOrHostAddressConstKHR transformAddress;
-	transformAddress.hostAddress = &transformation;
-
-	vk::AccelerationStructureGeometryTrianglesDataKHR triangleData;
-	triangleData.vertexFormat = vk::Format::eR32G32B32Sfloat;
-	triangleData.vertexData = getBufferDeviceAddress<vk::DeviceOrHostAddressConstKHR>(mesh.getVertexBuffer());
-	triangleData.vertexStride = vk::DeviceSize(sizeof(float) * 3);
-	triangleData.indexType = vk::IndexType::eUint16;
-	triangleData.indexData = getBufferDeviceAddress<vk::DeviceOrHostAddressConstKHR>(mesh.getIndexBuffer());
-	triangleData.transformData = transformAddress;
-
-	vk::AccelerationStructureGeometryDataKHR geometryData;
-	geometryData.triangles = triangleData;
-
-	vk::AccelerationStructureGeometryKHR geometry;
-	geometry.geometryType = vk::GeometryTypeKHR::eTriangles;
-	geometry.geometry = geometryData;
-	geometry.flags = vk::GeometryFlagBitsKHR::eOpaque;
-
-	const vk::AccelerationStructureGeometryKHR* const pGeometry = &geometry;
-
-	Buffer scratchBuffer = createScratchBuffer(*accelerationStructure);
-
-	vk::AccelerationStructureBuildGeometryInfoKHR geometryInfo;
-	geometryInfo.type = vk::AccelerationStructureTypeKHR::eBottomLevel;
-	geometryInfo.flags = vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastTrace;
-	geometryInfo.update = VK_FALSE;
-	geometryInfo.srcAccelerationStructure = nullptr;
-	geometryInfo.dstAccelerationStructure = *accelerationStructure;
-	geometryInfo.geometryArrayOfPointers = VK_FALSE;
-	geometryInfo.geometryCount = 1;
-	geometryInfo.ppGeometries = &pGeometry;
-	geometryInfo.scratchData = getBufferDeviceAddress<vk::DeviceOrHostAddressKHR>(scratchBuffer.get());
-
-	vk::AccelerationStructureBuildOffsetInfoKHR offsetInfo;
-	offsetInfo.primitiveCount = mesh.getVertextCount() / 3;
-	offsetInfo.primitiveOffset = 0;
-	offsetInfo.firstVertex = 0;
-	offsetInfo.transformOffset = 0;
-
-	vk::AccelerationStructureBuildOffsetInfoKHR* pOffsetInfo = &offsetInfo;
-
-	vk::UniqueCommandBuffer computeCmdBuffer = CmdBufferAllocator::get()->createBufferUnique(*CmdBufferAllocator::get()->m_computeCmdPool);
-	vk::CommandBufferBeginInfo beginInfo;
-	beginInfo.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
-	computeCmdBuffer->begin(beginInfo);
-	computeCmdBuffer->buildAccelerationStructureKHR(1, &geometryInfo, &pOffsetInfo);
-	computeCmdBuffer->end();
-
-	CmdBufferAllocator::get()->submitBuffer(*computeCmdBuffer, m_context->m_computeQueue, true);
-
-	return std::move(accelerationStructure);
-}
-
-vk::UniqueAccelerationStructureKHR RayTracing::createTopAccelerationStructure(vk::AccelerationStructureKHR& bottom) {
-	vk::AccelerationStructureCreateGeometryTypeInfoKHR geometryTypeInfo;
-	geometryTypeInfo.geometryType = vk::GeometryTypeKHR::eInstances;
-	
-	vk::AccelerationStructureCreateInfoKHR createInfo;
-	createInfo.type = vk::AccelerationStructureTypeKHR::eTopLevel;
-	createInfo.flags = vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastTrace;
-	createInfo.maxGeometryCount = 1;
-	createInfo.pGeometryInfos = &geometryTypeInfo;
-
-	vk::UniqueAccelerationStructureKHR accelerationStructure = m_context->m_logicalDevice->createAccelerationStructureKHRUnique(createInfo);
-
-	float rowMajorAffineTransformation[3][4] =
-	{ {1.0f, 0.0f, 0.0f, 0.0f},
-	{0.0f, 1.0f, 0.0f, 0.0f},
-	{0.0f, 0.0f, 1.0f, 0.0f} };
-
-	vk::TransformMatrixKHR transformation;
-	memcpy(transformation.matrix, rowMajorAffineTransformation, 3 * 4 * sizeof(float));
-
-	vk::AccelerationStructureDeviceAddressInfoKHR addressInfo;
-	addressInfo.accelerationStructure = bottom;
-
-	vk::DeviceAddress bottomAccelerationStructureAddress = m_context->m_logicalDevice->getAccelerationStructureAddressKHR(addressInfo);
-
-	vk::AccelerationStructureInstanceKHR instance;
-	instance.transform = transformation;
-	instance.instanceCustomIndex = 0;
-	instance.mask = 0;
-	instance.instanceShaderBindingTableRecordOffset = 0;
-	instance.flags = VkGeometryInstanceFlagBitsKHR(vk::GeometryInstanceFlagBitsKHR::eTriangleCullDisable);
-	instance.accelerationStructureReference = bottomAccelerationStructureAddress;
-
-	vk::DeviceOrHostAddressConstKHR instanceAddress;
-	instanceAddress.hostAddress = &instance;
-
-	vk::AccelerationStructureGeometryInstancesDataKHR instanceData;
-	instanceData.arrayOfPointers = VK_FALSE;
-	instanceData.data = instanceAddress;
-
-	vk::AccelerationStructureGeometryDataKHR geometryData;
-	geometryData.instances = instanceData;
-
-	vk::AccelerationStructureGeometryKHR geometry;
-	geometry.geometryType = vk::GeometryTypeKHR::eInstances;
-	geometry.geometry = geometryData;
-	geometry.flags = vk::GeometryFlagBitsKHR::eOpaque;
-
-	vk::AccelerationStructureGeometryKHR* pGeometry = &geometry;
-
-	Buffer scratchBuffer = createScratchBuffer(*accelerationStructure);
-
-	vk::AccelerationStructureBuildGeometryInfoKHR geometryInfo;
-	geometryInfo.type = vk::AccelerationStructureTypeKHR::eBottomLevel;
-	geometryInfo.flags = vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastTrace;
-	geometryInfo.update = VK_FALSE;
-	geometryInfo.srcAccelerationStructure = nullptr;
-	geometryInfo.dstAccelerationStructure = *accelerationStructure;
-	geometryInfo.geometryArrayOfPointers = VK_FALSE;
-	geometryInfo.geometryCount = 1;
-	geometryInfo.ppGeometries = &pGeometry;
-	geometryInfo.scratchData = getBufferDeviceAddress<vk::DeviceOrHostAddressKHR>(scratchBuffer.get());
-
-
-
-	return std::move(accelerationStructure);
-}
-
-Buffer RayTracing::createScratchBuffer(vk::AccelerationStructureKHR& accelerationStructure) {
-	vk::AccelerationStructureMemoryRequirementsInfoKHR memoryInfo;
-	memoryInfo.type = vk::AccelerationStructureMemoryRequirementsTypeKHR::eBuildScratch;
-	memoryInfo.buildType = vk::AccelerationStructureBuildTypeKHR::eDevice;
-	memoryInfo.accelerationStructure = accelerationStructure;
-
-	vk::MemoryRequirements memoryRequirements =
-		m_context->m_logicalDevice->getAccelerationStructureMemoryRequirementsKHR(memoryInfo).memoryRequirements;
-
-	return Buffer(
+	// I would very much like this to be DeviceLocal, but the deriver crashes for some reason if I try.
+	std::unique_ptr<Buffer> sbTable = std::make_unique<Buffer>(
 		*m_context->m_logicalDevice,
-		memoryRequirements.size,
-		vk::BufferUsageFlagBits::eRayTracingKHR
+		sbTableSize,
+		vk::BufferUsageFlagBits::eTransferDst
+		| vk::BufferUsageFlagBits::eRayTracingKHR
 		| vk::BufferUsageFlagBits::eShaderDeviceAddress,
-		vk::MemoryPropertyFlagBits::eDeviceLocal,
-		vk::MemoryAllocateFlagBits::eDeviceAddress,
-		memoryRequirements);
+		vk::MemoryPropertyFlagBits::eDeviceLocal);
+
+	std::vector<uint8_t> handleData(sbTableSize);
+	VulkanContext::get()->m_logicalDevice->getRayTracingShaderGroupHandlesKHR(pipeline, 0, 3, sbTableSize, handleData.data());
+
+	sbTable->uploadToBuffer(handleData);
+	return std::move(sbTable);
 }
 
-RayTracing::RayTracing(std::shared_ptr<VulkanContext> vkCtx) :
-	m_context(vkCtx) {};
+std::unique_ptr<Image> RayTracing::createStorageImage(uint32_t width, uint32_t height) {
+	return std::make_unique<Image>(
+		*m_context->m_logicalDevice,
+		width,
+		height,
+		vk::Format::eB8G8R8A8Unorm,
+		vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eStorage,
+		vk::ImageAspectFlagBits::eColor,
+		vk::ImageLayout::eGeneral);
+}
 
+vk::UniqueDescriptorSetLayout RayTracing::createDescriptorSetLayout() {
+	vk::DescriptorSetLayoutBinding accelerationStructureBinding;
+	accelerationStructureBinding.binding = 0;
+	accelerationStructureBinding.descriptorType = vk::DescriptorType::eAccelerationStructureKHR;
+	accelerationStructureBinding.descriptorCount = 1;
+	accelerationStructureBinding.stageFlags = vk::ShaderStageFlagBits::eRaygenKHR;
+
+	vk::DescriptorSetLayoutBinding resultImageBinding;
+	resultImageBinding.binding = 1;
+	resultImageBinding.descriptorType = vk::DescriptorType::eStorageImage;
+	resultImageBinding.descriptorCount = 1;
+	resultImageBinding.stageFlags = vk::ShaderStageFlagBits::eRaygenKHR;
+
+	vk::DescriptorSetLayoutBinding uniformBufferBinding;
+	uniformBufferBinding.binding = 2;
+	uniformBufferBinding.descriptorType = vk::DescriptorType::eUniformBuffer;
+	uniformBufferBinding.descriptorCount = 1;
+	uniformBufferBinding.stageFlags = vk::ShaderStageFlagBits::eRaygenKHR;
+
+	std::vector<vk::DescriptorSetLayoutBinding> bindings = {
+		accelerationStructureBinding,
+		resultImageBinding,
+		uniformBufferBinding
+	};
+
+	vk::DescriptorSetLayoutCreateInfo layoutInfo;
+	layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
+	layoutInfo.pBindings = bindings.data();
+
+	return VulkanContext::get()->m_logicalDevice->createDescriptorSetLayoutUnique(layoutInfo);
+}
+
+vk::UniqueDescriptorPool RayTracing::createDescriptorPool() {
+	std::vector<vk::DescriptorPoolSize> poolSizes = {
+		{vk::DescriptorType::eAccelerationStructureKHR, 1},
+		{vk::DescriptorType::eStorageImage, 1},
+		{vk::DescriptorType::eUniformBuffer, 1}
+	};
+
+	vk::DescriptorPoolCreateInfo descriptorPoolCreateInfo;
+	descriptorPoolCreateInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
+	descriptorPoolCreateInfo.pPoolSizes = poolSizes.data();
+	descriptorPoolCreateInfo.flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet;
+	descriptorPoolCreateInfo.maxSets = 1;
+	return VulkanContext::get()->m_logicalDevice->createDescriptorPoolUnique(descriptorPoolCreateInfo);
+}
+
+vk::UniqueDescriptorSet RayTracing::createDescriptorSet(
+	vk::DescriptorPool& descriptorPool,
+	vk::DescriptorSetLayout& descriptorSetLayout) {
+
+	vk::DescriptorSetAllocateInfo descriptorSetAllocateInfo;
+	descriptorSetAllocateInfo.descriptorPool = descriptorPool;
+	descriptorSetAllocateInfo.pSetLayouts = &descriptorSetLayout;
+	descriptorSetAllocateInfo.descriptorSetCount = 1;
+	return std::move(VulkanContext::get()->m_logicalDevice->allocateDescriptorSetsUnique(descriptorSetAllocateInfo)[0]);
+}
+
+RayTracing::RayTracing() :
+	m_context(VulkanContext::get()) {};
