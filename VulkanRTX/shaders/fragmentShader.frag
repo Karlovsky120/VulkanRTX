@@ -2,7 +2,6 @@
 #extension GL_ARB_separate_shader_objects : enable
 
 layout(location = 0) in vec3 fragPosition;
-layout(location = 1) in vec3 fragNormal;
 layout(location = 2) flat in vec3 fragPlayerPosition;
 layout(location = 3) flat in vec3 fragLightPosition;
 layout(location = 4) flat in vec3 fragLightColor;

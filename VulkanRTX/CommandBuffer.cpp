@@ -2,21 +2,16 @@
 
 #include "VulkanContext.h"
 
+#ifdef AFTERMATH
+#include <chrono>
+#include <thread>
+#endif
+
 CommandBuffer::CommandBuffer(PoolType type) :
 	m_type(type),
 	m_logicalDevice(*VulkanContext::get()->m_logicalDevice) {
 
-	vk::CommandBufferAllocateInfo commandBufferAllocateInfo;
-	commandBufferAllocateInfo.commandPool = CommandPools::getPool(type);
-	commandBufferAllocateInfo.level = vk::CommandBufferLevel::ePrimary;
-	commandBufferAllocateInfo.commandBufferCount = 1;
-
-	m_commandBuffer = std::move(m_logicalDevice.allocateCommandBuffersUnique(
-		commandBufferAllocateInfo)[0]);
-
-	vk::CommandBufferBeginInfo beginInfo;
-	beginInfo.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
-	m_commandBuffer->begin(beginInfo);
+	reset();
 }
 
 void CommandBuffer::submit(bool wait) {
@@ -28,11 +23,27 @@ void CommandBuffer::submit(bool wait) {
 
 	if (wait) {
 		vk::UniqueFence fence = m_logicalDevice.createFenceUnique({});
+#ifdef AFTERMATH
+		vk::Result result = CommandPools::getQueue(m_type).submit(1, &submitInfo, *fence);
+		if (result == vk::Result::eErrorDeviceLost) {
+			std::this_thread::sleep_for(std::chrono::seconds(3));
+			throw std::runtime_error("Error device lost");
+		}
+#else
 		CommandPools::getQueue(m_type).submit(submitInfo, *fence);
+#endif
 		m_logicalDevice.waitForFences(*fence, VK_TRUE, UINT64_MAX);
 	}
 	else {
+#ifdef AFTERMATH
+		vk::Result result = CommandPools::getQueue(m_type).submit(1, &submitInfo, nullptr);
+		if (result == vk::Result::eErrorDeviceLost) {
+			std::this_thread::sleep_for(std::chrono::seconds(3));
+			throw std::runtime_error("Error device lost");
+		}
+#else
 		CommandPools::getQueue(m_type).submit(submitInfo, nullptr);
+#endif
 	}
 }
 
@@ -43,12 +54,6 @@ void CommandBuffer::setImageLayout(
 	vk::ImageSubresourceRange subresourceRange,
 	vk::PipelineStageFlags srcMask,
 	vk::PipelineStageFlags dstMask) {
-
-	/*vk::ImageSubresourceRange subresourceRange;
-	subresourceRange.aspectMask = aspectMask;
-	subresourceRange.baseMipLevel = 0;
-	subresourceRange.levelCount = 1;
-	subresourceRange.layerCount = 1;*/
 
 	vk::ImageMemoryBarrier barrier;
 	barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
@@ -103,6 +108,22 @@ void CommandBuffer::setImageLayout(
 		{},
 		{},
 		{ barrier });
+}
+
+void CommandBuffer::reset() {
+	m_commandBuffer.reset();
+
+	vk::CommandBufferAllocateInfo commandBufferAllocateInfo;
+	commandBufferAllocateInfo.commandPool = CommandPools::getPool(m_type);
+	commandBufferAllocateInfo.level = vk::CommandBufferLevel::ePrimary;
+	commandBufferAllocateInfo.commandBufferCount = 1;
+
+	m_commandBuffer = std::move(m_logicalDevice.allocateCommandBuffersUnique(
+		commandBufferAllocateInfo)[0]);
+
+	vk::CommandBufferBeginInfo beginInfo;
+	beginInfo.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
+	m_commandBuffer->begin(beginInfo);
 }
 
 vk::CommandBuffer& CommandBuffer::get() {

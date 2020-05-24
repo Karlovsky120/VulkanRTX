@@ -26,7 +26,7 @@ public:
 	void freeBlock(uint32_t offset);
 
 private:
-	//This is managed by a static class,
+	//This is managed by MemoryAllocator,
 	//it needs to be explicitly released before the vk::Device,
 	//hence no Unique handle.
 	vk::DeviceMemory m_deviceMemory;

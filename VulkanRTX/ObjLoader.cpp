@@ -1,4 +1,4 @@
-#include "ObjLoader.h"
+/*#include "ObjLoader.h"
 
 #include "glm/vec3.hpp"
 #include "glm/geometric.hpp"
@@ -25,7 +25,7 @@ void ObjLoader::getVertex(std::string& line, std::vector<Vertex>& vertices) {
 	vertices.push_back(vertex);
 }
 
-void ObjLoader::getIndices(std::string& line, std::vector<uint16_t>& indices) {
+void ObjLoader::getIndices(std::string& line, std::vector<uint32_t>& indices) {
 	line = line.substr(2);
 	uint32_t delimiterIndex = line.find(" ");
 	indices.push_back(std::stoi(line.substr(0, delimiterIndex)) - 1);
@@ -126,4 +126,4 @@ ObjectData ObjLoader::loadObj(std::string modelPath) {
 	}
 
 	return object;
-}
+}*/

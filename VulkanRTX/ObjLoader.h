@@ -1,4 +1,4 @@
-#pragma once
+/*#pragma once
 
 #include "Vertex.h"
 
@@ -14,7 +14,7 @@ struct FaceCoeff {
 
 struct ObjectData {
 	std::vector<Vertex> vertices;
-	std::vector<uint16_t> indices;
+	std::vector<uint32_t> indices;
 	std::vector<FaceCoeff> faceCoeffs;
 };
 
@@ -25,8 +25,8 @@ public:
 
 private:
 	static void getVertex(std::string& line, std::vector<Vertex>& vertices);
-	static void getIndices(std::string& line, std::vector<uint16_t>& indices);
+	static void getIndices(std::string& line, std::vector<uint32_t>& indices);
 	static void normalize(ObjectData& object);
 	static void calculateSurfaceNormals(ObjectData& object);
-};
+};*/
 

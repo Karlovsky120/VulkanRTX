@@ -3,6 +3,8 @@
 #include "MemoryAllocator.h"
 #include "VulkanInclude.h"
 
+#include <vector>
+
 class Image {
 public:
 	Image(const vk::Device& device,

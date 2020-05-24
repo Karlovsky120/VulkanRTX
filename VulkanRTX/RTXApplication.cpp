@@ -37,38 +37,29 @@ void RTXApplication::initVulkan() {
         *vkCtx->m_logicalDevice,
         vkCtx->m_presentQueue);
 
-    /*descriptorSetLayout = vkCtx->createUniformDescriptorSetLayout();
-
-    pipeline = std::make_unique<Pipeline>(*vkCtx->m_logicalDevice);
-    pipeline->initPipeline(swapchain->m_extent, swapchain->m_colorFormat, &*descriptorSetLayout);
-
-    createDepthBuffer();
-
-    clearColors.resize(2);
-    clearColors[0].color = vk::ClearColorValue(std::array<float, 4>({ 0.0f, 0.0f, 0.0f, 1.0f }));
-    clearColors[1].depthStencil = vk::ClearDepthStencilValue(1.0f);
-
-    swapchain->updateFramebuffers(*pipeline->m_renderPass, depthBuffer->getView());*/
-
     //objectData = ObjLoader::loadObj(modelPath);
 
-    chunk = std::make_unique<Chunk>();
+    /*chunk = std::make_unique<Chunk>();
     chunk->generateRandomly();
     chunk->generateVertices();
     //chunk.generateGreedyTriangles();
     chunk->generateGreedyTrianglesMultithreaded();
-    //chunk.generateSimpleTriangles();
+    //chunk.generateSimpleTriangles();*/
 
+    chunk = std::make_unique<Chunk>();
+    std::vector<Vertex> vertices = chunk->generateVertices();
+    std::vector<uint32_t> indices = chunk->generateChunk(0);
 
-    object = std::make_unique<Mesh>(*vkCtx->m_logicalDevice, chunk->vertices, sizeof(Vertex), chunk->indices);
+    vertexBuffer = std::make_unique<Buffer>(
+        *vkCtx->m_logicalDevice,
+        vertices.size() * sizeof(Vertex),
+        vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress,
+        vk::MemoryPropertyFlagBits::eDeviceLocal,
+        vk::MemoryAllocateFlagBits::eDeviceAddress
+        );
+
+    object = std::make_unique<Mesh>(*vkCtx->m_logicalDevice, /*vertices, sizeof(Vertex),*/ indices);
     object->translate(glm::vec3(0.0, -CHUNK_SIZE * 0.5, 0));
-
-    descriptorPool = rt->createDescriptorPool();
-    descriptorSetLayout = rt->createDescriptorSetLayout();
-    descriptorSet = rt->createDescriptorSet(
-        *descriptorPool,
-        *descriptorSetLayout
-    );
 
     swapchainFrameInfos.resize(swapchain->m_imageCount);
 
@@ -87,24 +78,6 @@ void RTXApplication::initVulkan() {
         inFlightFrameInfos[i].renderCompleteSemaphore = vkCtx->m_logicalDevice->createSemaphoreUnique(semaphoreCreateInfo);
         inFlightFrameInfos[i].inFlightFence = vkCtx->m_logicalDevice->createFenceUnique(fenceCreateInfo);
     }
-
-    /*descriptorPool = vkCtx->createDescriptorPool(swapchain->m_imageCount);
-
-    
-    
-    std::vector<vk::DescriptorSetLayout> layouts(swapchain->m_imageCount, *descriptorSetLayout);
-    std::vector<vk::UniqueDescriptorSet> descriptorSets = vkCtx->createDescriptorSets(*descriptorPool, layouts);
-    std::vector<vk::CommandBuffer> cmdBuffers =
-        CmdBufferAllocator::get()->createBuffers(*CmdBufferAllocator::get()->m_graphicsCmdPool, static_cast<uint32_t>(swapchainFrameInfos.size()));
-
-    for (uint32_t i = 0; i < swapchainFrameInfos.size(); ++i) {
-        swapchainFrameInfos[i].descriptorSet = std::move(descriptorSets[i]);
-        swapchainFrameInfos[i].frameBuffer = std::move(cmdBuffers[i]);
-
-        generateSwapchainFrameInfo(i);
-        updateSwapchainFrameInfo(i);
-    }*/
-
     
     uniformBuffer = std::make_unique<Buffer>(
         *vkCtx->m_logicalDevice,
@@ -112,11 +85,18 @@ void RTXApplication::initVulkan() {
         vk::BufferUsageFlagBits::eUniformBuffer,
         vk::MemoryPropertyFlagBits::eDeviceLocal);
 
+    rt = std::make_unique<RayTracing>();
+    descriptorPool = rt->createDescriptorPool();
+    descriptorSetLayout = rt->createDescriptorSetLayout();
+    descriptorSet = rt->createDescriptorSet(
+        *descriptorPool,
+        *descriptorSetLayout
+    );
+
     AccelerationStructures asses;
-    blas = std::make_unique<AccelerationStructure>(asses.createBottomAccelerationStructure(*object));
+    blas = std::make_unique<AccelerationStructure>(asses.createBottomAccelerationStructure(*object, vertexBuffer->get()));
     tlas = std::make_unique<AccelerationStructure>(asses.createTopAccelerationStructure(*blas));
 
-    rt = std::make_unique<RayTracing>();
     storageImage = rt->createStorageImage(windowWidth, windowHeight);
 
     rtPipeline = std::make_unique<RTPipeline>(*vkCtx->m_logicalDevice);
@@ -129,9 +109,9 @@ void RTXApplication::initVulkan() {
         *tlas->structure,
         storageImage->getView());
 
-    for (int i = 0; i < swapchain->m_imageCount; ++i) {
+    /*for (int i = 0; i < swapchain->m_imageCount; ++i) {
         recordCommandBuffer(i);
-    }
+    }*/
 
     glfwGetCursorPos(window, &cursorX, &cursorY);
 }
@@ -152,7 +132,7 @@ void RTXApplication::initWindow() {
 }
 
 void RTXApplication::initOther() {
-    camera = Camera(glm::vec3(0.0f, 0.0f, 2.5f), glm::vec3(0.0f), 90.0f, windowWidth / (float)windowHeight, 0.01f, 100.0f);
+    camera = Camera(glm::vec3(0.0f, 0.0f, 2.5f), glm::vec3(0.0f), 90.0f, windowWidth / (float)windowHeight, 0.01f, 10000.0f);
 }
 
 void RTXApplication::mainLoop() {
@@ -163,7 +143,7 @@ void RTXApplication::mainLoop() {
         processMouse();
         processKeyboard();
 
-        uint32_t swapchainIndex;
+        uint32_t swapchainImageIndex;
 
         vk::FenceCreateInfo fenceInfo;
         vk::UniqueFence fence = vkCtx->m_logicalDevice->createFenceUnique(fenceInfo);
@@ -173,35 +153,20 @@ void RTXApplication::mainLoop() {
             UINT64_MAX,
             nullptr,
             *fence,
-            &swapchainIndex);
+            &swapchainImageIndex);
 
         vkCtx->m_logicalDevice->waitForFences(*fence, VK_TRUE, UINT64_MAX);
 
-        swapchainFrameInfos[swapchainIndex].frameBuffer->submit(true);
+        recordCommandBuffer(swapchainImageIndex);
 
-        /*vk::UniqueSemaphore renderComplete;
-        vk::SemaphoreCreateInfo semaphoreInfo;*/
-
+        swapchainFrameInfos[swapchainImageIndex].frameBuffer->submit(true);
 
         vk::PresentInfoKHR presentInfo;
-        /*presentInfo.waitSemaphoreCount = 1;
-        presentInfo.pWaitSemaphores = renderComplete;*/
-
-        vk::SwapchainKHR swapchains[] = { *swapchain->m_swapchain };
         presentInfo.swapchainCount = 1;
-        presentInfo.pSwapchains = swapchains;
-        presentInfo.pImageIndices = &swapchainIndex;
+        presentInfo.pSwapchains = &*swapchain->m_swapchain;
+        presentInfo.pImageIndices = &swapchainImageIndex;
 
         vk::Result presentResult = vkCtx->m_presentQueue.presentKHR(presentInfo);
-
-        //drawFrame(swapchainIndex);
-
-        /*if (swapchainIndex != -1) {
-            updatePushConstants();
-            resetCommandBuffer(swapchainIndex);
-            recordCommandBuffer(swapchainIndex);
-            drawFrame(swapchainIndex);
-        }*/
     }
 }
 
@@ -303,17 +268,17 @@ void RTXApplication::updateDescriptorSets(
     imageDescriptorInfo.imageView = imageView;
     imageDescriptorInfo.imageLayout = vk::ImageLayout::eGeneral;
 
-    vk::DescriptorBufferInfo descriptorBufferInfo;
-    descriptorBufferInfo.buffer = uniformBuffer->get();
-    descriptorBufferInfo.range = sizeof(UniformBufferData);
-    descriptorBufferInfo.offset = 0;
-
     vk::WriteDescriptorSet resultImageWrite;
     resultImageWrite.dstSet = descriptorSet;
     resultImageWrite.descriptorType = vk::DescriptorType::eStorageImage;
     resultImageWrite.dstBinding = 1;
     resultImageWrite.descriptorCount = 1;
     resultImageWrite.pImageInfo = &imageDescriptorInfo;
+
+    vk::DescriptorBufferInfo descriptorBufferInfo;
+    descriptorBufferInfo.buffer = uniformBuffer->get();
+    descriptorBufferInfo.range = sizeof(UniformBufferData);
+    descriptorBufferInfo.offset = 0;
 
     vk::WriteDescriptorSet uniformBufferWrite;
     uniformBufferWrite.dstSet = descriptorSet;
@@ -367,10 +332,6 @@ uint32_t RTXApplication::acquireNextImage() {
     return swapchainIndex;
 }
 
-
-
-
-
 void RTXApplication::generateSwapchainFrameInfo(const uint32_t index) {
     /*SwapchainFrameInfo& frameInfo = swapchainFrameInfos[index];
 
@@ -387,24 +348,6 @@ void RTXApplication::generateSwapchainFrameInfo(const uint32_t index) {
 
     vkCtx->m_logicalDevice->updateDescriptorSets(1, &frameInfo.writeDescriptorSet, 0, nullptr);*/
 }
-
-/*void RTXApplication::createDepthBuffer() {
-    vk::SurfaceCapabilitiesKHR surfaceCapabilities =
-        vkCtx->m_physicalDevice.getSurfaceCapabilitiesKHR(*vkCtx->m_surface);
-
-    vk::Extent2D currentExtent;
-    if (surfaceCapabilities.currentExtent.width != -1) {
-        currentExtent = surfaceCapabilities.currentExtent;
-    }
-
-    depthBuffer = std::make_unique<Image>(
-        *vkCtx->m_logicalDevice,
-        currentExtent.width,
-        currentExtent.height,
-        vk::Format::eD32Sfloat,
-        vk::ImageUsageFlagBits::eDepthStencilAttachment,
-        vk::ImageAspectFlagBits::eDepth);
-}*/
 
 /*void RTXApplication::updateSwapchainStack() {
 
@@ -447,28 +390,32 @@ void RTXApplication::generateSwapchainFrameInfo(const uint32_t index) {
 
 
 void RTXApplication::recordCommandBuffer(const uint32_t index) {
+    vk::StridedBufferRegionKHR raygenShaderSbtEntry;
+    raygenShaderSbtEntry.buffer = sbt->get();
+    raygenShaderSbtEntry.offset =
+        static_cast<vk::DeviceSize>(vkCtx->m_rayTracingProperties.shaderGroupHandleSize * INDEX_RAYGEN);
+    raygenShaderSbtEntry.size = vkCtx->m_rayTracingProperties.shaderGroupHandleSize;
+
+    vk::StridedBufferRegionKHR missShaderSbtEntry;
+    missShaderSbtEntry.buffer = sbt->get();
+    missShaderSbtEntry.offset =
+        static_cast<vk::DeviceSize>(vkCtx->m_rayTracingProperties.shaderGroupHandleSize * INDEX_MISS);
+    missShaderSbtEntry.size = vkCtx->m_rayTracingProperties.shaderGroupHandleSize;
+
+    vk::StridedBufferRegionKHR hitShaderSbtEntry;
+    hitShaderSbtEntry.buffer = sbt->get();
+    hitShaderSbtEntry.offset =
+        static_cast<vk::DeviceSize>(vkCtx->m_rayTracingProperties.shaderGroupHandleSize * INDEX_CLOSEST_HIT);
+    hitShaderSbtEntry.size = vkCtx->m_rayTracingProperties.shaderGroupHandleSize;
+
+    vk::StridedBufferRegionKHR callableShaderSbtEntry;
+
+    std::vector<vk::DescriptorSet> sets = { *descriptorSet };
+    
     CommandBuffer& cmdBuffer = *swapchainFrameInfos[index].frameBuffer;
+    cmdBuffer.reset();
 
-    /*vk::StridedBufferRegionKHR raygenShaderStbEntry;
-    raygenShaderStbEntry.buffer = sbt->get();
-    raygenShaderStbEntry.offset = static_cast<vk::DeviceSize>(vkCtx->m_rayTracingProperties.shaderGroupHandleSize * INDEX_RAYGEN);
-    raygenShaderStbEntry.size = vkCtx->m_rayTracingProperties.shaderGroupHandleSize;
-
-    vk::StridedBufferRegionKHR missShaderStbEntry;
-    missShaderStbEntry.buffer = sbt->get();
-    missShaderStbEntry.offset = static_cast<vk::DeviceSize>(vkCtx->m_rayTracingProperties.shaderGroupHandleSize * INDEX_MISS);
-    missShaderStbEntry.size = vkCtx->m_rayTracingProperties.shaderGroupHandleSize;
-
-    vk::StridedBufferRegionKHR hitShaderStbEntry;
-    missShaderStbEntry.buffer = sbt->get();
-    missShaderStbEntry.offset = static_cast<vk::DeviceSize>(vkCtx->m_rayTracingProperties.shaderGroupHandleSize * INDEX_CLOSEST_HIT);
-    missShaderStbEntry.size = vkCtx->m_rayTracingProperties.shaderGroupHandleSize;
-
-    vk::StridedBufferRegionKHR callableShaderStbEntry;
-
-    std::vector<vk::DescriptorSet> sets = { *descriptorSet };*/
-
-    /*cmdBuffer.get().bindPipeline(vk::PipelineBindPoint::eRayTracingKHR, rtPipeline->get());
+    cmdBuffer.get().bindPipeline(vk::PipelineBindPoint::eRayTracingKHR, rtPipeline->get());
     cmdBuffer.get().bindDescriptorSets(
         vk::PipelineBindPoint::eRayTracingKHR,
         rtPipeline->getLayout(),
@@ -477,13 +424,13 @@ void RTXApplication::recordCommandBuffer(const uint32_t index) {
         nullptr);
 
     cmdBuffer.get().traceRaysKHR(
-        &raygenShaderStbEntry,
-        &missShaderStbEntry,
-        &hitShaderStbEntry,
-        &callableShaderStbEntry,
+        &raygenShaderSbtEntry,
+        &missShaderSbtEntry,
+        &hitShaderSbtEntry,
+        &callableShaderSbtEntry,
         windowWidth,
         windowHeight,
-        1);*/
+        1);
 
     vk::ImageSubresourceRange subresourceRange;
     subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
@@ -498,7 +445,7 @@ void RTXApplication::recordCommandBuffer(const uint32_t index) {
         vk::ImageLayout::eTransferSrcOptimal,
         subresourceRange);
 
-    /*cmdBuffer.setImageLayout(
+    cmdBuffer.setImageLayout(
         swapchain->getImage(index),
         vk::ImageLayout::eUndefined,
         vk::ImageLayout::eTransferDstOptimal,
@@ -537,7 +484,7 @@ void RTXApplication::recordCommandBuffer(const uint32_t index) {
         storageImage->get(),
         vk::ImageLayout::eTransferSrcOptimal,
         vk::ImageLayout::eGeneral,
-        subresourceRange);*/
+        subresourceRange);
 }
 
 /*void RTXApplication::resetCommandBuffer(const uint32_t index) {

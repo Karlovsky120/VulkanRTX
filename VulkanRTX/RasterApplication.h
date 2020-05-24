@@ -28,7 +28,7 @@ public:
 
 private:
     struct UniformBufferObject {
-        glm::mat4 model;
+        glm::mat4 models[256];
         glm::vec3 playerPosition;
         float spacer1;
         glm::vec3 lightPosition;
@@ -45,7 +45,6 @@ private:
         vk::CommandBufferBeginInfo beginInfo;
         vk::RenderPassBeginInfo renderPassBeginInfo;
         vk::Fence imageInUse = vk::Fence();
-        std::unique_ptr<Image> rasterImage;
     };
 
     std::vector<vk::ClearValue> clearColors;
@@ -72,7 +71,6 @@ private:
     GLFWwindow* window;
 
     std::string modelPath;
-    ObjectData objectData;
     std::unique_ptr<Chunk> chunk;
 
     std::shared_ptr<VulkanContext> vkCtx;
@@ -82,6 +80,7 @@ private:
     std::unique_ptr<Swapchain> swapchain;
     std::unique_ptr<Pipeline> pipeline;
     
+    std::unique_ptr<Buffer> vertexBuffer;
     std::unique_ptr<Buffer> uniformBuffer;
     std::unique_ptr<Image> depthBuffer;
     
@@ -91,7 +90,7 @@ private:
     std::vector<SwapchainFrameInfo> swapchainFrameInfos;
     std::vector<InFlightFrameInfo> inFlightFrameInfos;
     
-    std::unique_ptr<Mesh> object;
+    std::vector<std::unique_ptr<Mesh>> chunks;
     glm::vec3 lightPosition = glm::vec3(-32.0f, 0.0f, 0.0f);
     glm::vec3 lightColor = glm::vec3(1.0f, 1.0f, 1.0f);
     

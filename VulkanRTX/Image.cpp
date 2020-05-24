@@ -23,12 +23,11 @@ Image::Image(const vk::Device& device,
 	imageInfo.usage = usageFlags;
 	imageInfo.initialLayout = vk::ImageLayout::eUndefined;
 	//imageInfo.sharingMode = vk::SharingMode::eExclusive;
-	//imageInfo.flags = vk::ImageCreateFlags();
 
 	m_image = device.createImageUnique(imageInfo);
 
 	vk::MemoryRequirements memoryRequirements = device.getImageMemoryRequirements(*m_image);
-	m_allocId = MemoryAllocator::get()->allocate(memoryRequirements, vk::MemoryPropertyFlagBits::eDeviceLocal);
+	m_allocId = MemoryAllocator::allocate(memoryRequirements, vk::MemoryPropertyFlagBits::eDeviceLocal);
 	device.bindImageMemory(*m_image, *m_allocId->memory, m_allocId->offset);
 
 	vk::ImageSubresourceRange subresourceRange;
@@ -47,12 +46,19 @@ Image::Image(const vk::Device& device,
 	m_imageView = device.createImageViewUnique(imageViewInfo);
 
 	if (startLayout != vk::ImageLayout::eUndefined)	{
-		std::unique_ptr<CommandBuffer> cmdBuffer = std::make_unique<CommandBuffer>(PoolType::eGraphics);
+		vk::ImageSubresourceRange subresourceRange2;
+		subresourceRange2.aspectMask = aspectFlags;
+		subresourceRange2.baseMipLevel = 0;
+		subresourceRange2.levelCount = 1;
+		subresourceRange2.baseArrayLayer = 0;
+		subresourceRange2.layerCount = 1;
+
+		std::unique_ptr<CommandBuffer> cmdBuffer = std::make_unique<CommandBuffer>(PoolType::eTransfer);
 		cmdBuffer->setImageLayout(
 			*m_image,
 			vk::ImageLayout::eUndefined,
 			startLayout,
-			subresourceRange);
+			subresourceRange2);
 		cmdBuffer->submit(true);
 	}
 }

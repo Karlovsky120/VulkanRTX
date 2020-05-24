@@ -11,8 +11,7 @@ std::pair<vk::DeviceMemory*, uint32_t> DeviceMemory::allocateBlock(
 	size_t alignment) {
 
 	for (auto currentBlock = m_blocks.begin(); currentBlock != m_blocks.end(); ++currentBlock) {
-
-		uint32_t alignmentShift = alignment - currentBlock->offset & (alignment - 1);
+		uint32_t alignmentShift = (alignment - currentBlock->offset) & (alignment - 1);
 		uint32_t alignedSize = currentBlock->size - alignmentShift;
 
 		if (currentBlock->free && requestedSize <= alignedSize) {
@@ -26,9 +25,9 @@ std::pair<vk::DeviceMemory*, uint32_t> DeviceMemory::allocateBlock(
 			if (currentBlock->size != requestedSize) {
 				uint32_t newBlockSize = currentBlock->size - requestedSize;
 				m_blocks.insert(std::next(currentBlock), MemoryChunk{currentBlock->offset + requestedSize, newBlockSize, true});
+				currentBlock->size = requestedSize;
 			}
 			
-			currentBlock->size = requestedSize;
 			currentBlock->free = false;
 
 			return std::pair(&m_deviceMemory, currentBlock->offset);
@@ -68,13 +67,15 @@ DeviceMemory::DeviceMemory(const vk::Device& logicalDevice, const uint32_t memor
 
 	m_blocks.insert(m_blocks.begin(), MemoryChunk{0, m_size, true});
 
-	vk::MemoryAllocateFlagsInfo flagInfo;
-	flagInfo.flags = flags;
-
 	vk::MemoryAllocateInfo allocateInfo;
 	allocateInfo.allocationSize = m_size;
 	allocateInfo.memoryTypeIndex = memoryTypeIndex;
-	allocateInfo.pNext = &flagInfo;
+
+	if (flags != vk::MemoryAllocateFlags()) {
+		vk::MemoryAllocateFlagsInfo flagInfo;
+		flagInfo.flags = flags;
+		allocateInfo.pNext = &flagInfo;
+	}
 
 	m_deviceMemory = logicalDevice.allocateMemory(allocateInfo);
 }

@@ -11,23 +11,20 @@ void MemoryAllocator::init(
     instance = storage;
 }
 
-std::shared_ptr<MemoryAllocator> MemoryAllocator::get() {
-    return instance.lock();
-}
-
 std::unique_ptr<AllocId> MemoryAllocator::allocate(
     vk::MemoryRequirements& requirements,
     vk::MemoryPropertyFlags memoryFlags,
     vk::MemoryAllocateFlags allocateFlags) {
 
-    uint32_t deviceMemoryType = findMemoryType(requirements.memoryTypeBits, memoryFlags);
+    uint32_t deviceMemoryType = instance.lock()->findMemoryType(requirements.memoryTypeBits, memoryFlags);
     auto memoryId = std::make_pair(deviceMemoryType, allocateFlags);
 
-    auto it = m_memoryTable.find(memoryId);
+    auto& memoryTable = instance.lock()->m_memoryTable;
+    auto it = memoryTable.find(memoryId);
 
-    if (it == m_memoryTable.end()) {
-        m_memoryTable.insert(std::make_pair(memoryId, std::vector<DeviceMemory>()));
-        it = m_memoryTable.find(memoryId);
+    if (it == memoryTable.end()) {
+        memoryTable.insert(std::make_pair(memoryId, std::vector<DeviceMemory>()));
+        it = memoryTable.find(memoryId);
     }
 
     std::vector<DeviceMemory>& deviceMemories = it->second;
@@ -43,7 +40,7 @@ std::unique_ptr<AllocId> MemoryAllocator::allocate(
         ++chunkIndex;
     }
 
-    deviceMemories.push_back(DeviceMemory(m_logicalDevice, deviceMemoryType, allocateFlags));
+    deviceMemories.push_back(DeviceMemory(instance.lock()->m_logicalDevice, deviceMemoryType, allocateFlags));
 
     memoryData = deviceMemories.back().allocateBlock(requirements.size, requirements.alignment);
 
@@ -51,7 +48,7 @@ std::unique_ptr<AllocId> MemoryAllocator::allocate(
 }
 
 void MemoryAllocator::free(AllocId& allocId) {
-    m_memoryTable[std::make_pair(allocId.type, allocId.allocateFlags)][allocId.chunk].freeBlock(allocId.offset);
+    instance.lock()->m_memoryTable[std::make_pair(allocId.type, allocId.allocateFlags)][allocId.chunk].freeBlock(allocId.offset);
 }
 
 void MemoryAllocator::freeAllMemory() {
@@ -75,8 +72,8 @@ uint32_t MemoryAllocator::findMemoryType(uint32_t typeFilter, vk::MemoryProperty
 MemoryAllocator::MemoryAllocator(
     const vk::Device& logicalDevice,
     const vk::PhysicalDeviceMemoryProperties& memoryProperties) :
-    m_logicalDevice(logicalDevice),
-    m_memoryProperties(memoryProperties) {}
+    m_memoryProperties(memoryProperties),
+    m_logicalDevice(logicalDevice) {}
 
 std::weak_ptr<MemoryAllocator> MemoryAllocator::instance;
 
