@@ -65,8 +65,9 @@ private:
     GLFWwindow* window;
 
     std::string modelPath;
-    ObjectData objectData;
+    //ObjectData objectData;
     std::unique_ptr<Chunk> chunk;
+    std::unique_ptr<Buffer> vertexBuffer;
 
     std::shared_ptr<VulkanContext> vkCtx;
     std::shared_ptr<MemoryAllocator> memoryAllocator;

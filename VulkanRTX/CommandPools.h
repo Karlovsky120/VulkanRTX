@@ -16,6 +16,9 @@ public:
 	static vk::CommandPool& getPool(PoolType type);
 	static vk::Queue& getQueue(PoolType type);
 
+	/*CommandPools(CommandPools const&) = delete;
+	void operator=(CommandPools const&) = delete;*/
+
 private:
 	static std::weak_ptr<CommandPools> instance;
 

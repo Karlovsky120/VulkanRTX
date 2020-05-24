@@ -110,6 +110,8 @@ void VulkanContext::createPhysicalDevice() {
         bool deferredHostOperationsSupported = false;
         bool bufferDeviceAddressSUpported = false;
         bool descriptorIndexingSupported = false;
+        bool aftermathCheckpointsSupported = false;
+        bool aftermathConfigSupported = false;
         for (vk::ExtensionProperties extensionProperty : extensionProperties) {
             std::string extensionName(extensionProperty.extensionName);
 
@@ -117,24 +119,34 @@ void VulkanContext::createPhysicalDevice() {
                 bufferDeviceAddressSUpported = true;
             }
 
-            if (extensionName == VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME) {
+            else if (extensionName == VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME) {
                 deferredHostOperationsSupported = true;
             }
 
-            if (extensionName == VK_KHR_PIPELINE_LIBRARY_EXTENSION_NAME) {
+            else if (extensionName == VK_KHR_PIPELINE_LIBRARY_EXTENSION_NAME) {
                 pipelineLibrarySupported = true;
             }
 
-            if (extensionName == VK_KHR_RAY_TRACING_EXTENSION_NAME) {
+            else if (extensionName == VK_KHR_RAY_TRACING_EXTENSION_NAME) {
                 rayTracingSupported = true;
                 m_rayTracingProperties =
                     m_physicalDevice.getProperties2<vk::PhysicalDeviceProperties2,
                     vk::PhysicalDeviceRayTracingPropertiesKHR>().get<vk::PhysicalDeviceRayTracingPropertiesKHR>();
             }
 
-            if (extensionName == VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME) {
+            else if (extensionName == VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME) {
                 descriptorIndexingSupported = true;
             }
+
+#ifdef AFTERMATH
+            else if (extensionName == VK_NV_DEVICE_DIAGNOSTIC_CHECKPOINTS_EXTENSION_NAME) {
+                aftermathCheckpointsSupported = true;
+            }
+
+            else if (extensionName == VK_NV_DEVICE_DIAGNOSTICS_CONFIG_EXTENSION_NAME) {
+                aftermathConfigSupported = true;
+            }
+#endif
         }
 
         if (m_deviceProperties.deviceType == vk::PhysicalDeviceType::eDiscreteGpu) {
@@ -145,6 +157,12 @@ void VulkanContext::createPhysicalDevice() {
                 && deferredHostOperationsSupported
                 && bufferDeviceAddressSUpported
                 && descriptorIndexingSupported;
+
+#ifdef AFTERMATH
+            m_aftermathSupported =
+                aftermathCheckpointsSupported
+                && aftermathConfigSupported;
+#endif
             break;
         }
     }
@@ -201,7 +219,6 @@ uint32_t VulkanContext::findGraphicsQueue(std::vector<vk::QueueFamilyProperties>
 }
 
 uint32_t VulkanContext::findPresentQueue(uint32_t count, vk::SurfaceKHR surface, vk::PhysicalDevice physicalDevice) {
-    uint32_t index = 0;
     for (uint32_t i = 0; i < count; ++i) {
         if (physicalDevice.getSurfaceSupportKHR(i, surface)) {
             return i;
@@ -282,6 +299,23 @@ void VulkanContext::createLogicalDevice() {
 
     vk::PhysicalDeviceTimelineSemaphoreFeatures timelineSemaphore;
     timelineSemaphore.timelineSemaphore = true;
+
+#ifdef AFTERMATH
+    vk::DeviceDiagnosticsConfigCreateInfoNV diagnosticInfo;
+    diagnosticInfo.flags =
+        vk::DeviceDiagnosticsConfigFlagBitsNV::eEnableResourceTracking
+        | vk::DeviceDiagnosticsConfigFlagBitsNV::eEnableAutomaticCheckpoints
+        | vk::DeviceDiagnosticsConfigFlagBitsNV::eEnableShaderDebugInfo;
+
+    timelineSemaphore.pNext = &diagnosticInfo;
+
+    if (m_aftermathSupported) {
+        deviceExtensions.push_back(VK_NV_DEVICE_DIAGNOSTIC_CHECKPOINTS_EXTENSION_NAME);
+        deviceExtensions.push_back(VK_NV_DEVICE_DIAGNOSTICS_CONFIG_EXTENSION_NAME);
+    }
+
+    m_gpuCrashTracker.Initialize();
+#endif
 
     if (m_rayTracingSupported) {
         vk::PhysicalDeviceRayTracingFeaturesKHR rayTracing;
@@ -383,7 +417,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL VulkanContext::debugCallback(
     void* pUserData) {
 
     std::cerr << pCallbackData->pMessage << std::endl;
-    std::cerr << "----------------------------------------" << std::endl;
+    std::cerr << "------------------------------------------------------------------------------------------------" << std::endl;
 
     return VK_FALSE;
 }
@@ -395,8 +429,8 @@ VulkanContext::VulkanContext(GLFWwindow* window) {
 
 std::weak_ptr<VulkanContext> VulkanContext::instance;
 
-VulkanContext::~VulkanContext() {
 #ifdef ENABLE_VALIDATION
+VulkanContext::~VulkanContext() {
     m_instance->destroyDebugUtilsMessengerEXT(m_debugMessenger);
-#endif
 }
+#endif

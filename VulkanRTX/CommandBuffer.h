@@ -10,6 +10,8 @@ public:
 	CommandBuffer(PoolType pool);
 
 	void submit(bool wait = true);
+	void reset();
+
 	void setImageLayout(
 		vk::Image image,
 		vk::ImageLayout oldLayout,

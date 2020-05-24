@@ -10,7 +10,6 @@ public:
 	std::unique_ptr<AllocId> m_allocId;
 
 	vk::Buffer& get();
-	vk::Buffer* getPtr();
 
 	const vk::MemoryRequirements& getMemoryRequirements() const;
 
@@ -29,7 +28,7 @@ public:
 			uploadToDeviceLocal(data);
 		}
 		else {
-			throw std::runtime_error("Unhandle Memory property on buffer copy!");
+			throw std::runtime_error("Unhandled memory property on buffer copy!");
 		}
 	}
 
@@ -38,8 +37,7 @@ public:
 		const vk::DeviceSize size,
 		const vk::BufferUsageFlags usageFlags,
 		const vk::MemoryPropertyFlags memoryFlags,
-		vk::MemoryAllocateFlags memoryAllocateFlags = vk::MemoryAllocateFlags(),
-		const vk::MemoryRequirements memoryRequirements = { 0, 0, 0 });
+		vk::MemoryAllocateFlags memoryAllocateFlags = vk::MemoryAllocateFlags());
 
 private:
 	template <class T>
@@ -65,7 +63,7 @@ private:
 			vk::BufferUsageFlagBits::eTransferSrc,
 			vk::MemoryPropertyFlagBits::eHostVisible);
 
-		hostLocal.uploadToHostVisible(data);
+		hostLocal.uploadToBuffer(data);
 
 		vk::BufferCopy bufferCopy;
 		bufferCopy.size = sizeInBytes;

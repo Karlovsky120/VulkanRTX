@@ -13,7 +13,7 @@ struct AccelerationStructure {
 
 class AccelerationStructures {
 public:
-	AccelerationStructure createBottomAccelerationStructure(Mesh& mesh);
+	AccelerationStructure createBottomAccelerationStructure(Mesh& mesh, vk::Buffer& vertices);
 	AccelerationStructure createTopAccelerationStructure(AccelerationStructure& blas);
 
 private:

@@ -3,6 +3,10 @@
 #include <glm/mat4x4.hpp>
 #include "VulkanInclude.h"
 
+#ifdef AFTERMATH
+#include <Aftermath/NsightAftermathGpuCrashTracker.h>
+#endif
+
 #include <vector>
 
 struct GLFWwindow;
@@ -54,11 +58,19 @@ public:
 
     bool m_rayTracingSupported = false;
 
+#ifdef AFTERMATH
+    bool m_aftermathSupported = false;
+    GpuCrashTracker m_gpuCrashTracker;
+#endif
+
     VulkanContext(VulkanContext const&) = delete;
     void operator=(VulkanContext const&) = delete;
 
     VulkanContext(GLFWwindow* window);
+
+#ifdef ENABLE_VALIDATION
     ~VulkanContext();
+#endif
 
 private:
     uint32_t findTransferQueue(std::vector<vk::QueueFamilyProperties> queueFamilyProperties);

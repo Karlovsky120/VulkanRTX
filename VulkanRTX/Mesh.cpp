@@ -3,26 +3,26 @@
 #include <fstream>
 
 Mesh::Mesh(vk::Device& logicalDevice,
-		   std::vector<Vertex> vertices,
-		   uint32_t vertexStride,
-		   std::vector<uint16_t> indices,
+		   /*std::vector<Vertex> vertices,
+		   uint32_t vertexStride,*/
+		   std::vector<uint32_t> indices,
 		   glm::vec3 position,
 		   glm::vec3 rotation,
 		   glm::vec3 scale) :
-	m_vertices(vertices),
-	m_vertexStride(vertexStride),
+	/*m_vertices(vertices),
+	m_vertexStride(vertexStride),*/
 	m_indices(indices),
 	m_position(position),
 	m_rotation(rotation),
 	m_scale(scale),
-	m_deviceVertexBuffer(logicalDevice,
+	/*m_deviceVertexBuffer(logicalDevice,
 		sizeof(vertices[0]) * vertices.size(),
 		vk::BufferUsageFlagBits::eTransferDst
 		| vk::BufferUsageFlagBits::eVertexBuffer
 		| vk::BufferUsageFlagBits::eRayTracingKHR
 		| vk::BufferUsageFlagBits::eShaderDeviceAddress, //so it can be used with getBufferAddress()
 		vk::MemoryPropertyFlagBits::eDeviceLocal,
-		vk::MemoryAllocateFlagBits::eDeviceAddress), //so it can be used with getBufferAddress()
+		vk::MemoryAllocateFlagBits::eDeviceAddress), //so it can be used with getBufferAddress()*/
 	m_deviceIndexBuffer(logicalDevice,
 		sizeof(indices[0])* indices.size(),
 		vk::BufferUsageFlagBits::eTransferDst
@@ -32,11 +32,11 @@ Mesh::Mesh(vk::Device& logicalDevice,
 		vk::MemoryPropertyFlagBits::eDeviceLocal,
 		vk::MemoryAllocateFlagBits::eDeviceAddress) { //so it can be used with getBufferAddress()
 
-	m_deviceVertexBuffer.uploadToBuffer(vertices);
+	//m_deviceVertexBuffer.uploadToBuffer(vertices);
 	m_deviceIndexBuffer.uploadToBuffer(indices);
 }
 
-vk::Buffer& Mesh::getVertexBuffer() {
+/*vk::Buffer& Mesh::getVertexBuffer() {
 	return m_deviceVertexBuffer.get();
 }
 
@@ -46,7 +46,7 @@ Buffer& Mesh::getVertexBufferObject() {
 
 uint32_t Mesh::getVertexCount() {
 	return static_cast<uint32_t>(m_vertices.size());
-}
+}*/
 
 vk::Buffer& Mesh::getIndexBuffer() {
 	return m_deviceIndexBuffer.get();

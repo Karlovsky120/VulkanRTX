@@ -22,6 +22,12 @@
     <Filter Include="Source Files\Vulkan">
       <UniqueIdentifier>{645cc27d-c383-457b-bb65-49a099a064e9}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\Aftermath">
+      <UniqueIdentifier>{70fe0c82-a8fa-4712-9ade-9ac0a3b151f2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Aftermath">
+      <UniqueIdentifier>{ffba42e6-58fe-44a0-b009-7845ee29a06e}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -80,6 +86,12 @@
     </ClCompile>
     <ClCompile Include="CommandBuffer.cpp">
       <Filter>Source Files\Vulkan</Filter>
+    </ClCompile>
+    <ClCompile Include="include\Aftermath\NsightAftermathGpuCrashTracker.cpp">
+      <Filter>Source Files\Aftermath</Filter>
+    </ClCompile>
+    <ClCompile Include="include\Aftermath\NsightAftermathShaderDatabase.cpp">
+      <Filter>Source Files\Aftermath</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -142,6 +154,15 @@
     </ClInclude>
     <ClInclude Include="CommandBuffer.h">
       <Filter>Header Files\Vulkan</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Aftermath\NsightAftermathGpuCrashTracker.h">
+      <Filter>Header Files\Aftermath</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Aftermath\NsightAftermathHelpers.h">
+      <Filter>Header Files\Aftermath</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Aftermath\NsightAftermathShaderDatabase.h">
+      <Filter>Header Files\Aftermath</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

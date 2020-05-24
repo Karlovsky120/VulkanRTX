@@ -50,10 +50,36 @@ void RasterApplication::initVulkan() {
 
     swapchain->updateFramebuffers(*pipeline->m_renderPass, depthBuffer->getView());
 
-    objectData = ObjLoader::loadObj(modelPath);
+    //objectData = ObjLoader::loadObj(modelPath);
 
     chunk = std::make_unique<Chunk>();
-    chunk->generateRandomly();
+    std::vector<Vertex> vertices = chunk->generateVertices();
+
+    vertexBuffer = std::make_unique<Buffer>(
+        *vkCtx->m_logicalDevice,
+        vertices.size() * sizeof(Vertex),
+        vk::BufferUsageFlagBits::eVertexBuffer,
+        vk::MemoryPropertyFlagBits::eDeviceLocal
+    );
+
+    vertexBuffer->uploadToBuffer(vertices);
+
+    std::vector<Vertex> dummy = {};
+
+    uint32_t triangleCount = 0;
+
+    for (uint32_t i = 0; i < 16; ++i) {
+        for (uint32_t j = 0; j < 16; ++j) {
+            std::vector<uint32_t> indices = chunk->generateChunk(16 * i + j);
+            triangleCount += indices.size();
+            chunks.push_back(std::make_unique<Mesh>(*vkCtx->m_logicalDevice, /*dummy, sizeof(Vertex),*/ indices));
+            chunks.back()->translate(glm::vec3((i+1)*CHUNK_SIZE, 0.0f, (j+1)*CHUNK_SIZE));
+        }
+    }
+
+    triangleCount /= 3;
+
+    /*chunk->generateRandomly();
     chunk->generateVertices();
     //chunk.generateGreedyTriangles();
     chunk->generateGreedyTrianglesMultithreaded();
@@ -61,6 +87,7 @@ void RasterApplication::initVulkan() {
 
 
     object = std::make_unique<Mesh>(*vkCtx->m_logicalDevice, chunk->vertices, sizeof(Vertex), chunk->indices);
+    object->translate(glm::vec3(0.0f, 0.0f, CHUNK_SIZE));*/
     
     uniformBuffer = std::make_unique<Buffer>(
         *vkCtx->m_logicalDevice,
@@ -82,15 +109,6 @@ void RasterApplication::initVulkan() {
 
         generateSwapchainFrameInfo(i);
         updateSwapchainFrameInfo(i);
-
-        swapchainFrameInfos[i].rasterImage = std::make_unique<Image>(
-            *vkCtx->m_logicalDevice,
-            windowWidth,
-            windowHeight,
-            vk::Format::eB8G8R8A8Srgb,
-            vk::ImageUsageFlagBits::eColorAttachment
-            | vk::ImageUsageFlagBits::eTransferSrc,
-            vk::ImageAspectFlagBits::eColor);
     }
 
     inFlightFrameInfos.resize(MAX_FRAMES_IN_FLIGHT);
@@ -123,7 +141,7 @@ void RasterApplication::initWindow() {
 }
 
 void RasterApplication::initOther() {
-    camera = Camera(glm::vec3(0.0f, 0.0f, 20.0f), glm::vec3(0.0f), 90.0f, windowWidth / (float)windowHeight, 0.01f, 100.0f);
+    camera = Camera(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f), 90.0f, windowWidth / (float)windowHeight, 0.01f, 10000.0f);
 }
 
 void RasterApplication::mainLoop() {
@@ -176,6 +194,8 @@ void RasterApplication::createDepthBuffer() {
     if (surfaceCapabilities.currentExtent.width != -1) {
         currentExtent = surfaceCapabilities.currentExtent;
     }
+
+    std::vector<uint32_t> queueIndices = { vkCtx->m_graphicsQueueIndex };
 
     depthBuffer = std::make_unique<Image>(
         *vkCtx->m_logicalDevice,
@@ -240,9 +260,6 @@ void RasterApplication::recordCommandBuffer(const uint32_t index) {
         glm::value_ptr(camera.getCameraMatrix()));
 
     frameBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, *pipeline->m_pipeline);
-
-    frameBuffer.bindVertexBuffers(0, object->getVertexBuffer(), vk::DeviceSize(0));
-    frameBuffer.bindIndexBuffer(object->getIndexBuffer(), 0, vk::IndexType::eUint16);
     frameBuffer.bindDescriptorSets(
         vk::PipelineBindPoint::eGraphics,
         *pipeline->m_pipelineLayout,
@@ -250,7 +267,20 @@ void RasterApplication::recordCommandBuffer(const uint32_t index) {
         *frameInfo.descriptorSet,
         { nullptr });
 
-    frameBuffer.drawIndexed(object->getIndexCount(), 1, 0, 0, 0);
+    frameBuffer.bindVertexBuffers(0, vertexBuffer->get(), vk::DeviceSize(0));
+
+    for (uint32_t i = 0; i < chunks.size(); ++i) {
+        frameBuffer.pushConstants(
+            *pipeline->m_pipelineLayout,
+            vk::ShaderStageFlagBits::eVertex,
+            sizeof(glm::mat4),
+            sizeof(uint32_t),
+            &i);
+
+        frameBuffer.bindIndexBuffer(chunks[i]->getIndexBuffer(), 0, vk::IndexType::eUint32);
+        frameBuffer.drawIndexed(chunks[i]->getIndexCount(), 1, 0, 0, 0);
+    }
+
     frameBuffer.endRenderPass();
     frameBuffer.end();
 }
@@ -370,7 +400,11 @@ void RasterApplication::updatePushConstants() {
     //object->rotate(glm::vec3(0.0f, -2 * frameTime, 0.0f));
 
     UniformBufferObject ubo;
-    ubo.model = object->getMeshMatrix();
+    for (uint32_t i = 0; i < chunks.size(); ++i) {
+        ubo.models[i] = chunks[i]->getMeshMatrix();
+    }
+
+    //ubo.model = chunks[0]->getMeshMatrix();
     ubo.playerPosition = camera.getCameraPosition();
     //lightPosition = glm::rotateY(lightPosition, 2 * frameTime);
     ubo.lightPosition = lightPosition;

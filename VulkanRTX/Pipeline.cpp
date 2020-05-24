@@ -7,17 +7,17 @@ void Pipeline::createPipeline(const vk::Extent2D& extent) {
 	m_pipelineInfo.bindingDescription.stride = sizeof(Vertex);
 	m_pipelineInfo.bindingDescription.inputRate = vk::VertexInputRate::eVertex;
 
-	m_pipelineInfo.attributeDescriptions = std::vector<vk::VertexInputAttributeDescription>(2);
+	vk::VertexInputAttributeDescription position_description;
+	position_description.binding = 0;
+	position_description.location = 0;
+	position_description.format = vk::Format::eR32G32B32Sfloat;
+	position_description.offset = offsetof(Vertex, position);
+	m_pipelineInfo.attributeDescriptions.push_back(position_description);
 
-	m_pipelineInfo.attributeDescriptions[0].binding = 0;
-	m_pipelineInfo.attributeDescriptions[0].location = 0;
-	m_pipelineInfo.attributeDescriptions[0].format = vk::Format::eR32G32B32Sfloat;
-	m_pipelineInfo.attributeDescriptions[0].offset = offsetof(Vertex, position);
-
-	m_pipelineInfo.attributeDescriptions[1].binding = 0;
+	/*m_pipelineInfo.attributeDescriptions[1].binding = 0;
 	m_pipelineInfo.attributeDescriptions[1].location = 1;
 	m_pipelineInfo.attributeDescriptions[1].format = vk::Format::eR32G32B32Sfloat;
-	m_pipelineInfo.attributeDescriptions[1].offset = offsetof(Vertex, normal);
+	m_pipelineInfo.attributeDescriptions[1].offset = offsetof(Vertex, normal);*/
 
 	m_pipelineInfo.vertexInputCreateInfo.vertexBindingDescriptionCount = 1;
 	m_pipelineInfo.vertexInputCreateInfo.vertexAttributeDescriptionCount = m_pipelineInfo.attributeDescriptions.size();
@@ -127,7 +127,6 @@ void Pipeline::createPipeline(const vk::Extent2D& extent) {
 
 	m_pipelineInfo.pipelineCreateInfo.flags |= vk::PipelineCreateFlagBits::eDerivative;
 	m_pipelineInfo.pipelineCreateInfo.basePipelineIndex = 0;
-
 }
 
 void Pipeline::createRenderPass(const vk::Format& format) {
@@ -182,14 +181,17 @@ void Pipeline::createRenderPass(const vk::Format& format) {
 }
 
 void Pipeline::createPipelineLayout(const vk::DescriptorSetLayout* setLayout) {
-	std::vector<vk::PushConstantRange> pushConstantRanges;
-
 	vk::PushConstantRange cameraMatrix;
 	cameraMatrix.stageFlags = vk::ShaderStageFlagBits::eVertex;
 	cameraMatrix.offset = 0;
 	cameraMatrix.size = 16 * sizeof(float);
 
-	pushConstantRanges.push_back(cameraMatrix);
+	vk::PushConstantRange chunkId;
+	chunkId.stageFlags = vk::ShaderStageFlagBits::eVertex;
+	chunkId.offset = 16 * sizeof(float);
+	chunkId.size = sizeof(uint32_t);
+
+	std::vector<vk::PushConstantRange> pushConstantRanges = { cameraMatrix, chunkId };
 
 	vk::PipelineLayoutCreateInfo pipelineLayoutInfo;
 	pipelineLayoutInfo.setLayoutCount = 1;

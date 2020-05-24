@@ -15,14 +15,14 @@ public:
 		const vk::Device& logicalDevice,
 		const vk::PhysicalDeviceMemoryProperties& m_memoryProperties);
 
-	static std::shared_ptr<MemoryAllocator> get();
+	//static std::shared_ptr<MemoryAllocator> get();
 
-	std::unique_ptr<AllocId> allocate(
+	static std::unique_ptr<AllocId> allocate(
 		vk::MemoryRequirements& requirements,
 		vk::MemoryPropertyFlags memoryFlags,
 		vk::MemoryAllocateFlags allocateFlags = vk::MemoryAllocateFlags());
 
-	void free(AllocId& allocId);
+	static void free(AllocId& allocId);
 	void freeAllMemory();
 
 	MemoryAllocator(MemoryAllocator const&) = delete;
@@ -48,8 +48,8 @@ private:
 class AllocId {
 public:
 	vk::DeviceMemory* memory;
-	vk::MemoryAllocateFlags allocateFlags;
 	uint32_t type;
+	vk::MemoryAllocateFlags allocateFlags;
 	uint32_t chunk;
 	uint32_t offset;
 
@@ -70,6 +70,6 @@ public:
 		offset(offset) {}
 
 	~AllocId() {
-		MemoryAllocator::get()->free(*this);
+		MemoryAllocator::free(*this);
 	}
 };

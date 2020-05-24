@@ -2,12 +2,12 @@
 
 #include "VulkanContext.h"
 
-AccelerationStructure AccelerationStructures::createBottomAccelerationStructure(Mesh& mesh) {
+AccelerationStructure AccelerationStructures::createBottomAccelerationStructure(Mesh& mesh, vk::Buffer& vertices) {
 	vk::AccelerationStructureCreateGeometryTypeInfoKHR geometryTypeInfo;
 	geometryTypeInfo.geometryType = vk::GeometryTypeKHR::eTriangles;
 	geometryTypeInfo.maxPrimitiveCount = mesh.getIndexCount() / 3;
-	geometryTypeInfo.indexType = vk::IndexType::eUint16;
-	geometryTypeInfo.maxVertexCount = mesh.getVertexCount();
+	geometryTypeInfo.indexType = vk::IndexType::eUint32;
+	geometryTypeInfo.maxVertexCount = 33 * 33 * 33; // mesh.getVertexCount();
 	geometryTypeInfo.vertexFormat = vk::Format::eR32G32B32Sfloat;
 	geometryTypeInfo.allowsTransforms = VK_FALSE;
 
@@ -28,7 +28,7 @@ AccelerationStructure AccelerationStructures::createBottomAccelerationStructure(
 	vk::MemoryRequirements memoryRequirements =
 		VulkanContext::get()->m_logicalDevice->getAccelerationStructureMemoryRequirementsKHR(memoryInfo).memoryRequirements;
 
-	as.memory = MemoryAllocator::get()->allocate(memoryRequirements, vk::MemoryPropertyFlagBits::eDeviceLocal);
+	as.memory = MemoryAllocator::allocate(memoryRequirements, vk::MemoryPropertyFlagBits::eDeviceLocal);
 
 	vk::BindAccelerationStructureMemoryInfoKHR bindInfo;
 	bindInfo.accelerationStructure = *as.structure;
@@ -46,9 +46,9 @@ AccelerationStructure AccelerationStructures::createBottomAccelerationStructure(
 	geometry.geometryType = vk::GeometryTypeKHR::eTriangles;
 	geometry.geometry.triangles.vertexFormat = vk::Format::eR32G32B32Sfloat;
 	geometry.geometry.triangles.vertexData =
-		getBufferDeviceAddress<vk::DeviceOrHostAddressConstKHR>(mesh.getVertexBuffer()).deviceAddress;
+		getBufferDeviceAddress<vk::DeviceOrHostAddressConstKHR>(vertices).deviceAddress;
 	geometry.geometry.triangles.vertexStride = vk::DeviceSize(sizeof(Vertex));
-	geometry.geometry.triangles.indexType = vk::IndexType::eUint16;
+	geometry.geometry.triangles.indexType = vk::IndexType::eUint32;
 	geometry.geometry.triangles.indexData.deviceAddress =
 		getBufferDeviceAddress<vk::DeviceOrHostAddressConstKHR>(mesh.getIndexBuffer()).deviceAddress;
 
@@ -111,7 +111,7 @@ AccelerationStructure AccelerationStructures::createTopAccelerationStructure(
 	vk::MemoryRequirements memoryRequirements =
 		VulkanContext::get()->m_logicalDevice->getAccelerationStructureMemoryRequirementsKHR(memoryInfo).memoryRequirements;
 
-	as.memory = MemoryAllocator::get()->allocate(
+	as.memory = MemoryAllocator::allocate(
 		memoryRequirements,
 		vk::MemoryPropertyFlagBits::eDeviceLocal,
 		vk::MemoryAllocateFlagBits::eDeviceAddress);
@@ -209,15 +209,11 @@ Buffer AccelerationStructures::createScratchBuffer(
 	vk::MemoryRequirements memoryRequirements =
 		VulkanContext::get()->m_logicalDevice->getAccelerationStructureMemoryRequirementsKHR(memoryInfo).memoryRequirements;
 
-	vk::MemoryRequirements dummy;
-	dummy.size = 0;
-
 	return Buffer(
 		*VulkanContext::get()->m_logicalDevice,
 		memoryRequirements.size,
 		vk::BufferUsageFlagBits::eRayTracingKHR
 		| vk::BufferUsageFlagBits::eShaderDeviceAddress,
 		vk::MemoryPropertyFlagBits::eDeviceLocal,
-		vk::MemoryAllocateFlagBits::eDeviceAddress,
-		dummy);
+		vk::MemoryAllocateFlagBits::eDeviceAddress);
 }

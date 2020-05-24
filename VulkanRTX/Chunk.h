@@ -25,16 +25,42 @@
 #define CHUNK_PADDED_SIZE_CUBED (CHUNK_PADDED_SIZE_SQUARED*CHUNK_PADDED_SIZE)
 
 class Chunk {
-	bool blocks[CHUNK_PADDED_SIZE][CHUNK_PADDED_SIZE][CHUNK_PADDED_SIZE] = {};
+	//bool blocks[CHUNK_PADDED_SIZE][CHUNK_PADDED_SIZE][CHUNK_PADDED_SIZE] = {};
 
 public:
-	std::vector<Vertex> vertices;
-	std::vector<uint16_t> indices;
+	//std::vector<Vertex> vertices;
+	//std::vector<uint32_t> indices;
 
-	void generateRandomly() {
-		srand(1);
+	std::vector<Vertex> generateVertices() {
+		std::vector<Vertex> vertices;
+		for (uint32_t i = 0; i < VERTEX_SIZE; ++i) {
+			for (uint32_t j = 0; j < VERTEX_SIZE; ++j) {
+				for (uint32_t k = 0; k < VERTEX_SIZE; ++k) {
+					vertices.push_back({
+						glm::vec3(
+							i - static_cast<float>(CHUNK_SIZE) * 0.5,
+							j - static_cast<float>(CHUNK_SIZE) * 0.5,
+							k - static_cast<float>(CHUNK_SIZE) * 0.5
+						),
+					});
+				}
+			}
+		}
+
+		return vertices;
+	}
+
+	std::vector<uint32_t> generateChunk(uint32_t seed) {
+		bool blocks[CHUNK_PADDED_SIZE][CHUNK_PADDED_SIZE][CHUNK_PADDED_SIZE] = {};
+		generateRandomly(seed, blocks);
+		return generateGreedyTrianglesMultithreaded(blocks);
+	}
+
+	void generateRandomly(uint32_t seed, bool blocks[CHUNK_PADDED_SIZE][CHUNK_PADDED_SIZE][CHUNK_PADDED_SIZE]) {
+		srand(seed);
 
 		for (uint32_t i = 1; i < CHUNK_SIZE + 1; ++i) {
+			srand(rand());
 			for (uint32_t j = 1; j < CHUNK_SIZE + 1; ++j) {
 				for (uint32_t k = 1; k < CHUNK_SIZE + 1; ++k) {
 					blocks[i][j][k] = rand() % 2 == 0;
@@ -51,7 +77,7 @@ public:
 		//blocks[getBlockIndex(1, 2, 2)] = false;
 	}
 
-	void generateVertices() {
+	/*void generateVertices() {
 		for (uint32_t i = 0; i < VERTEX_SIZE; ++i) {
 			for (uint32_t j = 0; j < VERTEX_SIZE; ++j) {
 				for (uint32_t k = 0; k < VERTEX_SIZE; ++k) {
@@ -59,13 +85,12 @@ public:
 						glm::vec3(
 							i - static_cast<float>(CHUNK_SIZE) * 0.5,
 							j - static_cast<float>(CHUNK_SIZE) * 0.5,
-							k - static_cast<float>(CHUNK_SIZE) * 0.5),
-						{}
-					});
+							k - static_cast<float>(CHUNK_SIZE) * 0.5)
+						});
 				}
 			}
 		}
-	}
+	}*/
 
 	inline uint32_t getBlockIndex(uint32_t x, uint32_t y, uint32_t z) const {
 		return x * CHUNK_PADDED_SIZE_SQUARED + y * CHUNK_PADDED_SIZE + z;
@@ -75,7 +100,7 @@ public:
 		return x * VERTEX_SIZE_SQUARED + y * VERTEX_SIZE + z;
 	}
 
-	inline void pushRectangle(std::vector<uint16_t>& v, uint32_t v1, uint32_t v2, uint32_t v3, uint32_t v4) {
+	inline void pushRectangle(std::vector<uint32_t>& v, uint32_t v1, uint32_t v2, uint32_t v3, uint32_t v4) {
 		v.push_back(v1);
 		v.push_back(v2);
 		v.push_back(v3);
@@ -84,7 +109,9 @@ public:
 		v.push_back(v3);
 	}
 
-	void generateSimpleTriangles() {
+	std::vector<uint32_t> generateSimpleTriangles(bool blocks[CHUNK_PADDED_SIZE][CHUNK_PADDED_SIZE][CHUNK_PADDED_SIZE]) {
+		std::vector<uint32_t> indices;
+
 		for (uint32_t i = 1; i < CHUNK_SIZE + 1; ++i) {
 			for (uint32_t j = 1; j < CHUNK_SIZE + 1; ++j) {
 				for (uint32_t k = 1; k < CHUNK_SIZE + 1; ++k) {
@@ -151,6 +178,8 @@ public:
 				}
 			}
 		}
+
+		return indices;
 	}
 
 	/*void generateSimpleTriangles() {
@@ -293,8 +322,8 @@ public:
 		}
 	}
 
-	std::vector<uint16_t> generateXSlice(int32_t side) {
-		std::vector<uint16_t> slices;
+	std::vector<uint32_t> generateXSlice(bool blocks[CHUNK_PADDED_SIZE][CHUNK_PADDED_SIZE][CHUNK_PADDED_SIZE], int32_t side) {
+		std::vector<uint32_t> slices;
 		for (uint32_t i = 1; i < CHUNK_SIZE + 1; ++i) {
 			bool meshed[CHUNK_SIZE][CHUNK_SIZE] = {};
 			for (uint32_t j = 1; j < CHUNK_SIZE + 1; ++j) {
@@ -354,8 +383,8 @@ public:
 		return slices;
 	}
 
-	std::vector<uint16_t> generateYSlice(int32_t side) {
-		std::vector<uint16_t> slices;
+	std::vector<uint32_t> generateYSlice(bool blocks[CHUNK_PADDED_SIZE][CHUNK_PADDED_SIZE][CHUNK_PADDED_SIZE], int32_t side) {
+		std::vector<uint32_t> slices;
 		for (uint32_t j = 1; j < CHUNK_SIZE + 1; ++j) {
 			bool meshed[CHUNK_SIZE][CHUNK_SIZE] = {};
 			for (uint32_t i = 1; i < CHUNK_SIZE + 1; ++i) {
@@ -416,8 +445,8 @@ public:
 		return slices;
 	}
 
-	std::vector<uint16_t> generateZSlice(int32_t side) {
-		std::vector<uint16_t> slices;
+	std::vector<uint32_t> generateZSlice(bool blocks[CHUNK_PADDED_SIZE][CHUNK_PADDED_SIZE][CHUNK_PADDED_SIZE], int32_t side) {
+		std::vector<uint32_t> slices;
 		for (uint32_t k = 1; k < CHUNK_SIZE + 1; ++k) {
 			bool meshed[CHUNK_SIZE][CHUNK_SIZE] = {};
 			for (uint32_t i = 1; i < CHUNK_SIZE + 1; ++i) {
@@ -477,7 +506,9 @@ public:
 		return slices;
 	}
 
-	void combineSlices(std::vector<std::vector<uint16_t>>& slices) {
+	std::vector<uint32_t> combineSlices(std::vector<std::vector<uint32_t>>& slices) {
+		std::vector<uint32_t> indices;
+
 		std::size_t totalSize = 0;
 		for (const auto& slice : slices) {
 			totalSize += slice.size();
@@ -487,10 +518,12 @@ public:
 		for (const auto& slice : slices) {
 			indices.insert(indices.end(), slice.begin(), slice.end());
 		}
+
+		return indices;
 	}
 
-	void generateGreedyTriangles() {
-		std::vector<std::vector<uint16_t>> slices;
+	std::vector<uint32_t> generateGreedyTriangles(bool blocks[CHUNK_PADDED_SIZE][CHUNK_PADDED_SIZE][CHUNK_PADDED_SIZE]) {
+		std::vector<std::vector<uint32_t>> slices;
 
 		long long totalTime = 0;
 
@@ -498,40 +531,40 @@ public:
 			auto start = std::chrono::high_resolution_clock::now();
 
 			slices = {};
-			slices.push_back(generateXSlice(-1));
-			slices.push_back(generateXSlice(1));
-			slices.push_back(generateYSlice(-1));
-			slices.push_back(generateYSlice(1));
-			slices.push_back(generateZSlice(-1));
-			slices.push_back(generateZSlice(1));
+			slices.push_back(generateXSlice(blocks, -1));
+			slices.push_back(generateXSlice(blocks, 1));
+			slices.push_back(generateYSlice(blocks, -1));
+			slices.push_back(generateYSlice(blocks, 1));
+			slices.push_back(generateZSlice(blocks, -1));
+			slices.push_back(generateZSlice(blocks, 1));
 			
 			auto end = std::chrono::high_resolution_clock::now();
 			auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
-			std::cout << duration << std::endl;
+			//std::cout << duration << std::endl;
 			totalTime += duration;
 		//}
 
 		std::cout << totalTime / 1000 << std::endl;
 
-		combineSlices(slices);
+		return combineSlices(slices);
 	}
 
-	void generateGreedyTrianglesMultithreaded() {
-		std::vector<std::vector<uint16_t>> slices;
+	std::vector<uint32_t> generateGreedyTrianglesMultithreaded(bool blocks[CHUNK_PADDED_SIZE][CHUNK_PADDED_SIZE][CHUNK_PADDED_SIZE]) {
+		std::vector<std::vector<uint32_t>> slices;
 
 		long long totalTime = 0;
 
 		//for (uint32_t k = 0; k < 1000; ++k) {
 			auto start = std::chrono::high_resolution_clock::now();
 
-			std::vector<std::future<std::vector<uint16_t>>> futures;
+			std::vector<std::future<std::vector<uint32_t>>> futures;
 
-			futures.push_back(std::async(std::launch::async, &Chunk::generateXSlice, this, -1));
-			futures.push_back(std::async(std::launch::async, &Chunk::generateXSlice, this, 1));
-			futures.push_back(std::async(std::launch::async, &Chunk::generateYSlice, this, -1));
-			futures.push_back(std::async(std::launch::async, &Chunk::generateYSlice, this, 1));
-			futures.push_back(std::async(std::launch::async, &Chunk::generateZSlice, this, -1));
-			futures.push_back(std::async(std::launch::async, &Chunk::generateZSlice, this, 1));
+			futures.push_back(std::async(std::launch::async, &Chunk::generateXSlice, this, blocks, -1));
+			futures.push_back(std::async(std::launch::async, &Chunk::generateXSlice, this, blocks, 1));
+			futures.push_back(std::async(std::launch::async, &Chunk::generateYSlice, this, blocks, -1));
+			futures.push_back(std::async(std::launch::async, &Chunk::generateYSlice, this, blocks, 1));
+			futures.push_back(std::async(std::launch::async, &Chunk::generateZSlice, this, blocks, -1));
+			futures.push_back(std::async(std::launch::async, &Chunk::generateZSlice, this, blocks, 1));
 
 			slices = {};
 			slices.reserve(VERTEX_SIZE_CUBED);
@@ -541,12 +574,12 @@ public:
 
 			auto end = std::chrono::high_resolution_clock::now();
 			auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
-			std::cout << duration << std::endl;
+			//std::cout << duration << std::endl;
 			totalTime += duration;
 		//}
 
-		std::cout << totalTime / 1000 << std::endl;
+		//std::cout << totalTime / 1000 << std::endl;
 
-		combineSlices(slices);
+		return combineSlices(slices);
 	}
 };
