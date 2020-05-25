@@ -50,9 +50,7 @@ void RasterApplication::initVulkan() {
 
     swapchain->updateFramebuffers(*pipeline->m_renderPass, depthBuffer->getView());
 
-    //objectData = ObjLoader::loadObj(modelPath);
-
-    chunk = std::make_unique<Chunk>();
+    chunk = std::make_unique<ChunkGenerator>();
     std::vector<Vertex> vertices = chunk->generateVertices();
 
     vertexBuffer = std::make_unique<Buffer>(
@@ -68,26 +66,16 @@ void RasterApplication::initVulkan() {
 
     uint32_t triangleCount = 0;
 
-    for (uint32_t i = 0; i < 16; ++i) {
-        for (uint32_t j = 0; j < 16; ++j) {
+    for (uint32_t i = 0; i < 4; ++i) {
+        for (uint32_t j = 0; j < 4; ++j) {
             std::vector<uint32_t> indices = chunk->generateChunk(16 * i + j);
             triangleCount += indices.size();
-            chunks.push_back(std::make_unique<Mesh>(*vkCtx->m_logicalDevice, /*dummy, sizeof(Vertex),*/ indices));
+            chunks.push_back(std::make_unique<Mesh>(*vkCtx->m_logicalDevice, indices));
             chunks.back()->translate(glm::vec3((i+1)*CHUNK_SIZE, 0.0f, (j+1)*CHUNK_SIZE));
         }
     }
 
     triangleCount /= 3;
-
-    /*chunk->generateRandomly();
-    chunk->generateVertices();
-    //chunk.generateGreedyTriangles();
-    chunk->generateGreedyTrianglesMultithreaded();
-    //chunk.generateSimpleTriangles();
-
-
-    object = std::make_unique<Mesh>(*vkCtx->m_logicalDevice, chunk->vertices, sizeof(Vertex), chunk->indices);
-    object->translate(glm::vec3(0.0f, 0.0f, CHUNK_SIZE));*/
     
     uniformBuffer = std::make_unique<Buffer>(
         *vkCtx->m_logicalDevice,
@@ -397,10 +385,10 @@ uint32_t RasterApplication::acquireNextImage() {
 }
 
 void RasterApplication::updatePushConstants() {
-    //object->rotate(glm::vec3(0.0f, -2 * frameTime, 0.0f));
 
     UniformBufferObject ubo;
     for (uint32_t i = 0; i < chunks.size(); ++i) {
+        //chunks[i]->rotate(glm::vec3(0.0f, -2 * frameTime, 0.0f));
         ubo.models[i] = chunks[i]->getMeshMatrix();
     }
 
@@ -470,9 +458,6 @@ void RasterApplication::framebufferSizeCallback(GLFWwindow* window, int width, i
 
     glfwGetWindowSize(window, &app->windowWidth, &app->windowHeight);
 }
-
-RasterApplication::RasterApplication(std::string modelPath) :
-    modelPath(modelPath) {}
 
 RasterApplication::~RasterApplication() {
     glfwDestroyWindow(window);

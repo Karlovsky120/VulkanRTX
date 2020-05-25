@@ -14,11 +14,6 @@ void Pipeline::createPipeline(const vk::Extent2D& extent) {
 	position_description.offset = offsetof(Vertex, position);
 	m_pipelineInfo.attributeDescriptions.push_back(position_description);
 
-	/*m_pipelineInfo.attributeDescriptions[1].binding = 0;
-	m_pipelineInfo.attributeDescriptions[1].location = 1;
-	m_pipelineInfo.attributeDescriptions[1].format = vk::Format::eR32G32B32Sfloat;
-	m_pipelineInfo.attributeDescriptions[1].offset = offsetof(Vertex, normal);*/
-
 	m_pipelineInfo.vertexInputCreateInfo.vertexBindingDescriptionCount = 1;
 	m_pipelineInfo.vertexInputCreateInfo.vertexAttributeDescriptionCount = m_pipelineInfo.attributeDescriptions.size();
 	m_pipelineInfo.vertexInputCreateInfo.pVertexBindingDescriptions = &m_pipelineInfo.bindingDescription;

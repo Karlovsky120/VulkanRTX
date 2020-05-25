@@ -9,12 +9,11 @@
 #include <iostream>
 
 int main(int argc, char** argv) {
-    std::string modelPath = argv[1];
 
 #ifdef RTX
-    RTXApplication app(modelPath);
+    RTXApplication app;
 #else
-    RasterApplication app(modelPath);
+    RasterApplication app;
 #endif
 
     try {
