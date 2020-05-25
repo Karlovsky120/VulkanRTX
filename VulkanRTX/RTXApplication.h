@@ -2,10 +2,9 @@
 
 #include "AccelerationStructure.h"
 #include "Camera.h"
-#include "Chunk.h"
+#include "ChunkGenerator.h"
 #include "Image.h"
 #include "Mesh.h"
-#include "ObjLoader.h"
 #include "Pipeline.h"
 #include "RayTracing.h"
 #include "RTPipeline.h"
@@ -25,7 +24,6 @@ class RTXApplication {
 public:
     void run();
 
-    RTXApplication(std::string modelPath);
     ~RTXApplication();
 
 private:
@@ -35,11 +33,7 @@ private:
     };
 
     struct SwapchainFrameInfo {
-        //vk::UniqueDescriptorSet descriptorSet;
-        //vk::DescriptorBufferInfo descriptorBufferInfo;
-        //vk::WriteDescriptorSet writeDescriptorSet;
         std::unique_ptr<CommandBuffer> frameBuffer;
-        //vk::CommandBufferBeginInfo beginInfo;
         vk::Fence imageInUse = vk::Fence();
     };
 
@@ -64,9 +58,7 @@ private:
 
     GLFWwindow* window;
 
-    std::string modelPath;
-    //ObjectData objectData;
-    std::unique_ptr<Chunk> chunk;
+    std::unique_ptr<ChunkGenerator> chunk;
     std::unique_ptr<Buffer> vertexBuffer;
 
     std::shared_ptr<VulkanContext> vkCtx;
@@ -89,13 +81,6 @@ private:
 
     std::unique_ptr<Buffer> uniformBuffer;
     std::unique_ptr<Image> storageImage;
-
-    /*std::unique_ptr<Pipeline> pipeline;
-    
-    std::unique_ptr<Buffer> uniformBuffer;
-    
-    vk::UniqueDescriptorSetLayout descriptorSetLayout;
-    vk::UniqueDescriptorPool descriptorPool;*/
     
     std::vector<SwapchainFrameInfo> swapchainFrameInfos;
     std::vector<InFlightFrameInfo> inFlightFrameInfos;
@@ -117,14 +102,7 @@ private:
     void initOther();
     void mainLoop();
 
-    void generateSwapchainFrameInfo(const uint32_t index);
-    /*void createDepthBuffer();
-
-    void updateSwapchainStack();
-    void updateSwapchainFrameInfo(const uint32_t index);*/
     void recordCommandBuffer(const uint32_t index);
-
-    /*void resetCommandBuffer(const uint32_t index);*/
 
     void calculateTime();
     void updateFPS();
@@ -135,10 +113,6 @@ private:
         vk::DescriptorSet& descriptorSet,
         vk::AccelerationStructureKHR& as,
         vk::ImageView& imageView);
-
-    uint32_t acquireNextImage();
-    /*void updatePushConstants();*/
-    void drawFrame(const uint32_t swapchainIndex);
 
     static void framebufferSizeCallback(GLFWwindow* window, int width, int height);
 };

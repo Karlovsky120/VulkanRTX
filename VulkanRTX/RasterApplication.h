@@ -1,11 +1,10 @@
 #pragma once
 
 #include "Camera.h"
-#include "Chunk.h"
+#include "ChunkGenerator.h"
 #include "CommandBuffer.h"
 #include "Image.h"
 #include "Mesh.h"
-#include "ObjLoader.h"
 #include "Pipeline.h"
 #include "Swapchain.h"
 #include "VulkanContext.h"
@@ -23,12 +22,11 @@ class RasterApplication {
 public:
     void run();
 
-    RasterApplication(std::string modelPath);
     ~RasterApplication();
 
 private:
     struct UniformBufferObject {
-        glm::mat4 models[256];
+        glm::mat4 models[16];
         glm::vec3 playerPosition;
         float spacer1;
         glm::vec3 lightPosition;
@@ -71,7 +69,7 @@ private:
     GLFWwindow* window;
 
     std::string modelPath;
-    std::unique_ptr<Chunk> chunk;
+    std::unique_ptr<ChunkGenerator> chunk;
 
     std::shared_ptr<VulkanContext> vkCtx;
     std::shared_ptr<MemoryAllocator> memoryAllocator;
@@ -91,7 +89,7 @@ private:
     std::vector<InFlightFrameInfo> inFlightFrameInfos;
     
     std::vector<std::unique_ptr<Mesh>> chunks;
-    glm::vec3 lightPosition = glm::vec3(-32.0f, 0.0f, 0.0f);
+    glm::vec3 lightPosition = glm::vec3(0.0f, 32.0f, 0.0f);
     glm::vec3 lightColor = glm::vec3(1.0f, 1.0f, 1.0f);
     
     vk::UniqueSemaphore flushStagingSemaphore;

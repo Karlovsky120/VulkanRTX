@@ -269,7 +269,7 @@ for %%f in (*.vert *.tesc *.tese *.geom *.frag *.comp *.rgen *.rchit *.rmiss) do
     <ClCompile Include="AccelerationStructure.cpp" />
     <ClCompile Include="Buffer.cpp" />
     <ClCompile Include="Camera.cpp" />
-    <ClCompile Include="Chunk.cpp" />
+    <ClCompile Include="ChunkGenerator.cpp" />
     <ClCompile Include="CommandBuffer.cpp" />
     <ClCompile Include="CommandPools.cpp" />
     <ClCompile Include="DeviceMemory.cpp" />
@@ -279,7 +279,6 @@ for %%f in (*.vert *.tesc *.tese *.geom *.frag *.comp *.rgen *.rchit *.rmiss) do
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MemoryAllocator.cpp" />
     <ClCompile Include="Mesh.cpp" />
-    <ClCompile Include="ObjLoader.cpp" />
     <ClCompile Include="Pipeline.cpp" />
     <ClCompile Include="RayTracing.cpp" />
     <ClCompile Include="RasterApplication.cpp" />
@@ -292,7 +291,7 @@ for %%f in (*.vert *.tesc *.tese *.geom *.frag *.comp *.rgen *.rchit *.rmiss) do
     <ClInclude Include="AccelerationStructure.h" />
     <ClInclude Include="Buffer.h" />
     <ClInclude Include="Camera.h" />
-    <ClInclude Include="Chunk.h" />
+    <ClInclude Include="ChunkGenerator.h" />
     <ClInclude Include="CommandBuffer.h" />
     <ClInclude Include="CommandPools.h" />
     <ClInclude Include="DeviceMemory.h" />
@@ -302,7 +301,6 @@ for %%f in (*.vert *.tesc *.tese *.geom *.frag *.comp *.rgen *.rchit *.rmiss) do
     <ClInclude Include="include\Aftermath\NsightAftermathShaderDatabase.h" />
     <ClInclude Include="MemoryAllocator.h" />
     <ClInclude Include="Mesh.h" />
-    <ClInclude Include="ObjLoader.h" />
     <ClInclude Include="Pipeline.h" />
     <ClInclude Include="RayTracing.h" />
     <ClInclude Include="RasterApplication.h" />

@@ -7,7 +7,7 @@ layout( push_constant ) uniform PushConstants {
 } push;
 
 layout(binding = 0) uniform UniformBufferObject {
-    mat4 models[256];
+    mat4 models[16];
     vec3 playerPosition;
     float spacer1;
     vec3 lightPosition;
