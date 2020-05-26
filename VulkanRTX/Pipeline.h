@@ -1,5 +1,7 @@
 #pragma once
 
+#include "GlobalDefines.h"
+
 #include "Vertex.h"
 #include "VulkanInclude.h"
 

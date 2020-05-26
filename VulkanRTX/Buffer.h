@@ -1,9 +1,11 @@
 #pragma once
 
-#include "VulkanInclude.h"
+#include "GlobalDefines.h"
 
 #include "CommandBuffer.h"
 #include "MemoryAllocator.h"
+
+#include "VulkanInclude.h"
 
 class Buffer {
 public:
@@ -37,6 +39,7 @@ public:
 		const vk::DeviceSize size,
 		const vk::BufferUsageFlags usageFlags,
 		const vk::MemoryPropertyFlags memoryFlags,
+		const std::string name,
 		vk::MemoryAllocateFlags memoryAllocateFlags = vk::MemoryAllocateFlags());
 
 private:
@@ -61,7 +64,8 @@ private:
 			m_logicalDevice,
 			sizeInBytes,
 			vk::BufferUsageFlagBits::eTransferSrc,
-			vk::MemoryPropertyFlagBits::eHostVisible);
+			vk::MemoryPropertyFlagBits::eHostVisible,
+			"Staging buffer for " + m_name);
 
 		hostLocal.uploadToBuffer(data);
 
@@ -79,6 +83,8 @@ private:
 
 	vk::MemoryPropertyFlags m_memoryFlags;
 	vk::MemoryRequirements m_memoryRequirements;
+
+	std::string m_name;
 
 	vk::Device& m_logicalDevice;
 };

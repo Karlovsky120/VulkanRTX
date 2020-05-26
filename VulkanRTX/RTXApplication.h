@@ -1,5 +1,7 @@
 #pragma once
 
+#include "GlobalDefines.h"
+
 #include "AccelerationStructure.h"
 #include "Camera.h"
 #include "ChunkGenerator.h"
@@ -59,7 +61,6 @@ private:
     GLFWwindow* window;
 
     std::unique_ptr<ChunkGenerator> chunk;
-    std::unique_ptr<Buffer> vertexBuffer;
 
     std::shared_ptr<VulkanContext> vkCtx;
     std::shared_ptr<MemoryAllocator> memoryAllocator;
@@ -79,6 +80,7 @@ private:
     vk::UniqueDescriptorSetLayout descriptorSetLayout;
     vk::UniqueDescriptorSet descriptorSet;
 
+    std::unique_ptr<Buffer> vertexBuffer;
     std::unique_ptr<Buffer> uniformBuffer;
     std::unique_ptr<Image> storageImage;
     

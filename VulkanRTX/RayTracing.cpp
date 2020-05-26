@@ -10,16 +10,17 @@
 
 
 std::unique_ptr<Buffer> RayTracing::createSBTable(vk::Pipeline& pipeline) {
-	uint32_t sbTableSize = m_context->m_rayTracingProperties.shaderGroupHandleSize * 3;
+	uint32_t sbTableSize = VulkanContext::get()->m_rayTracingProperties.shaderGroupHandleSize * 3;
 
 	// I would very much like this to be DeviceLocal, but the deriver crashes for some reason if I try.
 	std::unique_ptr<Buffer> sbTable = std::make_unique<Buffer>(
-		*m_context->m_logicalDevice,
+		*VulkanContext::get()->m_logicalDevice,
 		sbTableSize,
 		vk::BufferUsageFlagBits::eTransferDst
 		| vk::BufferUsageFlagBits::eRayTracingKHR
 		| vk::BufferUsageFlagBits::eShaderDeviceAddress,
-		vk::MemoryPropertyFlagBits::eDeviceLocal);
+		vk::MemoryPropertyFlagBits::eDeviceLocal,
+		"SBTable");
 
 	std::vector<uint8_t> handleData(sbTableSize);
 	VulkanContext::get()->m_logicalDevice->getRayTracingShaderGroupHandlesKHR(pipeline, 0, 3, sbTableSize, handleData.data());
@@ -30,10 +31,11 @@ std::unique_ptr<Buffer> RayTracing::createSBTable(vk::Pipeline& pipeline) {
 
 std::unique_ptr<Image> RayTracing::createStorageImage(uint32_t width, uint32_t height) {
 	return std::make_unique<Image>(
-		*m_context->m_logicalDevice,
+		*VulkanContext::get()->m_logicalDevice,
 		width,
 		height,
 		vk::Format::eB8G8R8A8Unorm,
+		"RTX render target",
 		vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eStorage,
 		vk::ImageAspectFlagBits::eColor,
 		vk::ImageLayout::eGeneral);
@@ -96,6 +98,3 @@ vk::UniqueDescriptorSet RayTracing::createDescriptorSet(
 	descriptorSetAllocateInfo.descriptorSetCount = 1;
 	return std::move(VulkanContext::get()->m_logicalDevice->allocateDescriptorSetsUnique(descriptorSetAllocateInfo)[0]);
 }
-
-RayTracing::RayTracing() :
-	m_context(VulkanContext::get()) {};

@@ -3,11 +3,37 @@
 #include "VulkanContext.h"
 
 AccelerationStructure AccelerationStructures::createBottomAccelerationStructure(Mesh& mesh, vk::Buffer& vertices) {
+	/*std::vector<Vertex> vertices2 = {
+			{{1.0f, 1.0f, 0.0f}},
+			{{-1.0f, 1.0f, 0.0f}},
+			{{0.0f, -1.0f, 0.0f}} };
+	std::vector<uint32_t> indices = { 0, 1, 2 };
+
+	Buffer vertexBuffer = Buffer(*VulkanContext::get()->m_logicalDevice,
+		vk::DeviceSize(vertices2.size() * sizeof(Vertex)),
+		vk::BufferUsageFlagBits::eVertexBuffer
+		| vk::BufferUsageFlagBits::eShaderDeviceAddress
+		| vk::BufferUsageFlagBits::eTransferDst,
+		vk::MemoryPropertyFlagBits::eDeviceLocal,
+		"Single triangle vertex buffer",
+		vk::MemoryAllocateFlagBits::eDeviceAddress);
+	vertexBuffer.uploadToBuffer(vertices2);
+
+	Buffer indexBuffer = Buffer(*VulkanContext::get()->m_logicalDevice,
+		vk::DeviceSize(indices.size() * sizeof(uint32_t)),
+		vk::BufferUsageFlagBits::eVertexBuffer
+		| vk::BufferUsageFlagBits::eShaderDeviceAddress
+		| vk::BufferUsageFlagBits::eTransferDst,
+		vk::MemoryPropertyFlagBits::eDeviceLocal,
+		"Single triangle index buffer",
+		vk::MemoryAllocateFlagBits::eDeviceAddress);
+	indexBuffer.uploadToBuffer(indices);*/
+	
 	vk::AccelerationStructureCreateGeometryTypeInfoKHR geometryTypeInfo;
 	geometryTypeInfo.geometryType = vk::GeometryTypeKHR::eTriangles;
 	geometryTypeInfo.maxPrimitiveCount = mesh.getIndexCount() / 3;
 	geometryTypeInfo.indexType = vk::IndexType::eUint32;
-	geometryTypeInfo.maxVertexCount = 33 * 33 * 33; // mesh.getVertexCount();
+	geometryTypeInfo.maxVertexCount = 33 * 33 * 33;
 	geometryTypeInfo.vertexFormat = vk::Format::eR32G32B32Sfloat;
 	geometryTypeInfo.allowsTransforms = VK_FALSE;
 
@@ -20,6 +46,11 @@ AccelerationStructure AccelerationStructures::createBottomAccelerationStructure(
 	AccelerationStructure as;
 	as.structure = VulkanContext::get()->m_logicalDevice->createAccelerationStructureKHRUnique(createInfo);
 
+	NAME_OBJECT(
+		&*as.structure,
+		vk::DebugReportObjectTypeEXT::eAccelerationStructureKHR,
+		"Bottom acceleration structure");
+
 	vk::AccelerationStructureMemoryRequirementsInfoKHR memoryInfo;
 	memoryInfo.type = vk::AccelerationStructureMemoryRequirementsTypeKHR::eObject;
 	memoryInfo.buildType = vk::AccelerationStructureBuildTypeKHR::eDevice;
@@ -28,7 +59,10 @@ AccelerationStructure AccelerationStructures::createBottomAccelerationStructure(
 	vk::MemoryRequirements memoryRequirements =
 		VulkanContext::get()->m_logicalDevice->getAccelerationStructureMemoryRequirementsKHR(memoryInfo).memoryRequirements;
 
-	as.memory = MemoryAllocator::allocate(memoryRequirements, vk::MemoryPropertyFlagBits::eDeviceLocal);
+	as.memory = MemoryAllocator::allocate(
+		memoryRequirements,
+		vk::MemoryPropertyFlagBits::eDeviceLocal,
+		vk::MemoryAllocateFlagBits::eDeviceAddress);
 
 	vk::BindAccelerationStructureMemoryInfoKHR bindInfo;
 	bindInfo.accelerationStructure = *as.structure;
@@ -36,10 +70,6 @@ AccelerationStructure AccelerationStructures::createBottomAccelerationStructure(
 	bindInfo.memoryOffset = as.memory->offset;
 
 	VulkanContext::get()->m_logicalDevice->bindAccelerationStructureMemoryKHR(bindInfo);
-
-	Buffer scratchBuffer = createScratchBuffer(
-		*as.structure,
-		vk::AccelerationStructureMemoryRequirementsTypeKHR::eBuildScratch);
 
 	vk::AccelerationStructureGeometryKHR geometry;
 	geometry.flags = vk::GeometryFlagBitsKHR::eOpaque;
@@ -53,6 +83,11 @@ AccelerationStructure AccelerationStructures::createBottomAccelerationStructure(
 		getBufferDeviceAddress<vk::DeviceOrHostAddressConstKHR>(mesh.getIndexBuffer()).deviceAddress;
 
 	const vk::AccelerationStructureGeometryKHR* const pGeometry = &geometry;
+
+	Buffer scratchBuffer = createScratchBuffer(
+		*as.structure,
+		vk::AccelerationStructureMemoryRequirementsTypeKHR::eBuildScratch,
+		"Bottom AS scratch buffer");
 
 	vk::AccelerationStructureBuildGeometryInfoKHR buildGeometryInfo;
 	buildGeometryInfo.type = vk::AccelerationStructureTypeKHR::eBottomLevel;
@@ -103,6 +138,11 @@ AccelerationStructure AccelerationStructures::createTopAccelerationStructure(
 	AccelerationStructure as;
 	as.structure = VulkanContext::get()->m_logicalDevice->createAccelerationStructureKHRUnique(createInfo);
 
+	NAME_OBJECT(
+		&*as.structure,
+		vk::DebugReportObjectTypeEXT::eAccelerationStructureKHR,
+		"Top acceleration structure")
+
 	vk::AccelerationStructureMemoryRequirementsInfoKHR memoryInfo;
 	memoryInfo.type = vk::AccelerationStructureMemoryRequirementsTypeKHR::eObject;
 	memoryInfo.buildType = vk::AccelerationStructureBuildTypeKHR::eDevice;
@@ -123,8 +163,7 @@ AccelerationStructure AccelerationStructures::createTopAccelerationStructure(
 
 	VulkanContext::get()->m_logicalDevice->bindAccelerationStructureMemoryKHR(bindInfo);
 
-	vk::TransformMatrixKHR transformation;
-	transformation.matrix = std::array<std::array<float, 4>, 3> {
+	vk::TransformMatrixKHR transformation = std::array<std::array<float, 4>, 3> {
 		1.0f, 0.0f, 0.0f, 0.0f,
 		0.0f, 1.0f, 0.0f, 0.0f,
 		0.0f, 0.0f, 1.0f, 0.0f
@@ -144,6 +183,7 @@ AccelerationStructure AccelerationStructures::createTopAccelerationStructure(
 		vk::BufferUsageFlagBits::eShaderDeviceAddress
 		| vk::BufferUsageFlagBits::eTransferDst,
 		vk::MemoryPropertyFlagBits::eDeviceLocal,
+		"Top AS instance buffer",
 		vk::MemoryAllocateFlagBits::eDeviceAddress);
 
 	std::vector<vk::AccelerationStructureInstanceKHR> instanceVec = { instance };
@@ -163,10 +203,11 @@ AccelerationStructure AccelerationStructures::createTopAccelerationStructure(
 
 	Buffer scratchBuffer = createScratchBuffer(
 		*as.structure,
-		vk::AccelerationStructureMemoryRequirementsTypeKHR::eBuildScratch);
+		vk::AccelerationStructureMemoryRequirementsTypeKHR::eBuildScratch,
+		"Top AS scratch buffer");
 
 	vk::AccelerationStructureBuildGeometryInfoKHR geometryInfo;
-	geometryInfo.type = vk::AccelerationStructureTypeKHR::eBottomLevel;
+	geometryInfo.type = vk::AccelerationStructureTypeKHR::eTopLevel;
 	geometryInfo.flags = vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastTrace;
 	geometryInfo.update = VK_FALSE;
 	geometryInfo.srcAccelerationStructure = nullptr;
@@ -187,7 +228,7 @@ AccelerationStructure AccelerationStructures::createTopAccelerationStructure(
 
 	std::unique_ptr<CommandBuffer> computeCmdBuffer = std::make_unique<CommandBuffer>(PoolType::eCompute);
 	computeCmdBuffer->get().buildAccelerationStructureKHR(1, &geometryInfo, &pOffsetInfo);
-	computeCmdBuffer->submit(true);
+	//computeCmdBuffer->submit(true);
 
 	vk::AccelerationStructureDeviceAddressInfoKHR addressInfo;
 	addressInfo.accelerationStructure = *as.structure;
@@ -199,7 +240,8 @@ AccelerationStructure AccelerationStructures::createTopAccelerationStructure(
 
 Buffer AccelerationStructures::createScratchBuffer(
 	vk::AccelerationStructureKHR& accelerationStructure,
-	vk::AccelerationStructureMemoryRequirementsTypeKHR type) {
+	vk::AccelerationStructureMemoryRequirementsTypeKHR type,
+	std::string name) {
 
 	vk::AccelerationStructureMemoryRequirementsInfoKHR memoryInfo;
 	memoryInfo.type = type;
@@ -215,5 +257,6 @@ Buffer AccelerationStructures::createScratchBuffer(
 		vk::BufferUsageFlagBits::eRayTracingKHR
 		| vk::BufferUsageFlagBits::eShaderDeviceAddress,
 		vk::MemoryPropertyFlagBits::eDeviceLocal,
+		name,
 		vk::MemoryAllocateFlagBits::eDeviceAddress);
 }

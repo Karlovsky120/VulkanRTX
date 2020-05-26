@@ -37,29 +37,23 @@ void RTXApplication::initVulkan() {
         *vkCtx->m_logicalDevice,
         vkCtx->m_presentQueue);
 
-    //objectData = ObjLoader::loadObj(modelPath);
-
-    /*chunk = std::make_unique<Chunk>();
-    chunk->generateRandomly();
-    chunk->generateVertices();
-    //chunk.generateGreedyTriangles();
-    chunk->generateGreedyTrianglesMultithreaded();
-    //chunk.generateSimpleTriangles();*/
-
     chunk = std::make_unique<ChunkGenerator>();
     std::vector<Vertex> vertices = chunk->generateVertices();
     std::vector<uint32_t> indices = chunk->generateChunk(0);
 
+    object = std::make_unique<Mesh>(*vkCtx->m_logicalDevice, indices, "RTX index mesh");
+    object->translate(glm::vec3(0.0, -CHUNK_SIZE * 0.5, 0));
+
     vertexBuffer = std::make_unique<Buffer>(
         *vkCtx->m_logicalDevice,
         vertices.size() * sizeof(Vertex),
-        vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress,
+        vk::BufferUsageFlagBits::eVertexBuffer
+        |vk::BufferUsageFlagBits::eTransferDst
+        |vk::BufferUsageFlagBits::eShaderDeviceAddress,
         vk::MemoryPropertyFlagBits::eDeviceLocal,
-        vk::MemoryAllocateFlagBits::eDeviceAddress
-        );
-
-    object = std::make_unique<Mesh>(*vkCtx->m_logicalDevice, indices);
-    object->translate(glm::vec3(0.0, -CHUNK_SIZE * 0.5, 0));
+        "All chunk vertices",
+        vk::MemoryAllocateFlagBits::eDeviceAddress);
+    vertexBuffer->uploadToBuffer(vertices);
 
     swapchainFrameInfos.resize(swapchain->m_imageCount);
 
@@ -82,7 +76,8 @@ void RTXApplication::initVulkan() {
         *vkCtx->m_logicalDevice,
         sizeof(UniformBufferData),
         vk::BufferUsageFlagBits::eUniformBuffer,
-        vk::MemoryPropertyFlagBits::eDeviceLocal);
+        vk::MemoryPropertyFlagBits::eDeviceLocal,
+        "RTX uniform buffer");
 
     rt = std::make_unique<RayTracing>();
     descriptorPool = rt->createDescriptorPool();

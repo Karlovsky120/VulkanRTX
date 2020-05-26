@@ -4,6 +4,7 @@
 
 Mesh::Mesh(vk::Device& logicalDevice,
 		   std::vector<uint32_t> indices,
+		   std::string name,
 		   glm::vec3 position,
 		   glm::vec3 rotation,
 		   glm::vec3 scale) :
@@ -18,6 +19,7 @@ Mesh::Mesh(vk::Device& logicalDevice,
 		| vk::BufferUsageFlagBits::eRayTracingKHR
 		| vk::BufferUsageFlagBits::eShaderDeviceAddress,
 		vk::MemoryPropertyFlagBits::eDeviceLocal,
+		name,
 		vk::MemoryAllocateFlagBits::eDeviceAddress) {
 
 	m_deviceIndexBuffer.uploadToBuffer(indices);
