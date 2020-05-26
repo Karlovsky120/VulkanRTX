@@ -1,11 +1,13 @@
 #include "Image.h"
 
+#include "VulkanContext.h"
 #include "CommandBuffer.h"
 
 Image::Image(const vk::Device& device,
 	const uint32_t width,
 	const uint32_t height,
 	const vk::Format format,
+	const std::string name,
 	const vk::ImageUsageFlags usageFlags,
 	const vk::ImageAspectFlags aspectFlags,
 	const vk::ImageLayout startLayout) {
@@ -25,6 +27,8 @@ Image::Image(const vk::Device& device,
 	//imageInfo.sharingMode = vk::SharingMode::eExclusive;
 
 	m_image = device.createImageUnique(imageInfo);
+
+	NAME_OBJECT(&*m_image, vk::DebugReportObjectTypeEXT::eImage, name)
 
 	vk::MemoryRequirements memoryRequirements = device.getImageMemoryRequirements(*m_image);
 	m_allocId = MemoryAllocator::allocate(memoryRequirements, vk::MemoryPropertyFlagBits::eDeviceLocal);

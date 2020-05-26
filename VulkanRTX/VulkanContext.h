@@ -1,5 +1,7 @@
 #pragma once
 
+#include "GlobalDefines.h"
+
 #include <glm/mat4x4.hpp>
 #include "VulkanInclude.h"
 
@@ -57,6 +59,11 @@ public:
     vk::Queue m_presentQueue;
 
     bool m_rayTracingSupported = false;
+
+#ifdef ENABLE_DEBUG_MARKERS
+    bool m_debugMarkersSupported = false;
+    static void nameObject(void* object, vk::DebugReportObjectTypeEXT type, std::string name);
+#endif
 
 #ifdef AFTERMATH
     bool m_aftermathSupported = false;

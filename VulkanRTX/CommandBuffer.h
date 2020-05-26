@@ -1,5 +1,7 @@
 #pragma once
 
+#include "GlobalDefines.h"
+
 #include "CommandPools.h"
 #include "VulkanInclude.h"
 

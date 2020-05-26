@@ -110,8 +110,12 @@ void VulkanContext::createPhysicalDevice() {
         bool deferredHostOperationsSupported = false;
         bool bufferDeviceAddressSUpported = false;
         bool descriptorIndexingSupported = false;
+#ifdef AFTERMATH
         bool aftermathCheckpointsSupported = false;
         bool aftermathConfigSupported = false;
+#endif
+
+        bool deviceFound = false;
         for (vk::ExtensionProperties extensionProperty : extensionProperties) {
             std::string extensionName(extensionProperty.extensionName);
 
@@ -147,23 +151,34 @@ void VulkanContext::createPhysicalDevice() {
                 aftermathConfigSupported = true;
             }
 #endif
+#ifdef ENABLE_DEBUG_MARKERS
+            else if (extensionName == VK_EXT_DEBUG_MARKER_EXTENSION_NAME) {
+                m_debugMarkersSupported = true;
+            }
+#endif
         }
 
         if (m_deviceProperties.deviceType == vk::PhysicalDeviceType::eDiscreteGpu) {
             m_physicalDevice = currentPhysicalDevice;
-            m_rayTracingSupported =
-                rayTracingSupported
+
+            if (rayTracingSupported
                 && pipelineLibrarySupported
                 && deferredHostOperationsSupported
                 && bufferDeviceAddressSUpported
-                && descriptorIndexingSupported;
+                && descriptorIndexingSupported) {
 
 #ifdef AFTERMATH
-            m_aftermathSupported =
-                aftermathCheckpointsSupported
-                && aftermathConfigSupported;
+                m_aftermathSupported =
+                    aftermathCheckpointsSupported
+                    && aftermathConfigSupported;
 #endif
-            break;
+                deviceFound = true;
+                break;
+            }
+        }
+
+        if (!deviceFound) {
+            throw std::runtime_error("No suitable physical device found!");
         }
     }
 }
@@ -295,52 +310,55 @@ void VulkanContext::createLogicalDevice() {
 
     std::vector<const char*> deviceExtensions = {
         VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+        VK_KHR_RAY_TRACING_EXTENSION_NAME,
+        VK_KHR_PIPELINE_LIBRARY_EXTENSION_NAME,
+        VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME,
+        VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME,
+        VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME
     };
 
+    void* currentFeature;
+
+    vk::PhysicalDeviceRayTracingFeaturesKHR rayTracing;
+    rayTracing.rayTracing = true;
+    currentFeature = &rayTracing;
+
+    // Required for ray tracing
+    vk::PhysicalDeviceBufferDeviceAddressFeaturesKHR deviceAddress;
+    deviceAddress.bufferDeviceAddress = true;
+    deviceAddress.pNext = currentFeature;
+    currentFeature = &deviceAddress;
+
+    // Nice, but currently unused
     vk::PhysicalDeviceTimelineSemaphoreFeatures timelineSemaphore;
     timelineSemaphore.timelineSemaphore = true;
+    timelineSemaphore.pNext = currentFeature;
+    currentFeature = &timelineSemaphore;
 
 #ifdef AFTERMATH
-    vk::DeviceDiagnosticsConfigCreateInfoNV diagnosticInfo;
-    diagnosticInfo.flags =
-        vk::DeviceDiagnosticsConfigFlagBitsNV::eEnableResourceTracking
-        | vk::DeviceDiagnosticsConfigFlagBitsNV::eEnableAutomaticCheckpoints
-        | vk::DeviceDiagnosticsConfigFlagBitsNV::eEnableShaderDebugInfo;
-
-    timelineSemaphore.pNext = &diagnosticInfo;
-
     if (m_aftermathSupported) {
+        vk::DeviceDiagnosticsConfigCreateInfoNV diagnosticInfo;
+        diagnosticInfo.flags =
+            vk::DeviceDiagnosticsConfigFlagBitsNV::eEnableResourceTracking
+            | vk::DeviceDiagnosticsConfigFlagBitsNV::eEnableAutomaticCheckpoints
+            | vk::DeviceDiagnosticsConfigFlagBitsNV::eEnableShaderDebugInfo;
+
+        diagnosticInfo.pNext = feature;
+        currentFeature = &diagnosticInfo;
+
         deviceExtensions.push_back(VK_NV_DEVICE_DIAGNOSTIC_CHECKPOINTS_EXTENSION_NAME);
         deviceExtensions.push_back(VK_NV_DEVICE_DIAGNOSTICS_CONFIG_EXTENSION_NAME);
-    }
 
-    m_gpuCrashTracker.Initialize();
+        m_gpuCrashTracker.Initialize();
+    }
 #endif
-
-    if (m_rayTracingSupported) {
-        vk::PhysicalDeviceRayTracingFeaturesKHR rayTracing;
-        rayTracing.rayTracing = true;
-
-        vk::PhysicalDeviceBufferDeviceAddressFeaturesKHR deviceAddress;
-        deviceAddress.bufferDeviceAddress = true;
-        deviceAddress.pNext = &rayTracing;
-
-        timelineSemaphore.pNext = &deviceAddress;
-
-        deviceExtensions.push_back(VK_KHR_RAY_TRACING_EXTENSION_NAME);
-        deviceExtensions.push_back(VK_KHR_PIPELINE_LIBRARY_EXTENSION_NAME);
-        deviceExtensions.push_back(VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME);
-        deviceExtensions.push_back(VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME);
-        deviceExtensions.push_back(VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME);
-    }
 
     vk::DeviceCreateInfo deviceCreateInfo;
     deviceCreateInfo.pQueueCreateInfos = queueCreateInfos.data();
-    deviceCreateInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
-    deviceCreateInfo.pNext = &timelineSemaphore;
-
+    deviceCreateInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());   
     deviceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size());
     deviceCreateInfo.ppEnabledExtensionNames = deviceExtensions.data();
+    deviceCreateInfo.pNext = currentFeature;
 
     m_logicalDevice = m_physicalDevice.createDeviceUnique(deviceCreateInfo);
     VULKAN_HPP_DEFAULT_DISPATCHER.init(*m_logicalDevice);
@@ -408,6 +426,19 @@ vk::UniqueSemaphore VulkanContext::createTimelineSemaphore(const uint32_t initia
 
     return m_logicalDevice->createSemaphoreUnique(createInfo);
 }
+
+#ifdef ENABLE_DEBUG_MARKERS
+void VulkanContext::nameObject(void* object, vk::DebugReportObjectTypeEXT type, std::string name) {
+    vk::DebugMarkerObjectNameInfoEXT objectNameInfo;
+    objectNameInfo.objectType = type;
+    objectNameInfo.pObjectName = name.c_str();
+
+    uint64_t* objectPtr = reinterpret_cast<uint64_t*>(object);
+    objectNameInfo.object = *objectPtr;
+
+    instance.lock()->m_logicalDevice->debugMarkerSetObjectNameEXT(objectNameInfo);
+}
+#endif
 
 #ifdef ENABLE_VALIDATION
 VKAPI_ATTR VkBool32 VKAPI_CALL VulkanContext::debugCallback(

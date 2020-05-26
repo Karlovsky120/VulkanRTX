@@ -1,6 +1,7 @@
 #include "Buffer.h"
 
 #include "MemoryAllocator.h"
+#include "VulkanContext.h"
 
 vk::Buffer& Buffer::get() {
 	return *m_buffer;
@@ -15,9 +16,11 @@ Buffer::Buffer(
 	const vk::DeviceSize size,
 	const vk::BufferUsageFlags usageFlags,
 	const vk::MemoryPropertyFlags memoryFlags,
+	const std::string name,
 	vk::MemoryAllocateFlags memoryAllocateFlags) :
 
 	m_memoryFlags(memoryFlags),
+	m_name(name),
 	m_logicalDevice(logicalDevice) {
 
 	vk::BufferCreateInfo bufferInfo;
@@ -26,6 +29,10 @@ Buffer::Buffer(
 	bufferInfo.sharingMode = vk::SharingMode::eExclusive;
 
 	m_buffer = m_logicalDevice.createBufferUnique(bufferInfo);
+
+	NAME_OBJECT(&*m_buffer,
+		vk::DebugReportObjectTypeEXT::eBuffer,
+		m_name)
 
 	m_memoryRequirements = m_logicalDevice.getBufferMemoryRequirements(*m_buffer);
 

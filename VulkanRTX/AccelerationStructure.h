@@ -1,5 +1,7 @@
 #pragma once
 
+#include "GlobalDefines.h"
+
 #include "Buffer.h"
 #include "Mesh.h"
 
@@ -27,7 +29,8 @@ private:
 
 	Buffer createScratchBuffer(
 		vk::AccelerationStructureKHR& accelerationStructure,
-		vk::AccelerationStructureMemoryRequirementsTypeKHR type
+		vk::AccelerationStructureMemoryRequirementsTypeKHR type,
+		std::string name
 	);
 };
 

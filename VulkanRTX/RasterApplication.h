@@ -1,5 +1,7 @@
 #pragma once
 
+#include "GlobalDefines.h"
+
 #include "Camera.h"
 #include "ChunkGenerator.h"
 #include "CommandBuffer.h"

@@ -14,6 +14,7 @@
 
 #include <chrono>
 #include <iostream>
+#include <string>
 
 void RasterApplication::run() {
     initWindow();
@@ -57,7 +58,8 @@ void RasterApplication::initVulkan() {
         *vkCtx->m_logicalDevice,
         vertices.size() * sizeof(Vertex),
         vk::BufferUsageFlagBits::eVertexBuffer,
-        vk::MemoryPropertyFlagBits::eDeviceLocal
+        vk::MemoryPropertyFlagBits::eDeviceLocal,
+        "Raster vertex buffer"
     );
 
     vertexBuffer->uploadToBuffer(vertices);
@@ -70,7 +72,10 @@ void RasterApplication::initVulkan() {
         for (uint32_t j = 0; j < 4; ++j) {
             std::vector<uint32_t> indices = chunk->generateChunk(16 * i + j);
             triangleCount += indices.size();
-            chunks.push_back(std::make_unique<Mesh>(*vkCtx->m_logicalDevice, indices));
+            chunks.push_back(std::make_unique<Mesh>(
+                *vkCtx->m_logicalDevice,
+                indices,
+                "Index buffer for chunk " + std::to_string(i) + "x" + std::to_string(j)));
             chunks.back()->translate(glm::vec3((i+1)*CHUNK_SIZE, 0.0f, (j+1)*CHUNK_SIZE));
         }
     }
@@ -81,7 +86,8 @@ void RasterApplication::initVulkan() {
         *vkCtx->m_logicalDevice,
         sizeof(UniformBufferObject),
         vk::BufferUsageFlagBits::eUniformBuffer,
-        vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+        vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent,
+        "Raster uniform buffer");
 
     descriptorPool = vkCtx->createDescriptorPool(swapchain->m_imageCount);
 
@@ -190,6 +196,7 @@ void RasterApplication::createDepthBuffer() {
         currentExtent.width,
         currentExtent.height,
         vk::Format::eD32Sfloat,
+        "Raster depth buffer",
         vk::ImageUsageFlagBits::eDepthStencilAttachment,
         vk::ImageAspectFlagBits::eDepth);
 }

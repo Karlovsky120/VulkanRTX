@@ -1,5 +1,7 @@
 #pragma once
 
+#include "GlobalDefines.h"
+
 #include "MemoryAllocator.h"
 #include "VulkanInclude.h"
 
@@ -11,6 +13,7 @@ public:
 		const uint32_t width,
 		const uint32_t height,
 		const vk::Format format,
+		const std::string name,
 		const vk::ImageUsageFlags usageFlags,
 		const vk::ImageAspectFlags aspectFlags,
 		const vk::ImageLayout startLayout = vk::ImageLayout::eUndefined);

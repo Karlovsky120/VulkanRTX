@@ -1,5 +1,7 @@
 #pragma once
 
+#include "GlobalDefines.h"
+
 #include "VulkanInclude.h"
 
 #define INDEX_RAYGEN 0

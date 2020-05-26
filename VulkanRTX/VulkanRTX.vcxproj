@@ -151,7 +151,7 @@ for %%f in (*.vert *.tesc *.tese *.geom *.frag *.comp *.rgen *.rchit *.rmiss) do
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>RTX;_DEBUG;_CONSOLE;ENABLE_VALIDATION;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>ENABLE_DEBUG_MARKERS;RTX;_DEBUG;_CONSOLE;ENABLE_VALIDATION;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>$(VULKAN_SDK)\Include;$(ProjectDir)include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
@@ -295,6 +295,7 @@ for %%f in (*.vert *.tesc *.tese *.geom *.frag *.comp *.rgen *.rchit *.rmiss) do
     <ClInclude Include="CommandBuffer.h" />
     <ClInclude Include="CommandPools.h" />
     <ClInclude Include="DeviceMemory.h" />
+    <ClInclude Include="GlobalDefines.h" />
     <ClInclude Include="Image.h" />
     <ClInclude Include="include\Aftermath\NsightAftermathGpuCrashTracker.h" />
     <ClInclude Include="include\Aftermath\NsightAftermathHelpers.h" />
