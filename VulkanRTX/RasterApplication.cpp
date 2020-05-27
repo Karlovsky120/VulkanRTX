@@ -51,8 +51,8 @@ void RasterApplication::initVulkan() {
 
     swapchain->updateFramebuffers(*pipeline->m_renderPass, depthBuffer->getView());
 
-    chunk = std::make_unique<ChunkGenerator>();
-    std::vector<Vertex> vertices = chunk->generateVertices();
+    chunkGenerator = std::make_unique<ChunkGenerator>();
+    std::vector<Vertex> vertices = chunkGenerator->generateVertices();
 
     vertexBuffer = std::make_unique<Buffer>(
         *vkCtx->m_logicalDevice,
@@ -70,7 +70,7 @@ void RasterApplication::initVulkan() {
 
     for (uint32_t i = 0; i < 4; ++i) {
         for (uint32_t j = 0; j < 4; ++j) {
-            std::vector<uint32_t> indices = chunk->generateChunk(16 * i + j);
+            std::vector<uint32_t> indices = chunkGenerator->generateChunk(16 * i + j);
             triangleCount += indices.size();
             chunks.push_back(std::make_unique<Mesh>(
                 *vkCtx->m_logicalDevice,

@@ -12,7 +12,6 @@
 std::unique_ptr<Buffer> RayTracing::createSBTable(vk::Pipeline& pipeline) {
 	uint32_t sbTableSize = VulkanContext::get()->m_rayTracingProperties.shaderGroupHandleSize * 3;
 
-	// I would very much like this to be DeviceLocal, but the deriver crashes for some reason if I try.
 	std::unique_ptr<Buffer> sbTable = std::make_unique<Buffer>(
 		*VulkanContext::get()->m_logicalDevice,
 		sbTableSize,
@@ -60,10 +59,24 @@ vk::UniqueDescriptorSetLayout RayTracing::createDescriptorSetLayout() {
 	uniformBufferBinding.descriptorCount = 1;
 	uniformBufferBinding.stageFlags = vk::ShaderStageFlagBits::eRaygenKHR;
 
+	vk::DescriptorSetLayoutBinding chunkVerticesBufferBinding;
+	chunkVerticesBufferBinding.binding = 3;
+	chunkVerticesBufferBinding.descriptorType = vk::DescriptorType::eStorageBuffer;
+	chunkVerticesBufferBinding.descriptorCount = 1;
+	chunkVerticesBufferBinding.stageFlags = vk::ShaderStageFlagBits::eClosestHitKHR;
+
+	vk::DescriptorSetLayoutBinding chunkIndicesBufferBinding;
+	chunkIndicesBufferBinding.binding = 4;
+	chunkIndicesBufferBinding.descriptorType = vk::DescriptorType::eStorageBuffer;
+	chunkIndicesBufferBinding.descriptorCount = 1;
+	chunkIndicesBufferBinding.stageFlags = vk::ShaderStageFlagBits::eClosestHitKHR;
+
 	std::vector<vk::DescriptorSetLayoutBinding> bindings = {
 		accelerationStructureBinding,
 		resultImageBinding,
-		uniformBufferBinding
+		uniformBufferBinding,
+		chunkVerticesBufferBinding,
+		chunkIndicesBufferBinding
 	};
 
 	vk::DescriptorSetLayoutCreateInfo layoutInfo;

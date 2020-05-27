@@ -60,7 +60,7 @@ private:
 
     GLFWwindow* window;
 
-    std::unique_ptr<ChunkGenerator> chunk;
+    std::unique_ptr<ChunkGenerator> chunkGenerator;
 
     std::shared_ptr<VulkanContext> vkCtx;
     std::shared_ptr<MemoryAllocator> memoryAllocator;
@@ -80,6 +80,7 @@ private:
     vk::UniqueDescriptorSetLayout descriptorSetLayout;
     vk::UniqueDescriptorSet descriptorSet;
 
+    std::vector<std::unique_ptr<Mesh>> chunks;
     std::unique_ptr<Buffer> vertexBuffer;
     std::unique_ptr<Buffer> uniformBuffer;
     std::unique_ptr<Image> storageImage;
@@ -87,7 +88,6 @@ private:
     std::vector<SwapchainFrameInfo> swapchainFrameInfos;
     std::vector<InFlightFrameInfo> inFlightFrameInfos;
     
-    std::unique_ptr<Mesh> object;
     glm::vec3 lightPosition = glm::vec3(-20.0f, 20.0f, 0.0f);
     glm::vec3 lightColor = glm::vec3(1.0f, 1.0f, 1.0f);
     

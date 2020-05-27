@@ -71,7 +71,7 @@ private:
     GLFWwindow* window;
 
     std::string modelPath;
-    std::unique_ptr<ChunkGenerator> chunk;
+    std::unique_ptr<ChunkGenerator> chunkGenerator;
 
     std::shared_ptr<VulkanContext> vkCtx;
     std::shared_ptr<MemoryAllocator> memoryAllocator;

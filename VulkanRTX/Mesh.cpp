@@ -49,6 +49,10 @@ void Mesh::scale(glm::vec3 scale) {
 	m_scale *= scale;
 }
 
+glm::vec3 Mesh::getPosition() {
+	return m_position;
+}
+
 glm::mat4 Mesh::getMeshMatrix() {
 	glm::mat4 identity(1.0f);
 
