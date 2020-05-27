@@ -121,7 +121,7 @@ private:
     void processMouse();
     void processKeyboard();
     uint32_t acquireNextImage();
-    void updatePushConstants();
+    void updateUniformBuffer();
     void drawFrame(const uint32_t swapchainIndex);
 
     static void framebufferSizeCallback(GLFWwindow* window, int width, int height);

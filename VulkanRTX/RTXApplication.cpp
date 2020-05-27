@@ -74,7 +74,7 @@ void RTXApplication::initVulkan() {
     
     uniformBuffer = std::make_unique<Buffer>(
         *vkCtx->m_logicalDevice,
-        sizeof(UniformBufferData),
+        sizeof(UniformBufferObject),
         vk::BufferUsageFlagBits::eUniformBuffer,
         vk::MemoryPropertyFlagBits::eDeviceLocal,
         "RTX uniform buffer");
@@ -132,6 +132,8 @@ void RTXApplication::mainLoop() {
         updateFPS();
         processMouse();
         processKeyboard();
+
+        updateUniformBuffer();
 
         uint32_t swapchainImageIndex;
 
@@ -264,7 +266,7 @@ void RTXApplication::updateDescriptorSets(
 
     vk::DescriptorBufferInfo descriptorBufferInfo;
     descriptorBufferInfo.buffer = uniformBuffer->get();
-    descriptorBufferInfo.range = sizeof(UniformBufferData);
+    descriptorBufferInfo.range = sizeof(UniformBufferObject);
     descriptorBufferInfo.offset = 0;
 
     vk::WriteDescriptorSet uniformBufferWrite;
@@ -379,4 +381,10 @@ void RTXApplication::recordCommandBuffer(const uint32_t index) {
         vk::ImageLayout::eTransferSrcOptimal,
         vk::ImageLayout::eGeneral,
         subresourceRange);
+}
+
+void RTXApplication::updateUniformBuffer() { 
+    ubo.projInv = glm::inverse(camera.getProjectionMatrix());
+    ubo.viewInv = glm::inverse(camera.getViewMatrix());
+    uniformBuffer->uploadToBuffer(ubo);
 }

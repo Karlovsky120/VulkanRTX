@@ -189,14 +189,11 @@ AccelerationStructure AccelerationStructures::createTopAccelerationStructure(
 	std::vector<vk::AccelerationStructureInstanceKHR> instanceVec = { instance };
 	instanceBuffer.uploadToBuffer(instanceVec);
 
-	vk::DeviceOrHostAddressConstKHR instanceAddress;
-	instanceAddress.deviceAddress =
-		VulkanContext::get()->m_logicalDevice->getBufferAddress(instanceBuffer.get());
-
 	vk::AccelerationStructureGeometryKHR geometry;
 	geometry.geometryType = vk::GeometryTypeKHR::eInstances;
 	geometry.geometry.instances.arrayOfPointers = VK_FALSE;
-	geometry.geometry.instances.data = &instanceAddress.deviceAddress;
+	geometry.geometry.instances.data =
+		getBufferDeviceAddress<vk::DeviceOrHostAddressConstKHR>(instanceBuffer.get());
 	geometry.flags = vk::GeometryFlagBitsKHR::eOpaque;
 
 	vk::AccelerationStructureGeometryKHR* pGeometry = &geometry;
@@ -228,7 +225,7 @@ AccelerationStructure AccelerationStructures::createTopAccelerationStructure(
 
 	std::unique_ptr<CommandBuffer> computeCmdBuffer = std::make_unique<CommandBuffer>(PoolType::eCompute);
 	computeCmdBuffer->get().buildAccelerationStructureKHR(1, &geometryInfo, &pOffsetInfo);
-	//computeCmdBuffer->submit(true);
+	computeCmdBuffer->submit(true);
 
 	vk::AccelerationStructureDeviceAddressInfoKHR addressInfo;
 	addressInfo.accelerationStructure = *as.structure;

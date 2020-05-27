@@ -17,8 +17,8 @@ public:
 
 	template <class T>
 	void uploadToBuffer(T data) {
-		std::vector<T> dataVector = { data };
-		uploadToBuffer(dataVector);
+		std::vector<T> vec = { data };
+		uploadToBuffer(vec);
 	}
 
 	template <class T>

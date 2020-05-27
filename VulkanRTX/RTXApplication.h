@@ -29,7 +29,7 @@ public:
     ~RTXApplication();
 
 private:
-    struct UniformBufferData {
+    struct UniformBufferObject {
         glm::mat4 viewInv;
         glm::mat4 projInv;
     };
@@ -92,6 +92,8 @@ private:
     glm::vec3 lightColor = glm::vec3(1.0f, 1.0f, 1.0f);
     
     vk::UniqueSemaphore flushStagingSemaphore;
+
+    UniformBufferObject ubo;
     
     double cursorX;
     double cursorY;
@@ -110,6 +112,7 @@ private:
     void updateFPS();
     void processMouse();
     void processKeyboard();
+    void updateUniformBuffer();
 
     void updateDescriptorSets(
         vk::DescriptorSet& descriptorSet,

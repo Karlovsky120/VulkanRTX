@@ -13,10 +13,6 @@
 
 struct GLFWwindow;
 
-struct UniformBufferObject {
-    glm::mat4 model;
-};
-
 class VulkanContext {
 public:
     static void init(std::shared_ptr<VulkanContext>& storage, GLFWwindow* window);
