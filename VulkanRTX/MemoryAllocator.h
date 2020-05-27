@@ -17,8 +17,6 @@ public:
 		const vk::Device& logicalDevice,
 		const vk::PhysicalDeviceMemoryProperties& m_memoryProperties);
 
-	//static std::shared_ptr<MemoryAllocator> get();
-
 	static std::unique_ptr<AllocId> allocate(
 		vk::MemoryRequirements& requirements,
 		vk::MemoryPropertyFlags memoryFlags,

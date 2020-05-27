@@ -1,3 +1,5 @@
+#include "GlobalDefines.h"
+
 #ifdef RTX
 #include "RTXApplication.h"
 #else

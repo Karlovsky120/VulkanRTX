@@ -149,7 +149,7 @@ void RasterApplication::mainLoop() {
         uint32_t swapchainIndex = acquireNextImage();
 
         if (swapchainIndex != -1) {
-            updatePushConstants();
+            updateUniformBuffer();
             resetCommandBuffer(swapchainIndex);
             recordCommandBuffer(swapchainIndex);
             drawFrame(swapchainIndex);
@@ -391,7 +391,7 @@ uint32_t RasterApplication::acquireNextImage() {
     return swapchainIndex;
 }
 
-void RasterApplication::updatePushConstants() {
+void RasterApplication::updateUniformBuffer() {
 
     UniformBufferObject ubo;
     for (uint32_t i = 0; i < chunks.size(); ++i) {
