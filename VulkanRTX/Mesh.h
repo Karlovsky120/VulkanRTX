@@ -23,6 +23,8 @@ public:
 	Buffer& getIndexBufferObject();
 	uint32_t getIndexCount();
 
+	glm::vec3 getPosition();
+
 	void translate(glm::vec3 offset);
 	void rotate(glm::vec3 rotation);
 	void scale(glm::vec3 scale);

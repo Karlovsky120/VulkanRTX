@@ -11,12 +11,13 @@ struct AccelerationStructure {
 	vk::UniqueAccelerationStructureKHR structure;
 	std::unique_ptr<AllocId>  memory;
 	vk::DeviceOrHostAddressKHR address;
+	glm::vec3 position;
 };
 
 class AccelerationStructures {
 public:
 	AccelerationStructure createBottomAccelerationStructure(Mesh& mesh, vk::Buffer& vertices);
-	AccelerationStructure createTopAccelerationStructure(AccelerationStructure& blas);
+	AccelerationStructure createTopAccelerationStructure(std::vector<std::unique_ptr<AccelerationStructure>>& blase);
 
 private:
 	template <class T>

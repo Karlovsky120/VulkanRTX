@@ -3,39 +3,13 @@
 #include "VulkanContext.h"
 
 AccelerationStructure AccelerationStructures::createBottomAccelerationStructure(Mesh& mesh, vk::Buffer& vertices) {
-	/*std::vector<Vertex> vertices2 = {
-			{{1.0f, 1.0f, 0.0f}},
-			{{-1.0f, 1.0f, 0.0f}},
-			{{0.0f, -1.0f, 0.0f}} };
-	std::vector<uint32_t> indices = { 0, 1, 2 };
-
-	Buffer vertexBuffer = Buffer(*VulkanContext::get()->m_logicalDevice,
-		vk::DeviceSize(vertices2.size() * sizeof(Vertex)),
-		vk::BufferUsageFlagBits::eVertexBuffer
-		| vk::BufferUsageFlagBits::eShaderDeviceAddress
-		| vk::BufferUsageFlagBits::eTransferDst,
-		vk::MemoryPropertyFlagBits::eDeviceLocal,
-		"Single triangle vertex buffer",
-		vk::MemoryAllocateFlagBits::eDeviceAddress);
-	vertexBuffer.uploadToBuffer(vertices2);
-
-	Buffer indexBuffer = Buffer(*VulkanContext::get()->m_logicalDevice,
-		vk::DeviceSize(indices.size() * sizeof(uint32_t)),
-		vk::BufferUsageFlagBits::eVertexBuffer
-		| vk::BufferUsageFlagBits::eShaderDeviceAddress
-		| vk::BufferUsageFlagBits::eTransferDst,
-		vk::MemoryPropertyFlagBits::eDeviceLocal,
-		"Single triangle index buffer",
-		vk::MemoryAllocateFlagBits::eDeviceAddress);
-	indexBuffer.uploadToBuffer(indices);*/
-	
 	vk::AccelerationStructureCreateGeometryTypeInfoKHR geometryTypeInfo;
 	geometryTypeInfo.geometryType = vk::GeometryTypeKHR::eTriangles;
 	geometryTypeInfo.maxPrimitiveCount = mesh.getIndexCount() / 3;
 	geometryTypeInfo.indexType = vk::IndexType::eUint32;
 	geometryTypeInfo.maxVertexCount = 33 * 33 * 33;
 	geometryTypeInfo.vertexFormat = vk::Format::eR32G32B32Sfloat;
-	geometryTypeInfo.allowsTransforms = VK_FALSE;
+	geometryTypeInfo.allowsTransforms = VK_TRUE;
 
 	vk::AccelerationStructureCreateInfoKHR createInfo;
 	createInfo.type = vk::AccelerationStructureTypeKHR::eBottomLevel;
@@ -45,6 +19,7 @@ AccelerationStructure AccelerationStructures::createBottomAccelerationStructure(
 
 	AccelerationStructure as;
 	as.structure = VulkanContext::get()->m_logicalDevice->createAccelerationStructureKHRUnique(createInfo);
+	as.position = mesh.getPosition();
 
 	NAME_OBJECT(
 		&*as.structure,
@@ -122,11 +97,11 @@ AccelerationStructure AccelerationStructures::createBottomAccelerationStructure(
 }
 
 AccelerationStructure AccelerationStructures::createTopAccelerationStructure(
-	AccelerationStructure& blas) {
+	std::vector<std::unique_ptr<AccelerationStructure>>& blases) {
 
 	vk::AccelerationStructureCreateGeometryTypeInfoKHR geometryTypeInfo;
 	geometryTypeInfo.geometryType = vk::GeometryTypeKHR::eInstances;
-	geometryTypeInfo.maxPrimitiveCount = 1;
+	geometryTypeInfo.maxPrimitiveCount = static_cast<uint32_t>(blases.size());
 	geometryTypeInfo.allowsTransforms = VK_FALSE;
 
 	vk::AccelerationStructureCreateInfoKHR createInfo;
@@ -169,31 +144,41 @@ AccelerationStructure AccelerationStructures::createTopAccelerationStructure(
 		0.0f, 0.0f, 1.0f, 0.0f
 	};
 
-	vk::AccelerationStructureInstanceKHR instance;
-	instance.transform = transformation;
-	instance.instanceCustomIndex = 0;
-	instance.mask = 0xFF;
-	instance.instanceShaderBindingTableRecordOffset = 0;
-	instance.flags = VkGeometryInstanceFlagBitsKHR(vk::GeometryInstanceFlagBitsKHR::eTriangleCullDisable);
-	instance.accelerationStructureReference = blas.address.deviceAddress;
+	std::vector<vk::AccelerationStructureInstanceKHR> instances;
+
+	for (uint32_t i = 0; i < blases.size(); ++i) {
+		transformation.matrix[0][3] = blases[i]->position.x;
+		transformation.matrix[1][3] = blases[i]->position.y;
+		transformation.matrix[2][3] = blases[i]->position.z;
+
+		vk::AccelerationStructureInstanceKHR instance;
+		instance.transform = transformation;
+		instance.instanceCustomIndex = i;
+		instance.mask = 0xFF;
+		instance.instanceShaderBindingTableRecordOffset = 0;
+		instance.flags = VkGeometryInstanceFlagBitsKHR(vk::GeometryInstanceFlagBitsKHR::eTriangleCullDisable);
+		instance.accelerationStructureReference = blases[i]->address.deviceAddress;
+
+		instances.push_back(instance);
+	}
 
 	Buffer instanceBuffer = Buffer(
 		*VulkanContext::get()->m_logicalDevice,
-		sizeof(instance),
-		vk::BufferUsageFlagBits::eShaderDeviceAddress
+		instances.size() * sizeof(vk::AccelerationStructureInstanceKHR),
+		vk::BufferUsageFlagBits::eRayTracingKHR
+		| vk::BufferUsageFlagBits::eShaderDeviceAddress
 		| vk::BufferUsageFlagBits::eTransferDst,
 		vk::MemoryPropertyFlagBits::eDeviceLocal,
 		"Top AS instance buffer",
 		vk::MemoryAllocateFlagBits::eDeviceAddress);
 
-	std::vector<vk::AccelerationStructureInstanceKHR> instanceVec = { instance };
-	instanceBuffer.uploadToBuffer(instanceVec);
+	instanceBuffer.uploadToBuffer(instances);
 
 	vk::AccelerationStructureGeometryKHR geometry;
 	geometry.geometryType = vk::GeometryTypeKHR::eInstances;
 	geometry.geometry.instances.arrayOfPointers = VK_FALSE;
-	geometry.geometry.instances.data =
-		getBufferDeviceAddress<vk::DeviceOrHostAddressConstKHR>(instanceBuffer.get());
+	geometry.geometry.instances.data.deviceAddress =
+		getBufferDeviceAddress<vk::DeviceOrHostAddressConstKHR>(instanceBuffer.get()).deviceAddress;
 	geometry.flags = vk::GeometryFlagBitsKHR::eOpaque;
 
 	vk::AccelerationStructureGeometryKHR* pGeometry = &geometry;
@@ -216,7 +201,7 @@ AccelerationStructure AccelerationStructures::createTopAccelerationStructure(
 		getBufferDeviceAddress<vk::DeviceOrHostAddressKHR>(scratchBuffer.get()).deviceAddress;
 
 	vk::AccelerationStructureBuildOffsetInfoKHR offsetInfo;
-	offsetInfo.primitiveCount = 1;
+	offsetInfo.primitiveCount = blases.size();
 	offsetInfo.primitiveOffset = 0;
 	offsetInfo.firstVertex = 0;
 	offsetInfo.transformOffset = 0;

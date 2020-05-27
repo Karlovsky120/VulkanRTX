@@ -37,12 +37,24 @@ void RTXApplication::initVulkan() {
         *vkCtx->m_logicalDevice,
         vkCtx->m_presentQueue);
 
-    chunk = std::make_unique<ChunkGenerator>();
-    std::vector<Vertex> vertices = chunk->generateVertices();
-    std::vector<uint32_t> indices = chunk->generateChunk(0);
+    chunkGenerator = std::make_unique<ChunkGenerator>();
+    std::vector<Vertex> vertices = chunkGenerator->generateVertices();
 
-    object = std::make_unique<Mesh>(*vkCtx->m_logicalDevice, indices, "RTX index mesh");
-    object->translate(glm::vec3(0.0, -CHUNK_SIZE * 0.5, 0));
+    uint32_t triangles = 0;
+
+    for (uint32_t i = 0; i < 16; ++i) {
+        for (uint32_t j = 0; j < 16; ++j) {
+            std::vector<uint32_t> indices = chunkGenerator->generateChunk(16 * i + j);
+            chunks.push_back(std::make_unique<Mesh>(
+                *vkCtx->m_logicalDevice,
+                indices,
+                "Index buffer for chunk " + std::to_string(i) + "x" + std::to_string(j)));
+            chunks.back()->translate(glm::vec3((i + 1) * CHUNK_SIZE, 0.0f, (j + 1) * CHUNK_SIZE));
+            triangles += indices.size();
+        }
+    }
+
+    triangles /= 3;
 
     vertexBuffer = std::make_unique<Buffer>(
         *vkCtx->m_logicalDevice,
@@ -88,8 +100,20 @@ void RTXApplication::initVulkan() {
     );
 
     AccelerationStructures asses;
-    blas = std::make_unique<AccelerationStructure>(asses.createBottomAccelerationStructure(*object, vertexBuffer->get()));
-    tlas = std::make_unique<AccelerationStructure>(asses.createTopAccelerationStructure(*blas));
+    std::vector<std::unique_ptr<AccelerationStructure>> blases;
+    for (uint32_t i = 0; i < 16; ++i) {
+        for (uint32_t j = 0; j < 16; ++j) {
+            blases.push_back(
+                std::make_unique<AccelerationStructure>(
+                    asses.createBottomAccelerationStructure(
+                        *chunks[i * 16 + j], vertexBuffer->get()
+                    )
+                )
+            );
+        }
+    }
+
+    tlas = std::make_unique<AccelerationStructure>(asses.createTopAccelerationStructure(blases));
 
     storageImage = rt->createStorageImage(windowWidth, windowHeight);
 
@@ -122,7 +146,7 @@ void RTXApplication::initWindow() {
 }
 
 void RTXApplication::initOther() {
-    camera = Camera(glm::vec3(0.0f, 0.0f, 2.5f), glm::vec3(0.0f), 90.0f, windowWidth / (float)windowHeight, 0.01f, 10000.0f);
+    camera = Camera(glm::vec3(0.0f, -32.0f, 2.5f), glm::vec3(0.0f), 90.0f, windowWidth / (float)windowHeight, 0.01f, 10000.0f);
 }
 
 void RTXApplication::mainLoop() {
