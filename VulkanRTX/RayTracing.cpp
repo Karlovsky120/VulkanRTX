@@ -13,7 +13,6 @@ std::unique_ptr<Buffer> RayTracing::createSBTable(vk::Pipeline& pipeline) {
 	uint32_t sbTableSize = VulkanContext::get()->m_rayTracingProperties.shaderGroupHandleSize * 3;
 
 	std::unique_ptr<Buffer> sbTable = std::make_unique<Buffer>(
-		*VulkanContext::get()->m_logicalDevice,
 		sbTableSize,
 		vk::BufferUsageFlagBits::eTransferDst
 		| vk::BufferUsageFlagBits::eRayTracingKHR
@@ -22,22 +21,10 @@ std::unique_ptr<Buffer> RayTracing::createSBTable(vk::Pipeline& pipeline) {
 		"SBTable");
 
 	std::vector<uint8_t> handleData(sbTableSize);
-	VulkanContext::get()->m_logicalDevice->getRayTracingShaderGroupHandlesKHR(pipeline, 0, 3, sbTableSize, handleData.data());
+	VulkanContext::getDevice().getRayTracingShaderGroupHandlesKHR(pipeline, 0, 3, sbTableSize, handleData.data());
 
 	sbTable->uploadToBuffer(handleData);
 	return std::move(sbTable);
-}
-
-std::unique_ptr<Image> RayTracing::createStorageImage(uint32_t width, uint32_t height) {
-	return std::make_unique<Image>(
-		*VulkanContext::get()->m_logicalDevice,
-		width,
-		height,
-		vk::Format::eB8G8R8A8Unorm,
-		"RTX render target",
-		vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eStorage,
-		vk::ImageAspectFlagBits::eColor,
-		vk::ImageLayout::eGeneral);
 }
 
 vk::UniqueDescriptorSetLayout RayTracing::createDescriptorSetLayout() {
@@ -83,7 +70,7 @@ vk::UniqueDescriptorSetLayout RayTracing::createDescriptorSetLayout() {
 	layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
 	layoutInfo.pBindings = bindings.data();
 
-	return VulkanContext::get()->m_logicalDevice->createDescriptorSetLayoutUnique(layoutInfo);
+	return VulkanContext::getDevice().createDescriptorSetLayoutUnique(layoutInfo);
 }
 
 vk::UniqueDescriptorPool RayTracing::createDescriptorPool() {
@@ -98,7 +85,7 @@ vk::UniqueDescriptorPool RayTracing::createDescriptorPool() {
 	descriptorPoolCreateInfo.pPoolSizes = poolSizes.data();
 	descriptorPoolCreateInfo.flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet;
 	descriptorPoolCreateInfo.maxSets = 1;
-	return VulkanContext::get()->m_logicalDevice->createDescriptorPoolUnique(descriptorPoolCreateInfo);
+	return VulkanContext::getDevice().createDescriptorPoolUnique(descriptorPoolCreateInfo);
 }
 
 vk::UniqueDescriptorSet RayTracing::createDescriptorSet(
@@ -109,5 +96,5 @@ vk::UniqueDescriptorSet RayTracing::createDescriptorSet(
 	descriptorSetAllocateInfo.descriptorPool = descriptorPool;
 	descriptorSetAllocateInfo.pSetLayouts = &descriptorSetLayout;
 	descriptorSetAllocateInfo.descriptorSetCount = 1;
-	return std::move(VulkanContext::get()->m_logicalDevice->allocateDescriptorSetsUnique(descriptorSetAllocateInfo)[0]);
+	return std::move(VulkanContext::getDevice().allocateDescriptorSetsUnique(descriptorSetAllocateInfo)[0]);
 }

@@ -1,12 +1,16 @@
 #include "DeviceMemory.h"
 
+#include "VulkanContext.h"
+
+#include <exception>
+
 vk::DeviceMemory& DeviceMemory::get() {
 	return m_deviceMemory;
 }
 
 // Find first free block with enough space when adjusted for alignment.
 // Any space lost at the start of the block due to alignment is added to the previous block
-std::pair<vk::DeviceMemory*, uint32_t> DeviceMemory::allocateBlock(
+uint32_t DeviceMemory::allocateBlock(
 	size_t requestedSize,
 	size_t alignment) {
 
@@ -30,11 +34,11 @@ std::pair<vk::DeviceMemory*, uint32_t> DeviceMemory::allocateBlock(
 			
 			currentBlock->free = false;
 
-			return std::pair(&m_deviceMemory, currentBlock->offset);
+			return currentBlock->offset;
 		}
 	}
 
-	return std::pair(&m_deviceMemory, -1);
+	return -1;
 }
 
 void DeviceMemory::freeBlock(uint32_t freeOffset) {
@@ -52,7 +56,7 @@ void DeviceMemory::freeBlock(uint32_t freeOffset) {
 			}
 
 			auto nextBlock = std::next(currentBlock);
-			if (nextBlock->free) {
+			if (nextBlock != m_blocks.end() && nextBlock->free) {
 				currentBlock->size += nextBlock->size;
 				m_blocks.erase(nextBlock);
 			}
@@ -62,20 +66,34 @@ void DeviceMemory::freeBlock(uint32_t freeOffset) {
 	}
 }
 
-DeviceMemory::DeviceMemory(const vk::Device& logicalDevice, const uint32_t memoryTypeIndex, const vk::MemoryAllocateFlags flags) :
+DeviceMemory::DeviceMemory(
+	const uint32_t size,
+	const uint32_t memoryTypeIndex,
+	const vk::MemoryAllocateFlags flags) :
+
 	m_blocks(std::list<MemoryChunk>()) {
 
-	m_blocks.insert(m_blocks.begin(), MemoryChunk{0, m_size, true});
+	m_blocks.insert(m_blocks.begin(), MemoryChunk{0, size, true});
 
-	vk::MemoryAllocateInfo allocateInfo;
-	allocateInfo.allocationSize = m_size;
-	allocateInfo.memoryTypeIndex = memoryTypeIndex;
+	void* currentFeature = nullptr;
 
+	vk::MemoryAllocateFlagsInfo flagInfo;
 	if (flags != vk::MemoryAllocateFlags()) {
-		vk::MemoryAllocateFlagsInfo flagInfo;
 		flagInfo.flags = flags;
-		allocateInfo.pNext = &flagInfo;
+		currentFeature = &flagInfo;
 	}
 
-	m_deviceMemory = logicalDevice.allocateMemory(allocateInfo);
+#ifdef OPTIX_DENOISER
+	vk::ExportMemoryAllocateInfo exportInfo;
+	exportInfo.handleTypes = vk::ExternalMemoryHandleTypeFlagBits::eOpaqueWin32;
+	exportInfo.pNext = currentFeature;
+	currentFeature = &exportInfo;
+#endif
+
+	vk::MemoryAllocateInfo allocateInfo;
+	allocateInfo.allocationSize = size;
+	allocateInfo.memoryTypeIndex = memoryTypeIndex;
+	allocateInfo.pNext = currentFeature;
+
+	m_deviceMemory = VulkanContext::getDevice().allocateMemory(allocateInfo);
 }

@@ -4,8 +4,11 @@
 
 #include "CommandBuffer.h"
 #include "MemoryAllocator.h"
+#include "VulkanContext.h"
 
 #include "VulkanInclude.h"
+
+#include <iostream>
 
 class Buffer {
 public:
@@ -35,7 +38,6 @@ public:
 	}
 
 	Buffer(
-		vk::Device& logicalDevice,
 		const vk::DeviceSize size,
 		const vk::BufferUsageFlags usageFlags,
 		const vk::MemoryPropertyFlags memoryFlags,
@@ -47,13 +49,14 @@ private:
 	void uploadToHostVisible(std::vector<T>& data) {
 		uint32_t sizeInBytes = static_cast<uint32_t>(data.size() * sizeof(T));
 
-		void* bufferData = m_logicalDevice.mapMemory(*m_allocId->memory,
-													 m_allocId->offset,
-													 sizeInBytes,
-													 vk::MemoryMapFlags());
+		void* bufferData = VulkanContext::getDevice().mapMemory(
+			m_allocId->memory(),
+			m_allocId->offset,
+			sizeInBytes,
+			vk::MemoryMapFlags());
 
 		memcpy(bufferData, data.data(), sizeInBytes);
-		m_logicalDevice.unmapMemory(*m_allocId->memory);
+		VulkanContext::getDevice().unmapMemory(m_allocId->memory());
 	}
 
 	template <class T>
@@ -61,7 +64,6 @@ private:
 		uint32_t sizeInBytes = static_cast<uint32_t>(data.size() * sizeof(T));
 
 		Buffer hostLocal = Buffer(
-			m_logicalDevice,
 			sizeInBytes,
 			vk::BufferUsageFlagBits::eTransferSrc,
 			vk::MemoryPropertyFlagBits::eHostVisible,
@@ -76,7 +78,7 @@ private:
 
 		CommandBuffer transferCmdBuffer = CommandBuffer(PoolType::eTransfer);
 		transferCmdBuffer.get().copyBuffer(hostLocal.get(), *m_buffer, bufferCopy);
-		transferCmdBuffer.submit(true);
+		transferCmdBuffer.submitAndWait();
 	}
 
 	vk::UniqueBuffer m_buffer;
@@ -85,7 +87,5 @@ private:
 	vk::MemoryRequirements m_memoryRequirements;
 
 	std::string m_name;
-
-	vk::Device& m_logicalDevice;
 };
 

@@ -19,7 +19,6 @@ public:
 	std::unique_ptr<Image> m_storageImage;
 
 	std::unique_ptr<Buffer> createSBTable(vk::Pipeline& pipeline);
-	std::unique_ptr<Image> createStorageImage(uint32_t width, uint32_t height);
 
 	vk::UniqueDescriptorPool createDescriptorPool();
 	vk::UniqueDescriptorSetLayout createDescriptorSetLayout();

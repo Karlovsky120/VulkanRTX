@@ -1,5 +1,7 @@
 #include "Swapchain.h"
 
+#include "VulkanContext.h"
+
 void Swapchain::updateSwapchain() {
 	const vk::SwapchainKHR oldSwapchain = *m_swapchain;
 
@@ -22,8 +24,8 @@ void Swapchain::updateSwapchain() {
 	m_colorFormat = surfaceFormats[0].format;
 	m_colorSpace = surfaceFormats[0].colorSpace;
 	for (const auto& availableFormat : surfaceFormats) {
-		if (availableFormat.format == vk::Format::eB8G8R8A8Srgb && availableFormat.colorSpace == vk::ColorSpaceKHR::eSrgbNonlinear) {
-			m_colorFormat = vk::Format::eB8G8R8A8Srgb;
+		if (availableFormat.format == vk::Format::eB8G8R8A8Unorm && availableFormat.colorSpace == vk::ColorSpaceKHR::eSrgbNonlinear) {
+			m_colorFormat = vk::Format::eB8G8R8A8Unorm;
 			m_colorSpace = vk::ColorSpaceKHR::eSrgbNonlinear;
 			break;
 		}
@@ -45,7 +47,7 @@ void Swapchain::updateSwapchain() {
 	m_createInfo.preTransform = surfaceCapabilities.currentTransform;
 	m_createInfo.oldSwapchain = oldSwapchain;
 
-	m_swapchain = m_logicalDevice.createSwapchainKHRUnique(m_createInfo);
+	m_swapchain = VulkanContext::getDevice().createSwapchainKHRUnique(m_createInfo);
 
 	if (oldSwapchain) {
 		m_imageViews.clear();
@@ -53,14 +55,14 @@ void Swapchain::updateSwapchain() {
 
 	m_imageViewCreateInfo.format = m_colorFormat;
 
-	m_images = m_logicalDevice.getSwapchainImagesKHR(*m_swapchain);
+	m_images = VulkanContext::getDevice().getSwapchainImagesKHR(*m_swapchain);
 	for (vk::Image& image : m_images) {
 		m_imageViewCreateInfo.image = image;
-		m_imageViews.push_back(m_logicalDevice.createImageViewUnique(m_imageViewCreateInfo));
+		m_imageViews.push_back(VulkanContext::getDevice().createImageViewUnique(m_imageViewCreateInfo));
 	}
 }
 
-void Swapchain::updateFramebuffers(vk::RenderPass& renderPass, vk::ImageView& depthBufferView) {
+void Swapchain::updateFramebuffers(const vk::RenderPass& renderPass, const vk::ImageView& depthBufferView) {
 	m_framebuffers.clear();
 
 	vk::FramebufferCreateInfo createInfo;
@@ -76,7 +78,7 @@ void Swapchain::updateFramebuffers(vk::RenderPass& renderPass, vk::ImageView& de
 	for (vk::UniqueImageView& imageView : m_imageViews) {
 		imageViews[0] = *imageView,
 		createInfo.pAttachments = imageViews.data();
-		m_framebuffers.push_back(m_logicalDevice.createFramebufferUnique(createInfo));
+		m_framebuffers.push_back(VulkanContext::getDevice().createFramebufferUnique(createInfo));
 	}
 }
 
@@ -86,11 +88,9 @@ vk::Image& Swapchain::getImage(uint32_t index) {
 
 Swapchain::Swapchain(vk::PhysicalDevice& physicalDevice,
 	vk::SurfaceKHR& surface,
-	vk::Device& logicalDevice,
 	vk::Queue& presentQueue) :
 	m_physicalDevice(physicalDevice),
 	m_surface(surface),
-	m_logicalDevice(logicalDevice),
 	m_presentQueue(presentQueue) {
 
 	m_createInfo.surface = m_surface;

@@ -12,12 +12,11 @@ public:
 	std::vector<vk::UniqueFramebuffer> m_framebuffers;
 	
 	void updateSwapchain();
-	void updateFramebuffers(vk::RenderPass& renderPass, vk::ImageView& depthBufferView);
+	void updateFramebuffers(const vk::RenderPass& renderPass, const vk::ImageView& depthBufferView);
 	vk::Image& getImage(uint32_t index);
 
 	Swapchain(vk::PhysicalDevice& physicalDevice,
 		vk::SurfaceKHR& surface,
-		vk::Device& logicalDevice,
 		vk::Queue& presentQueue);
 
 	vk::Extent2D m_extent;
@@ -28,7 +27,6 @@ public:
 private:
 	vk::PhysicalDevice& m_physicalDevice;
 	vk::SurfaceKHR& m_surface;
-	vk::Device& m_logicalDevice;
 	vk::Queue& m_presentQueue;
 	uint32_t m_presentQueueIndex;
 

@@ -12,7 +12,6 @@
 class Mesh {
 public:
 	Mesh(
-		vk::Device& logicalDevice,
 		std::vector<uint32_t> indices,
 		std::string name,
 		glm::vec3 position = glm::vec3(0.0f),

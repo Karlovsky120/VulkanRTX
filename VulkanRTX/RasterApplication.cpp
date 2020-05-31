@@ -28,19 +28,17 @@ void RasterApplication::initVulkan() {
     VulkanContext::init(vkCtx, window);
     MemoryAllocator::init(
         memoryAllocator,
-        *vkCtx->m_logicalDevice,
         vkCtx->m_deviceMemoryProperties);
     CommandPools::init(commandPools);
 
     swapchain = std::make_unique<Swapchain>(
         vkCtx->m_physicalDevice,
         *vkCtx->m_surface,
-        *vkCtx->m_logicalDevice,
         vkCtx->m_presentQueue);
 
     descriptorSetLayout = vkCtx->createUniformDescriptorSetLayout();
 
-    pipeline = std::make_unique<Pipeline>(*vkCtx->m_logicalDevice);
+    pipeline = std::make_unique<Pipeline>();
     pipeline->initPipeline(swapchain->m_extent, swapchain->m_colorFormat, &*descriptorSetLayout);
 
     createDepthBuffer();
@@ -55,7 +53,6 @@ void RasterApplication::initVulkan() {
     std::vector<Vertex> vertices = chunkGenerator->generateVertices();
 
     vertexBuffer = std::make_unique<Buffer>(
-        *vkCtx->m_logicalDevice,
         vertices.size() * sizeof(Vertex),
         vk::BufferUsageFlagBits::eVertexBuffer,
         vk::MemoryPropertyFlagBits::eDeviceLocal,
@@ -68,12 +65,11 @@ void RasterApplication::initVulkan() {
 
     uint32_t triangleCount = 0;
 
-    for (uint32_t i = 0; i < 4; ++i) {
-        for (uint32_t j = 0; j < 4; ++j) {
+    for (uint32_t i = 0; i < 16; ++i) {
+        for (uint32_t j = 0; j < 16; ++j) {
             std::vector<uint32_t> indices = chunkGenerator->generateChunk(16 * i + j);
             triangleCount += indices.size();
             chunks.push_back(std::make_unique<Mesh>(
-                *vkCtx->m_logicalDevice,
                 indices,
                 "Index buffer for chunk " + std::to_string(i) + "x" + std::to_string(j)));
             chunks.back()->translate(glm::vec3((i+1)*CHUNK_SIZE, 0.0f, (j+1)*CHUNK_SIZE));
@@ -83,7 +79,6 @@ void RasterApplication::initVulkan() {
     triangleCount /= 3;
     
     uniformBuffer = std::make_unique<Buffer>(
-        *vkCtx->m_logicalDevice,
         sizeof(UniformBufferObject),
         vk::BufferUsageFlagBits::eUniformBuffer,
         vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent,
@@ -111,9 +106,9 @@ void RasterApplication::initVulkan() {
     fenceCreateInfo.flags = vk::FenceCreateFlagBits::eSignaled;
 
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
-        inFlightFrameInfos[i].imageAvailableSemaphore = vkCtx->m_logicalDevice->createSemaphoreUnique(semaphoreCreateInfo);
-        inFlightFrameInfos[i].renderCompleteSemaphore = vkCtx->m_logicalDevice->createSemaphoreUnique(semaphoreCreateInfo);
-        inFlightFrameInfos[i].inFlightFence = vkCtx->m_logicalDevice->createFenceUnique(fenceCreateInfo);
+        inFlightFrameInfos[i].imageAvailableSemaphore = VulkanContext::getDevice().createSemaphoreUnique(semaphoreCreateInfo);
+        inFlightFrameInfos[i].renderCompleteSemaphore = VulkanContext::getDevice().createSemaphoreUnique(semaphoreCreateInfo);
+        inFlightFrameInfos[i].inFlightFence = VulkanContext::getDevice().createFenceUnique(fenceCreateInfo);
     }
 
     glfwGetCursorPos(window, &cursorX, &cursorY);
@@ -156,7 +151,7 @@ void RasterApplication::mainLoop() {
         }
     }
 
-    vkCtx->m_logicalDevice->waitIdle();
+    VulkanContext::getDevice().waitIdle();
 }
 
 void RasterApplication::generateSwapchainFrameInfo(const uint32_t index) {
@@ -173,7 +168,7 @@ void RasterApplication::generateSwapchainFrameInfo(const uint32_t index) {
     frameInfo.writeDescriptorSet.descriptorCount = 1;
     frameInfo.writeDescriptorSet.pBufferInfo = &frameInfo.descriptorBufferInfo;
 
-    vkCtx->m_logicalDevice->updateDescriptorSets(1, &frameInfo.writeDescriptorSet, 0, nullptr);
+    VulkanContext::getDevice().updateDescriptorSets(1, &frameInfo.writeDescriptorSet, 0, nullptr);
 
     frameInfo.renderPassBeginInfo.clearValueCount = clearColors.size();
     frameInfo.renderPassBeginInfo.pClearValues = clearColors.data();
@@ -192,7 +187,6 @@ void RasterApplication::createDepthBuffer() {
     std::vector<uint32_t> queueIndices = { vkCtx->m_graphicsQueueIndex };
 
     depthBuffer = std::make_unique<Image>(
-        *vkCtx->m_logicalDevice,
         currentExtent.width,
         currentExtent.height,
         vk::Format::eD32Sfloat,
@@ -284,7 +278,7 @@ void RasterApplication::resetCommandBuffer(const uint32_t index) {
     SwapchainFrameInfo& frameInfo = swapchainFrameInfos[index];
 
     if (frameInfo.imageInUse != vk::Fence()) {
-        vkCtx->m_logicalDevice->waitForFences(
+        VulkanContext::getDevice().waitForFences(
             frameInfo.imageInUse,
             VK_TRUE,
             UINT64_MAX);
@@ -358,13 +352,13 @@ void RasterApplication::processKeyboard() {
 uint32_t RasterApplication::acquireNextImage() {
     InFlightFrameInfo& frameInfo = inFlightFrameInfos[currentFrame];
 
-    vkCtx->m_logicalDevice->waitForFences(*frameInfo.inFlightFence, VK_TRUE, UINT64_MAX);
+    VulkanContext::getDevice().waitForFences(*frameInfo.inFlightFence, VK_TRUE, UINT64_MAX);
 
     uint32_t swapchainIndex;
     vk::Result acquireResult;
 
     try {
-        acquireResult = vkCtx->m_logicalDevice->acquireNextImageKHR(
+        acquireResult = VulkanContext::getDevice().acquireNextImageKHR(
             *swapchain->m_swapchain,
             UINT64_MAX,
             *frameInfo.imageAvailableSemaphore,
@@ -383,7 +377,7 @@ uint32_t RasterApplication::acquireNextImage() {
     SwapchainFrameInfo& swapchainInfo = swapchainFrameInfos[swapchainIndex];
 
     if (swapchainInfo.imageInUse != vk::Fence()) {
-        vkCtx->m_logicalDevice->waitForFences(swapchainInfo.imageInUse, VK_TRUE, UINT64_MAX);
+        VulkanContext::getDevice().waitForFences(swapchainInfo.imageInUse, VK_TRUE, UINT64_MAX);
     }
 
     swapchainInfo.imageInUse = *frameInfo.inFlightFence;
@@ -428,7 +422,7 @@ void RasterApplication::drawFrame(const uint32_t swapchainIndex) {
     submitInfo.signalSemaphoreCount = 1;
     submitInfo.pSignalSemaphores = renderComplete;
 
-    vkCtx->m_logicalDevice->resetFences(1, &*flightFrameInfo.inFlightFence);
+    VulkanContext::getDevice().resetFences(1, &*flightFrameInfo.inFlightFence);
     vkCtx->m_graphicsQueue.submit(submitInfo, *flightFrameInfo.inFlightFence);
 
     vk::PresentInfoKHR presentInfo;

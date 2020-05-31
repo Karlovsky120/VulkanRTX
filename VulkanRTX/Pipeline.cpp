@@ -1,5 +1,7 @@
 #include "Pipeline.h"
 
+#include "VulkanContext.h"
+
 #include <fstream>
 
 void Pipeline::createPipeline(const vk::Extent2D& extent) {
@@ -93,7 +95,7 @@ void Pipeline::createPipeline(const vk::Extent2D& extent) {
 	m_pipelineInfo.fragShaderStageCreateInfo.module = *m_pipelineInfo.fragmentShaderModule;
 	m_pipelineInfo.fragShaderStageCreateInfo.pName = "main";
 
-	m_pipelineCache = m_logicalDevice.createPipelineCacheUnique(m_cacheCreateInfo);
+	m_pipelineCache = VulkanContext::getDevice().createPipelineCacheUnique(m_cacheCreateInfo);
 
 	m_pipelineInfo.shaderStages = { m_pipelineInfo.vertShaderStageCreateInfo, m_pipelineInfo.fragShaderStageCreateInfo };
 
@@ -118,7 +120,7 @@ void Pipeline::createPipeline(const vk::Extent2D& extent) {
 	m_pipelineInfo.pipelineCreateInfo.basePipelineHandle = nullptr;
 	m_pipelineInfo.pipelineCreateInfo.basePipelineIndex = -1;
 
-	m_pipeline = m_logicalDevice.createGraphicsPipelineUnique(*m_pipelineCache, m_pipelineInfo.pipelineCreateInfo);
+	m_pipeline = VulkanContext::getDevice().createGraphicsPipelineUnique(*m_pipelineCache, m_pipelineInfo.pipelineCreateInfo);
 
 	m_pipelineInfo.pipelineCreateInfo.flags |= vk::PipelineCreateFlagBits::eDerivative;
 	m_pipelineInfo.pipelineCreateInfo.basePipelineIndex = 0;
@@ -172,7 +174,7 @@ void Pipeline::createRenderPass(const vk::Format& format) {
 	m_renderPassInfo.renderPassCreateInfo.dependencyCount = 1;
 	m_renderPassInfo.renderPassCreateInfo.pDependencies = &m_renderPassInfo.dependency;
 
-	m_renderPass = m_logicalDevice.createRenderPassUnique(m_renderPassInfo.renderPassCreateInfo);
+	m_renderPass = VulkanContext::getDevice().createRenderPassUnique(m_renderPassInfo.renderPassCreateInfo);
 }
 
 void Pipeline::createPipelineLayout(const vk::DescriptorSetLayout* setLayout) {
@@ -194,7 +196,7 @@ void Pipeline::createPipelineLayout(const vk::DescriptorSetLayout* setLayout) {
 	pipelineLayoutInfo.pushConstantRangeCount = pushConstantRanges.size();
 	pipelineLayoutInfo.pPushConstantRanges = pushConstantRanges.data();
 
-	m_pipelineLayout = m_logicalDevice.createPipelineLayoutUnique(pipelineLayoutInfo);
+	m_pipelineLayout = VulkanContext::getDevice().createPipelineLayoutUnique(pipelineLayoutInfo);
 }
 
 void Pipeline::initPipeline(
@@ -209,10 +211,10 @@ void Pipeline::initPipeline(
 
 void Pipeline::updatePipeline(const vk::Format& format, const vk::Extent2D& extent) {
 	if (format != m_renderPassInfo.colorAttachment.format) {
-		m_logicalDevice.destroyRenderPass(*m_renderPass);
+		VulkanContext::getDevice().destroyRenderPass(*m_renderPass);
 
 		m_renderPassInfo.colorAttachment.format = format;
-		m_renderPass = m_logicalDevice.createRenderPassUnique(m_renderPassInfo.renderPassCreateInfo);
+		m_renderPass = VulkanContext::getDevice().createRenderPassUnique(m_renderPassInfo.renderPassCreateInfo);
 	}
 
 	m_pipelineInfo.viewport.width = (float)extent.width;
@@ -222,7 +224,7 @@ void Pipeline::updatePipeline(const vk::Format& format, const vk::Extent2D& exte
 	vk::Pipeline oldPipeline = *m_pipeline;
 	m_pipelineInfo.pipelineCreateInfo.basePipelineHandle = oldPipeline;
 
-	m_pipeline = m_logicalDevice.createGraphicsPipelineUnique(*m_pipelineCache, m_pipelineInfo.pipelineCreateInfo);
+	m_pipeline = VulkanContext::getDevice().createGraphicsPipelineUnique(*m_pipelineCache, m_pipelineInfo.pipelineCreateInfo);
 }
 
 vk::UniqueShaderModule Pipeline::createShaderModule(const std::string shaderPath) const {
@@ -245,8 +247,5 @@ vk::UniqueShaderModule Pipeline::createShaderModule(const std::string shaderPath
 	createInfo.codeSize = fileSize;
 	createInfo.pCode = reinterpret_cast<const uint32_t*>(code.data());
 
-	return m_logicalDevice.createShaderModuleUnique(createInfo);
+	return VulkanContext::getDevice().createShaderModuleUnique(createInfo);
 }
-
-Pipeline::Pipeline(vk::Device& logicalDevice) :
-	m_logicalDevice(logicalDevice) {}

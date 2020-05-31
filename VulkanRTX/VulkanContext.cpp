@@ -9,11 +9,11 @@ VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE
 
 void VulkanContext::init(std::shared_ptr<VulkanContext>& storage, GLFWwindow* window) {
     storage = std::make_shared<VulkanContext>(window);
-    instance = storage;
+    m_staticInstance = storage;
 }
 
 std::shared_ptr<VulkanContext> VulkanContext::get() {
-    return instance.lock();
+    return m_staticInstance.lock();
 }
 
 void VulkanContext::createInstance() {
@@ -49,7 +49,9 @@ void VulkanContext::createInstance() {
 
 #ifdef ENABLE_VALIDATION
     const std::vector<const char*> validationLayers = {
+#ifdef ENABLE_API_DUMP
         "VK_LAYER_LUNARG_api_dump",
+#endif
         "VK_LAYER_KHRONOS_validation",
     };
 
@@ -114,6 +116,9 @@ void VulkanContext::createPhysicalDevice() {
         bool aftermathCheckpointsSupported = false;
         bool aftermathConfigSupported = false;
 #endif
+#ifdef OPTIX_DENOISER
+        bool externalMemorySupported = false;
+#endif
 
         bool deviceFound = false;
         for (vk::ExtensionProperties extensionProperty : extensionProperties) {
@@ -151,6 +156,11 @@ void VulkanContext::createPhysicalDevice() {
                 aftermathConfigSupported = true;
             }
 #endif
+#ifdef OPTIX_DENOISER
+            else if (extensionName == VK_KHR_EXTERNAL_MEMORY_WIN32_EXTENSION_NAME) {
+                externalMemorySupported = true;
+            }
+#endif
 #ifdef ENABLE_DEBUG_MARKERS
             else if (extensionName == VK_EXT_DEBUG_MARKER_EXTENSION_NAME) {
                 m_debugMarkersSupported = true;
@@ -165,7 +175,11 @@ void VulkanContext::createPhysicalDevice() {
                 && pipelineLibrarySupported
                 && deferredHostOperationsSupported
                 && bufferDeviceAddressSUpported
-                && descriptorIndexingSupported) {
+                && descriptorIndexingSupported
+#ifdef OPTIX_DENOISER
+                && externalMemorySupported
+#endif
+                ) {
 
 #ifdef AFTERMATH
                 m_aftermathSupported =
@@ -314,10 +328,13 @@ void VulkanContext::createLogicalDevice() {
         VK_KHR_PIPELINE_LIBRARY_EXTENSION_NAME,
         VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME,
         VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME,
-        VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME
+        VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME,
+#ifdef OPTIX_DENOISER
+        VK_KHR_EXTERNAL_MEMORY_WIN32_EXTENSION_NAME,
+#endif
     };
 
-    void* currentFeature;
+    void* currentFeature = nullptr;
 
     vk::PhysicalDeviceRayTracingFeaturesKHR rayTracing;
     rayTracing.rayTracing = true;
@@ -367,6 +384,10 @@ void VulkanContext::createLogicalDevice() {
     m_computeQueue = m_logicalDevice->getQueue(m_computeQueueIndex, 0);
     m_transferQueue = m_logicalDevice->getQueue(m_transferQueueIndex, 0);
     m_presentQueue = m_logicalDevice->getQueue(m_presentQueueIndex, 0);
+}
+
+vk::Device& VulkanContext::getDevice() {
+    return *m_staticInstance.lock()->m_logicalDevice;
 }
 
 void VulkanContext::initContext(GLFWwindow* window) {
@@ -436,7 +457,7 @@ void VulkanContext::nameObject(void* object, vk::DebugReportObjectTypeEXT type, 
     uint64_t* objectPtr = reinterpret_cast<uint64_t*>(object);
     objectNameInfo.object = *objectPtr;
 
-    instance.lock()->m_logicalDevice->debugMarkerSetObjectNameEXT(objectNameInfo);
+    m_staticInstance.lock()->m_logicalDevice->debugMarkerSetObjectNameEXT(objectNameInfo);
 }
 #endif
 
@@ -458,7 +479,7 @@ VulkanContext::VulkanContext(GLFWwindow* window) {
     initContext(window);
 }
 
-std::weak_ptr<VulkanContext> VulkanContext::instance;
+std::weak_ptr<VulkanContext> VulkanContext::m_staticInstance;
 
 #ifdef ENABLE_VALIDATION
 VulkanContext::~VulkanContext() {

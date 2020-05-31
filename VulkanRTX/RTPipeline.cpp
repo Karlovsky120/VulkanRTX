@@ -1,18 +1,20 @@
 #include "RTPipeline.h"
 
+#include "VulkanContext.h"
+
 #include <fstream>
 
 void RTPipeline::createPipeline(vk::DescriptorSetLayout& setLayout) {
 	vk::PipelineCacheCreateInfo cacheCreateInfo;
 	cacheCreateInfo.initialDataSize = 0;
 
-	m_pipelineCache = m_logicalDevice.createPipelineCacheUnique(cacheCreateInfo);
+	m_pipelineCache = VulkanContext::getDevice().createPipelineCacheUnique(cacheCreateInfo);
 
 	vk::PipelineLayoutCreateInfo pipelineLayoutInfo;
 	pipelineLayoutInfo.setLayoutCount = 1;
 	pipelineLayoutInfo.pSetLayouts = &setLayout;
 
-	m_pipelineLayout = m_logicalDevice.createPipelineLayoutUnique(pipelineLayoutInfo);
+	m_pipelineLayout = VulkanContext::getDevice().createPipelineLayoutUnique(pipelineLayoutInfo);
 
 	std::array<vk::PipelineShaderStageCreateInfo, 3> stageInfos;
 
@@ -60,7 +62,7 @@ void RTPipeline::createPipeline(vk::DescriptorSetLayout& setLayout) {
 	pipelineCreateInfo.maxRecursionDepth = 1;
 	pipelineCreateInfo.layout = *m_pipelineLayout;
 
-	m_pipeline = m_logicalDevice.createRayTracingPipelineKHRUnique(*m_pipelineCache, pipelineCreateInfo).value;
+	m_pipeline = VulkanContext::getDevice().createRayTracingPipelineKHRUnique(*m_pipelineCache, pipelineCreateInfo).value;
 }
 
 vk::Pipeline& RTPipeline::get() {
@@ -93,8 +95,5 @@ vk::UniqueShaderModule RTPipeline::createShaderModule(
 	createInfo.codeSize = fileSize;
 	createInfo.pCode = reinterpret_cast<const uint32_t*>(code.data());
 
-	return m_logicalDevice.createShaderModuleUnique(createInfo);
+	return VulkanContext::getDevice().createShaderModuleUnique(createInfo);
 }
-
-RTPipeline::RTPipeline(vk::Device& logicalDevice) :
-	m_logicalDevice(logicalDevice) {}

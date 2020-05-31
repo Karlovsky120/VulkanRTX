@@ -23,6 +23,8 @@ public:
     void createPhysicalDevice();
     void createLogicalDevice();
 
+    static vk::Device& getDevice();
+
     void initContext(GLFWwindow* window);
 
     vk::UniqueDescriptorPool createDescriptorPool(const uint32_t descriptorSetCount) const;
@@ -92,6 +94,6 @@ private:
     );
 #endif
 
-    static std::weak_ptr<VulkanContext> instance;
+    static std::weak_ptr<VulkanContext> m_staticInstance;
 };
 

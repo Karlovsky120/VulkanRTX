@@ -9,8 +9,7 @@
 
 class Image {
 public:
-	Image(const vk::Device& device,
-		const uint32_t width,
+	Image(const uint32_t width,
 		const uint32_t height,
 		const vk::Format format,
 		const std::string name,
@@ -18,8 +17,10 @@ public:
 		const vk::ImageAspectFlags aspectFlags,
 		const vk::ImageLayout startLayout = vk::ImageLayout::eUndefined);
 
-	vk::Image& get();
-	vk::ImageView& getView();
+	const vk::Image& get();
+	const vk::ImageView& getView();
+
+	vk::Extent2D m_imageSize;
 
 private:
 	vk::UniqueImage m_image;

@@ -10,8 +10,6 @@
 
 class RTPipeline {
 public:
-	RTPipeline(vk::Device& logicalDevice);
-
 	void createPipeline(vk::DescriptorSetLayout& setLayout);
 
 	vk::Pipeline& get();
@@ -26,7 +24,5 @@ private:
 	vk::UniquePipelineLayout m_pipelineLayout;
 
 	vk::UniqueDescriptorSetLayout m_descriptorSetLayout;
-
-	vk::Device& m_logicalDevice;
 };
 
