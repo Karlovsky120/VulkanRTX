@@ -28,7 +28,7 @@ public:
 
 private:
     struct UniformBufferObject {
-        glm::mat4 models[16];
+        glm::mat4 models[256];
         glm::vec3 playerPosition;
         float spacer1;
         glm::vec3 lightPosition;
@@ -59,14 +59,14 @@ private:
     int windowHeight = 720;
 
     const uint32_t MAX_FRAMES_IN_FLIGHT = 2;
-    std::string windowTitle = "Vulkan shenanigans";
+    std::string windowTitle = "Vulkan raster shenanigans";
 
     Camera camera;
 
     std::chrono::time_point<std::chrono::high_resolution_clock> time;
     float skip = 0;
     float frameTime = 1.0f;
-    const float velocity = 8.0f; 
+    const float velocity = 32.0f; 
 
     GLFWwindow* window;
 

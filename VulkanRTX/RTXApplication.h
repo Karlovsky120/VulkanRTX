@@ -5,6 +5,7 @@
 #include "AccelerationStructure.h"
 #include "Camera.h"
 #include "ChunkGenerator.h"
+#include "Denoiser.h"
 #include "Image.h"
 #include "Mesh.h"
 #include "Pipeline.h"
@@ -21,6 +22,8 @@
 #include <string>
 
 struct GLFWwindow;
+
+#define CHUNK_DIM 1
 
 class RTXApplication {
 public:
@@ -49,14 +52,14 @@ private:
     int windowHeight = 720;
 
     const uint32_t MAX_FRAMES_IN_FLIGHT = 2;
-    std::string windowTitle = "Vulkan shenanigans";
+    std::string windowTitle = "Vulkan RTX shenanigans";
 
     Camera camera;
 
     std::chrono::time_point<std::chrono::high_resolution_clock> time;
     float skip;
     float frameTime;
-    const float velocity = 4.0f; 
+    const float velocity = 32.0f; 
 
     GLFWwindow* window;
 
@@ -66,7 +69,11 @@ private:
     std::shared_ptr<MemoryAllocator> memoryAllocator;
     std::shared_ptr<CommandPools> commandPools;
 
-    std::shared_ptr<RayTracing> rt;
+#ifdef OPTIX_DENOISER
+    std::unique_ptr<Denoiser> denoiser;
+#endif
+
+    std::unique_ptr<RayTracing> rt;
     
     std::unique_ptr<Swapchain> swapchain;
 
@@ -83,7 +90,8 @@ private:
     std::vector<std::unique_ptr<Mesh>> chunks;
     std::unique_ptr<Buffer> vertexBuffer;
     std::unique_ptr<Buffer> uniformBuffer;
-    std::unique_ptr<Image> storageImage;
+    std::unique_ptr<Image> rayTraceTarget;
+    std::unique_ptr<Image> denoiseTarget;
     
     std::vector<SwapchainFrameInfo> swapchainFrameInfos;
     std::vector<InFlightFrameInfo> inFlightFrameInfos;
@@ -106,7 +114,7 @@ private:
     void initOther();
     void mainLoop();
 
-    void recordCommandBuffer(const uint32_t index);
+    void executeCommandBuffer(const uint32_t index);
 
     void calculateTime();
     void updateFPS();
@@ -115,9 +123,9 @@ private:
     void updateUniformBuffer();
 
     void updateDescriptorSets(
-        vk::DescriptorSet& descriptorSet,
-        vk::AccelerationStructureKHR& as,
-        vk::ImageView& imageView);
+        const vk::DescriptorSet& descriptorSet,
+        const vk::AccelerationStructureKHR& as,
+        const vk::ImageView& imageView);
 
     static void framebufferSizeCallback(GLFWwindow* window, int width, int height);
 };

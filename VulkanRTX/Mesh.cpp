@@ -2,8 +2,7 @@
 
 #include <fstream>
 
-Mesh::Mesh(vk::Device& logicalDevice,
-		   std::vector<uint32_t> indices,
+Mesh::Mesh(std::vector<uint32_t> indices,
 		   std::string name,
 		   glm::vec3 position,
 		   glm::vec3 rotation,
@@ -12,8 +11,7 @@ Mesh::Mesh(vk::Device& logicalDevice,
 	m_position(position),
 	m_rotation(rotation),
 	m_scale(scale),
-	m_deviceIndexBuffer(logicalDevice,
-		sizeof(indices[0])* indices.size(),
+	m_deviceIndexBuffer(sizeof(indices[0])* indices.size(),
 		vk::BufferUsageFlagBits::eTransferDst
 		| vk::BufferUsageFlagBits::eIndexBuffer
 		| vk::BufferUsageFlagBits::eRayTracingKHR

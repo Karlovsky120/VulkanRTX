@@ -25,7 +25,7 @@ private:
 		vk::BufferDeviceAddressInfo addressInfo;
 		addressInfo.buffer = buffer;
 
-		return { VulkanContext::get()->m_logicalDevice->getBufferAddress(addressInfo) };
+		return { VulkanContext::getDevice().getBufferAddress(addressInfo) };
 	}
 
 	Buffer createScratchBuffer(

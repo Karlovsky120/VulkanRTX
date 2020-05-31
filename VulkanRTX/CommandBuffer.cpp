@@ -1,5 +1,6 @@
 #include "CommandBuffer.h"
 
+#include "Image.h"
 #include "VulkanContext.h"
 
 #ifdef AFTERMATH
@@ -8,52 +9,56 @@
 #endif
 
 CommandBuffer::CommandBuffer(PoolType type) :
-	m_type(type),
-	m_logicalDevice(*VulkanContext::get()->m_logicalDevice) {
+	m_type(type) {
 
 	reset();
 }
 
-void CommandBuffer::submit(bool wait) {
+void CommandBuffer::submit() {
 	m_commandBuffer->end();
 
 	vk::SubmitInfo submitInfo;
 	submitInfo.commandBufferCount = 1;
 	submitInfo.pCommandBuffers = &*m_commandBuffer;
 
-	if (wait) {
-		vk::UniqueFence fence = m_logicalDevice.createFenceUnique({});
 #ifdef AFTERMATH
-		vk::Result result = CommandPools::getQueue(m_type).submit(1, &submitInfo, *fence);
-		if (result == vk::Result::eErrorDeviceLost) {
-			std::this_thread::sleep_for(std::chrono::seconds(3));
-			throw std::runtime_error("Error device lost");
-		}
-#else
-		CommandPools::getQueue(m_type).submit(submitInfo, *fence);
-#endif
-		m_logicalDevice.waitForFences(*fence, VK_TRUE, UINT64_MAX);
+	vk::Result result = CommandPools::getQueue(m_type).submit(1, &submitInfo, nullptr);
+	if (result == vk::Result::eErrorDeviceLost) {
+		std::this_thread::sleep_for(std::chrono::seconds(3));
+		throw std::runtime_error("Error device lost");
 	}
-	else {
+#else
+	CommandPools::getQueue(m_type).submit(submitInfo, nullptr);
+#endif
+}
+
+void CommandBuffer::submitAndWait() {
+	m_commandBuffer->end();
+
+	vk::SubmitInfo submitInfo;
+	submitInfo.commandBufferCount = 1;
+	submitInfo.pCommandBuffers = &*m_commandBuffer;
+
+	vk::UniqueFence fence = VulkanContext::getDevice().createFenceUnique({});
 #ifdef AFTERMATH
-		vk::Result result = CommandPools::getQueue(m_type).submit(1, &submitInfo, nullptr);
-		if (result == vk::Result::eErrorDeviceLost) {
-			std::this_thread::sleep_for(std::chrono::seconds(3));
-			throw std::runtime_error("Error device lost");
-		}
-#else
-		CommandPools::getQueue(m_type).submit(submitInfo, nullptr);
-#endif
+	vk::Result result = CommandPools::getQueue(m_type).submit(1, &submitInfo, *fence);
+	if (result == vk::Result::eErrorDeviceLost) {
+		std::this_thread::sleep_for(std::chrono::seconds(3));
+		throw std::runtime_error("Error device lost");
 	}
+#else
+	CommandPools::getQueue(m_type).submit(submitInfo, *fence);
+#endif
+	VulkanContext::getDevice().waitForFences(*fence, VK_TRUE, UINT64_MAX);
 }
 
 void CommandBuffer::setImageLayout(
-	vk::Image image,
-	vk::ImageLayout oldLayout,
-	vk::ImageLayout newLayout,
-	vk::ImageSubresourceRange subresourceRange,
-	vk::PipelineStageFlags srcMask,
-	vk::PipelineStageFlags dstMask) {
+	const vk::Image& image,
+	const vk::ImageLayout& oldLayout,
+	const vk::ImageLayout& newLayout,
+	const vk::ImageSubresourceRange& subresourceRange,
+	const vk::PipelineStageFlags& srcMask,
+	const vk::PipelineStageFlags& dstMask) {
 
 	vk::ImageMemoryBarrier barrier;
 	barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
@@ -110,6 +115,50 @@ void CommandBuffer::setImageLayout(
 		{ barrier });
 }
 
+void CommandBuffer::copyImageToBuffer(
+	const vk::Image& image,
+	const vk::Extent2D& imageSize,
+	const vk::ImageLayout& oldLayout,
+	const vk::Buffer& buffer) {
+
+	setImageLayout(image, oldLayout, vk::ImageLayout::eTransferSrcOptimal);
+
+	vk::BufferImageCopy copyRegion;
+	copyRegion.imageSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
+	copyRegion.imageSubresource.mipLevel = 0;
+	copyRegion.imageSubresource.baseArrayLayer = 0;
+	copyRegion.imageSubresource.layerCount = 1;
+	copyRegion.imageExtent = vk::Extent3D(imageSize, 1);
+
+	m_commandBuffer->copyImageToBuffer(
+		image,
+		vk::ImageLayout::eTransferSrcOptimal,
+		buffer,
+		{ copyRegion });
+}
+
+void CommandBuffer::copyBufferToImage(
+	const vk::Buffer& buffer,
+	const vk::Image& image,
+	const vk::Extent2D& imageSize,
+	const vk::ImageLayout& oldLayout) {
+
+	setImageLayout(image, oldLayout, vk::ImageLayout::eTransferDstOptimal);
+
+	vk::BufferImageCopy copyRegion;
+	copyRegion.imageSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
+	copyRegion.imageSubresource.mipLevel = 0;
+	copyRegion.imageSubresource.baseArrayLayer = 0;
+	copyRegion.imageSubresource.layerCount = 1;
+	copyRegion.imageExtent = vk::Extent3D(imageSize, 1);
+
+	m_commandBuffer->copyBufferToImage(
+		buffer,
+		image,
+		vk::ImageLayout::eTransferDstOptimal,
+		{ copyRegion });
+}
+
 void CommandBuffer::reset() {
 	m_commandBuffer.reset();
 
@@ -118,7 +167,7 @@ void CommandBuffer::reset() {
 	commandBufferAllocateInfo.level = vk::CommandBufferLevel::ePrimary;
 	commandBufferAllocateInfo.commandBufferCount = 1;
 
-	m_commandBuffer = std::move(m_logicalDevice.allocateCommandBuffersUnique(
+	m_commandBuffer = std::move(VulkanContext::getDevice().allocateCommandBuffersUnique(
 		commandBufferAllocateInfo)[0]);
 
 	vk::CommandBufferBeginInfo beginInfo;
@@ -128,4 +177,8 @@ void CommandBuffer::reset() {
 
 vk::CommandBuffer& CommandBuffer::get() {
 	return *m_commandBuffer;
+}
+
+PoolType CommandBuffer::getPoolType() {
+	return m_type;
 }

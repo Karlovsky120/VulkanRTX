@@ -27,14 +27,12 @@ void RTXApplication::initVulkan() {
     VulkanContext::init(vkCtx, window);
     MemoryAllocator::init(
         memoryAllocator,
-        *vkCtx->m_logicalDevice,
         vkCtx->m_deviceMemoryProperties);
     CommandPools::init(commandPools);
 
     swapchain = std::make_unique<Swapchain>(
         vkCtx->m_physicalDevice,
         *vkCtx->m_surface,
-        *vkCtx->m_logicalDevice,
         vkCtx->m_presentQueue);
 
     chunkGenerator = std::make_unique<ChunkGenerator>();
@@ -42,11 +40,10 @@ void RTXApplication::initVulkan() {
 
     uint32_t triangles = 0;
 
-    for (uint32_t i = 0; i < 16; ++i) {
-        for (uint32_t j = 0; j < 16; ++j) {
-            std::vector<uint32_t> indices = chunkGenerator->generateChunk(16 * i + j);
+    for (uint32_t i = 0; i < CHUNK_DIM; ++i) {
+        for (uint32_t j = 0; j < CHUNK_DIM; ++j) {
+            std::vector<uint32_t> indices = chunkGenerator->generateChunk(CHUNK_DIM * i + j);
             chunks.push_back(std::make_unique<Mesh>(
-                *vkCtx->m_logicalDevice,
                 indices,
                 "Index buffer for chunk " + std::to_string(i) + "x" + std::to_string(j)));
             chunks.back()->translate(glm::vec3((i + 1) * CHUNK_SIZE, 0.0f, (j + 1) * CHUNK_SIZE));
@@ -57,7 +54,6 @@ void RTXApplication::initVulkan() {
     triangles /= 3;
 
     vertexBuffer = std::make_unique<Buffer>(
-        *vkCtx->m_logicalDevice,
         vertices.size() * sizeof(Vertex),
         vk::BufferUsageFlagBits::eVertexBuffer
         |vk::BufferUsageFlagBits::eTransferDst
@@ -70,7 +66,7 @@ void RTXApplication::initVulkan() {
     swapchainFrameInfos.resize(swapchain->m_imageCount);
 
     for (uint32_t i = 0; i < swapchainFrameInfos.size(); ++i) {
-        swapchainFrameInfos[i].frameBuffer = std::make_unique<CommandBuffer>(PoolType::eCompute);
+        swapchainFrameInfos[i].frameBuffer = std::make_unique<CommandBuffer>(PoolType::eGraphics);
     }
 
     inFlightFrameInfos.resize(MAX_FRAMES_IN_FLIGHT);
@@ -79,15 +75,15 @@ void RTXApplication::initVulkan() {
     fenceCreateInfo.flags = vk::FenceCreateFlagBits::eSignaled;
 
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
-        inFlightFrameInfos[i].imageAvailableSemaphore = vkCtx->m_logicalDevice->createSemaphoreUnique(semaphoreCreateInfo);
-        inFlightFrameInfos[i].renderCompleteSemaphore = vkCtx->m_logicalDevice->createSemaphoreUnique(semaphoreCreateInfo);
-        inFlightFrameInfos[i].inFlightFence = vkCtx->m_logicalDevice->createFenceUnique(fenceCreateInfo);
+        inFlightFrameInfos[i].imageAvailableSemaphore = VulkanContext::getDevice().createSemaphoreUnique(semaphoreCreateInfo);
+        inFlightFrameInfos[i].renderCompleteSemaphore = VulkanContext::getDevice().createSemaphoreUnique(semaphoreCreateInfo);
+        inFlightFrameInfos[i].inFlightFence = VulkanContext::getDevice().createFenceUnique(fenceCreateInfo);
     }
     
     uniformBuffer = std::make_unique<Buffer>(
-        *vkCtx->m_logicalDevice,
         sizeof(UniformBufferObject),
-        vk::BufferUsageFlagBits::eUniformBuffer,
+        vk::BufferUsageFlagBits::eUniformBuffer
+        | vk::BufferUsageFlagBits::eTransferDst,
         vk::MemoryPropertyFlagBits::eDeviceLocal,
         "RTX uniform buffer");
 
@@ -101,12 +97,12 @@ void RTXApplication::initVulkan() {
 
     AccelerationStructures asses;
     std::vector<std::unique_ptr<AccelerationStructure>> blases;
-    for (uint32_t i = 0; i < 16; ++i) {
-        for (uint32_t j = 0; j < 16; ++j) {
+    for (uint32_t i = 0; i < CHUNK_DIM; ++i) {
+        for (uint32_t j = 0; j < CHUNK_DIM; ++j) {
             blases.push_back(
                 std::make_unique<AccelerationStructure>(
                     asses.createBottomAccelerationStructure(
-                        *chunks[i * 16 + j], vertexBuffer->get()
+                        *chunks[i * CHUNK_DIM + j], vertexBuffer->get()
                     )
                 )
             );
@@ -115,9 +111,32 @@ void RTXApplication::initVulkan() {
 
     tlas = std::make_unique<AccelerationStructure>(asses.createTopAccelerationStructure(blases));
 
-    storageImage = rt->createStorageImage(windowWidth, windowHeight);
+    rayTraceTarget = std::make_unique<Image>(
+        windowWidth,
+        windowHeight,
+        vk::Format::eR32G32B32A32Sfloat,
+        "RTX render target",
+        vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eTransferDst,
+        vk::ImageAspectFlagBits::eColor,
+        vk::ImageLayout::eGeneral);
 
-    rtPipeline = std::make_unique<RTPipeline>(*vkCtx->m_logicalDevice);
+    denoiseTarget = std::make_unique<Image>(
+        windowWidth,
+        windowHeight,
+        vk::Format::eR32G32B32A32Sfloat,
+        "Optix denoiser target",
+        vk::ImageUsageFlagBits::eTransferDst
+        | vk::ImageUsageFlagBits::eStorage
+        | vk::ImageUsageFlagBits::eTransferSrc,
+        vk::ImageAspectFlagBits::eColor,
+        vk::ImageLayout::eTransferSrcOptimal);
+
+
+#ifdef OPTIX_DENOISER
+    denoiser = std::make_unique<Denoiser>();
+#endif
+
+    rtPipeline = std::make_unique<RTPipeline>();
     rtPipeline->createPipeline(*descriptorSetLayout);
 
     sbt = rt->createSBTable(rtPipeline->get());
@@ -125,7 +144,7 @@ void RTXApplication::initVulkan() {
     updateDescriptorSets(
         *descriptorSet,
         *tlas->structure,
-        storageImage->getView());
+        rayTraceTarget->getView());
 
     glfwGetCursorPos(window, &cursorX, &cursorY);
 }
@@ -162,20 +181,18 @@ void RTXApplication::mainLoop() {
         uint32_t swapchainImageIndex;
 
         vk::FenceCreateInfo fenceInfo;
-        vk::UniqueFence fence = vkCtx->m_logicalDevice->createFenceUnique(fenceInfo);
+        vk::UniqueFence fence = VulkanContext::getDevice().createFenceUnique(fenceInfo);
 
-        vkCtx->m_logicalDevice->acquireNextImageKHR(
+        VulkanContext::getDevice().acquireNextImageKHR(
             *swapchain->m_swapchain,
             UINT64_MAX,
             nullptr,
             *fence,
             &swapchainImageIndex);
 
-        vkCtx->m_logicalDevice->waitForFences(*fence, VK_TRUE, UINT64_MAX);
+        VulkanContext::getDevice().waitForFences(*fence, VK_TRUE, UINT64_MAX);
 
-        recordCommandBuffer(swapchainImageIndex);
-
-        swapchainFrameInfos[swapchainImageIndex].frameBuffer->submit(true);
+        executeCommandBuffer(swapchainImageIndex);
 
         vk::PresentInfoKHR presentInfo;
         presentInfo.swapchainCount = 1;
@@ -262,9 +279,9 @@ RTXApplication::~RTXApplication() {
 }
 
 void RTXApplication::updateDescriptorSets(
-    vk::DescriptorSet& descriptorSet,
-    vk::AccelerationStructureKHR& as,
-    vk::ImageView& imageView) {
+    const vk::DescriptorSet& descriptorSet,
+    const vk::AccelerationStructureKHR& as,
+    const vk::ImageView& imageView) {
 
     vk::WriteDescriptorSetAccelerationStructureKHR descriptorSetAccelerationStructureInfo;
     descriptorSetAccelerationStructureInfo.accelerationStructureCount = 1;
@@ -306,10 +323,10 @@ void RTXApplication::updateDescriptorSets(
         uniformBufferWrite
     };
 
-    vkCtx->m_logicalDevice->updateDescriptorSets(writeDescriptorSets, nullptr);
+    VulkanContext::getDevice().updateDescriptorSets(writeDescriptorSets, nullptr);
 }
 
-void RTXApplication::recordCommandBuffer(const uint32_t index) {
+void RTXApplication::executeCommandBuffer(const uint32_t index) {
     vk::StridedBufferRegionKHR raygenShaderSbtEntry;
     raygenShaderSbtEntry.buffer = sbt->get();
     raygenShaderSbtEntry.offset =
@@ -352,24 +369,27 @@ void RTXApplication::recordCommandBuffer(const uint32_t index) {
         windowHeight,
         1);
 
-    vk::ImageSubresourceRange subresourceRange;
-    subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
-    subresourceRange.baseMipLevel = 0;
-    subresourceRange.levelCount = 1;
-    subresourceRange.baseArrayLayer = 0;
-    subresourceRange.layerCount = 1;
+    denoiser->denoise(
+        cmdBuffer,
+        *rayTraceTarget,
+        vk::ImageLayout::eGeneral,
+        *denoiseTarget,
+        vk::ImageLayout::eTransferSrcOptimal);
 
     cmdBuffer.setImageLayout(
-        storageImage->get(),
-        vk::ImageLayout::eGeneral,
+        rayTraceTarget->get(),
         vk::ImageLayout::eTransferSrcOptimal,
-        subresourceRange);
+        vk::ImageLayout::eGeneral);
+
+    cmdBuffer.setImageLayout(
+        denoiseTarget->get(),
+        vk::ImageLayout::eTransferDstOptimal,
+        vk::ImageLayout::eTransferSrcOptimal);
 
     cmdBuffer.setImageLayout(
         swapchain->getImage(index),
         vk::ImageLayout::eUndefined,
-        vk::ImageLayout::eTransferDstOptimal,
-        subresourceRange);
+        vk::ImageLayout::eTransferDstOptimal);
 
     vk::ImageSubresourceLayers subresourceLayers;
     subresourceLayers.aspectMask = vk::ImageAspectFlagBits::eColor;
@@ -377,7 +397,28 @@ void RTXApplication::recordCommandBuffer(const uint32_t index) {
     subresourceLayers.baseArrayLayer = 0;
     subresourceLayers.layerCount = 1;
 
-    vk::ImageCopy copyRegion;
+    vk::ImageBlit blit;
+    blit.srcSubresource = subresourceLayers;
+    blit.srcOffsets[0] = vk::Offset3D( 0, 0, 0 );
+    blit.srcOffsets[1] = vk::Offset3D(windowWidth, windowHeight, 1 );
+    blit.dstSubresource = subresourceLayers;
+    blit.dstOffsets[0] = vk::Offset3D(0, 0, 0 );
+    blit.dstOffsets[1] = vk::Offset3D(windowWidth, windowHeight, 1 );
+
+    cmdBuffer.get().blitImage(
+        denoiseTarget->get(),
+        vk::ImageLayout::eTransferSrcOptimal,
+        swapchain->getImage(index),
+        vk::ImageLayout::eTransferDstOptimal,
+        blit,
+        vk::Filter::eNearest);
+
+    cmdBuffer.setImageLayout(
+        swapchain->getImage(index),
+        vk::ImageLayout::eTransferDstOptimal,
+        vk::ImageLayout::ePresentSrcKHR);
+
+    /*vk::ImageCopy copyRegion;
     copyRegion.srcSubresource = subresourceLayers;
     copyRegion.srcOffset = vk::Offset3D(0, 0, 0);
     copyRegion.dstSubresource = subresourceLayers;
@@ -388,7 +429,7 @@ void RTXApplication::recordCommandBuffer(const uint32_t index) {
         1);
 
     cmdBuffer.get().copyImage(
-        storageImage->get(),
+        rayTraceTarget->get(),
         vk::ImageLayout::eTransferSrcOptimal,
         swapchain->getImage(index),
         vk::ImageLayout::eTransferDstOptimal,
@@ -397,14 +438,14 @@ void RTXApplication::recordCommandBuffer(const uint32_t index) {
     cmdBuffer.setImageLayout(
         swapchain->getImage(index),
         vk::ImageLayout::eTransferDstOptimal,
-        vk::ImageLayout::ePresentSrcKHR,
-        subresourceRange);
+        vk::ImageLayout::ePresentSrcKHR);
 
     cmdBuffer.setImageLayout(
-        storageImage->get(),
+        rayTraceTarget->get(),
         vk::ImageLayout::eTransferSrcOptimal,
-        vk::ImageLayout::eGeneral,
-        subresourceRange);
+        vk::ImageLayout::eGeneral);*/
+
+    cmdBuffer.submitAndWait();
 }
 
 void RTXApplication::updateUniformBuffer() { 

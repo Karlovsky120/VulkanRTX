@@ -21,14 +21,11 @@ public:
 
 	void updatePipeline(const vk::Format& format, const vk::Extent2D& extent);
 
-	Pipeline(vk::Device& logicalDevice);
-
 	vk::UniquePipeline m_pipeline;
 	vk::UniquePipelineLayout m_pipelineLayout;
 	vk::UniqueRenderPass m_renderPass;
 
 private:
-	vk::Device& m_logicalDevice;
 	vk::UniquePipelineCache m_pipelineCache;
 
 	struct PipelineInfo {

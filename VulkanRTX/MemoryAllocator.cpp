@@ -1,13 +1,13 @@
 #include "MemoryAllocator.h"
 
 #include "DeviceMemory.h"
+#include "VulkanContext.h"
 
 void MemoryAllocator::init(
     std::shared_ptr<MemoryAllocator>& storage,
-    const vk::Device& logicalDevice,
     const vk::PhysicalDeviceMemoryProperties& memoryProperties) {
 
-    storage = std::make_shared<MemoryAllocator>(logicalDevice, memoryProperties);
+    storage = std::make_shared<MemoryAllocator>(memoryProperties);
     instance = storage;
 }
 
@@ -29,32 +29,35 @@ std::unique_ptr<AllocId> MemoryAllocator::allocate(
 
     std::vector<DeviceMemory>& deviceMemories = it->second;
 
-    std::pair<vk::DeviceMemory*, uint32_t> memoryData(nullptr, -1);
-
     uint32_t chunkIndex = 0;
+    uint32_t blockIndex = -1;
     for (auto deviceMemory = deviceMemories.begin(); deviceMemory != deviceMemories.end(); ++deviceMemory) {
-        memoryData = deviceMemory->allocateBlock(requirements.size, requirements.alignment);
-        if (memoryData.second != -1) {
-            return std::make_unique<AllocId>(memoryData.first, deviceMemoryType, allocateFlags, chunkIndex, memoryData.second);
+        blockIndex = deviceMemory->allocateBlock(requirements.size, requirements.alignment);
+        if (blockIndex != -1) {
+            return std::make_unique<AllocId>(deviceMemoryType, allocateFlags, chunkIndex, blockIndex);
         }
         ++chunkIndex;
     }
 
-    deviceMemories.push_back(DeviceMemory(instance.lock()->m_logicalDevice, deviceMemoryType, allocateFlags));
+    deviceMemories.push_back(DeviceMemory(BLOCK_SIZE, deviceMemoryType, allocateFlags));
 
-    memoryData = deviceMemories.back().allocateBlock(requirements.size, requirements.alignment);
+    blockIndex = deviceMemories.back().allocateBlock(BLOCK_SIZE, requirements.alignment);
 
-    return std::make_unique<AllocId>(memoryData.first, deviceMemoryType, allocateFlags, chunkIndex, memoryData.second);
+    return std::make_unique<AllocId>(deviceMemoryType, allocateFlags, chunkIndex, blockIndex);
 }
 
 void MemoryAllocator::free(AllocId& allocId) {
     instance.lock()->m_memoryTable[std::make_pair(allocId.type, allocId.allocateFlags)][allocId.chunk].freeBlock(allocId.offset);
 }
 
+vk::DeviceMemory& MemoryAllocator::getMemory(AllocId& allocId) {
+    return instance.lock()->m_memoryTable[std::make_pair(allocId.type, allocId.allocateFlags)][allocId.chunk].get();
+}
+
 void MemoryAllocator::freeAllMemory() {
     for (auto& memoryType : m_memoryTable) {
         for (DeviceMemory& memoryChunk : memoryType.second) {
-            m_logicalDevice.freeMemory(memoryChunk.get());
+            VulkanContext::getDevice().freeMemory(memoryChunk.get());
         }
     }
 }
@@ -70,10 +73,8 @@ uint32_t MemoryAllocator::findMemoryType(uint32_t typeFilter, vk::MemoryProperty
 }
 
 MemoryAllocator::MemoryAllocator(
-    const vk::Device& logicalDevice,
     const vk::PhysicalDeviceMemoryProperties& memoryProperties) :
-    m_memoryProperties(memoryProperties),
-    m_logicalDevice(logicalDevice) {}
+    m_memoryProperties(memoryProperties) {}
 
 std::weak_ptr<MemoryAllocator> MemoryAllocator::instance;
 

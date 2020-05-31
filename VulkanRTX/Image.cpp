@@ -3,14 +3,14 @@
 #include "VulkanContext.h"
 #include "CommandBuffer.h"
 
-Image::Image(const vk::Device& device,
-	const uint32_t width,
+Image::Image(const uint32_t width,
 	const uint32_t height,
 	const vk::Format format,
 	const std::string name,
 	const vk::ImageUsageFlags usageFlags,
 	const vk::ImageAspectFlags aspectFlags,
-	const vk::ImageLayout startLayout) {
+	const vk::ImageLayout startLayout) : 
+	m_imageSize(width, height) {
 
 	vk::ImageCreateInfo imageInfo;
 	imageInfo.imageType = vk::ImageType::e2D;
@@ -24,15 +24,21 @@ Image::Image(const vk::Device& device,
 	imageInfo.format = format;
 	imageInfo.usage = usageFlags;
 	imageInfo.initialLayout = vk::ImageLayout::eUndefined;
-	//imageInfo.sharingMode = vk::SharingMode::eExclusive;
+	imageInfo.sharingMode = vk::SharingMode::eExclusive;
 
-	m_image = device.createImageUnique(imageInfo);
+	m_image = VulkanContext::getDevice().createImageUnique(imageInfo);
 
 	NAME_OBJECT(&*m_image, vk::DebugReportObjectTypeEXT::eImage, name)
 
-	vk::MemoryRequirements memoryRequirements = device.getImageMemoryRequirements(*m_image);
-	m_allocId = MemoryAllocator::allocate(memoryRequirements, vk::MemoryPropertyFlagBits::eDeviceLocal);
-	device.bindImageMemory(*m_image, *m_allocId->memory, m_allocId->offset);
+	vk::MemoryRequirements memoryRequirements =
+		VulkanContext::getDevice().getImageMemoryRequirements(*m_image);
+	m_allocId =	MemoryAllocator::allocate(
+			memoryRequirements,
+			vk::MemoryPropertyFlagBits::eDeviceLocal);
+	VulkanContext::getDevice().bindImageMemory(
+		*m_image,
+		m_allocId->memory(),
+		m_allocId->offset);
 
 	vk::ImageSubresourceRange subresourceRange;
 	subresourceRange.aspectMask = aspectFlags;
@@ -47,30 +53,22 @@ Image::Image(const vk::Device& device,
 	imageViewInfo.format = format;
 	imageViewInfo.subresourceRange = subresourceRange;
 
-	m_imageView = device.createImageViewUnique(imageViewInfo);
+	m_imageView = VulkanContext::getDevice().createImageViewUnique(imageViewInfo);
 
 	if (startLayout != vk::ImageLayout::eUndefined)	{
-		vk::ImageSubresourceRange subresourceRange2;
-		subresourceRange2.aspectMask = aspectFlags;
-		subresourceRange2.baseMipLevel = 0;
-		subresourceRange2.levelCount = 1;
-		subresourceRange2.baseArrayLayer = 0;
-		subresourceRange2.layerCount = 1;
-
 		std::unique_ptr<CommandBuffer> cmdBuffer = std::make_unique<CommandBuffer>(PoolType::eTransfer);
 		cmdBuffer->setImageLayout(
 			*m_image,
 			vk::ImageLayout::eUndefined,
-			startLayout,
-			subresourceRange2);
-		cmdBuffer->submit(true);
+			startLayout);
+		cmdBuffer->submitAndWait();
 	}
 }
 
-vk::Image& Image::get() {
+const vk::Image& Image::get() {
 	return *m_image;
 }
 
-vk::ImageView& Image::getView() {
+const vk::ImageView& Image::getView() {
 	return *m_imageView;
 }
