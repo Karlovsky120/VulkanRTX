@@ -21,7 +21,7 @@ public:
 	std::unique_ptr<Buffer> createSBTable(vk::Pipeline& pipeline);
 
 	vk::UniqueDescriptorPool createDescriptorPool();
-	vk::UniqueDescriptorSetLayout createDescriptorSetLayout();
+	vk::UniqueDescriptorSetLayout createDescriptorSetLayout(uint32_t chunkCount);
 	vk::UniqueDescriptorSet createDescriptorSet(
 		vk::DescriptorPool& descriptorPool, 
 		vk::DescriptorSetLayout& descriptorSetLayout);

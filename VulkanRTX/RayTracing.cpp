@@ -27,7 +27,7 @@ std::unique_ptr<Buffer> RayTracing::createSBTable(vk::Pipeline& pipeline) {
 	return std::move(sbTable);
 }
 
-vk::UniqueDescriptorSetLayout RayTracing::createDescriptorSetLayout() {
+vk::UniqueDescriptorSetLayout RayTracing::createDescriptorSetLayout(uint32_t chunkCount) {
 	vk::DescriptorSetLayoutBinding accelerationStructureBinding;
 	accelerationStructureBinding.binding = 0;
 	accelerationStructureBinding.descriptorType = vk::DescriptorType::eAccelerationStructureKHR;
@@ -52,18 +52,18 @@ vk::UniqueDescriptorSetLayout RayTracing::createDescriptorSetLayout() {
 	chunkVerticesBufferBinding.descriptorCount = 1;
 	chunkVerticesBufferBinding.stageFlags = vk::ShaderStageFlagBits::eClosestHitKHR;
 
-	vk::DescriptorSetLayoutBinding chunkIndicesBufferBinding;
-	chunkIndicesBufferBinding.binding = 4;
-	chunkIndicesBufferBinding.descriptorType = vk::DescriptorType::eStorageBuffer;
-	chunkIndicesBufferBinding.descriptorCount = 1;
-	chunkIndicesBufferBinding.stageFlags = vk::ShaderStageFlagBits::eClosestHitKHR;
+	vk::DescriptorSetLayoutBinding chunkIndicesArrayBufferBinding;
+	chunkIndicesArrayBufferBinding.binding = 4;
+	chunkIndicesArrayBufferBinding.descriptorType = vk::DescriptorType::eStorageBuffer;
+	chunkIndicesArrayBufferBinding.descriptorCount = chunkCount;
+	chunkIndicesArrayBufferBinding.stageFlags = vk::ShaderStageFlagBits::eClosestHitKHR;
 
 	std::vector<vk::DescriptorSetLayoutBinding> bindings = {
 		accelerationStructureBinding,
 		resultImageBinding,
 		uniformBufferBinding,
 		chunkVerticesBufferBinding,
-		chunkIndicesBufferBinding
+		chunkIndicesArrayBufferBinding
 	};
 
 	vk::DescriptorSetLayoutCreateInfo layoutInfo;

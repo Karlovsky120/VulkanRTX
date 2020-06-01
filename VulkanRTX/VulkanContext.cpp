@@ -321,7 +321,7 @@ void VulkanContext::createLogicalDevice() {
         presentInfo.pQueuePriorities = &presentQueuePriority;
         queueCreateInfos.push_back(presentInfo);
     }
-
+    
     std::vector<const char*> deviceExtensions = {
         VK_KHR_SWAPCHAIN_EXTENSION_NAME,
         VK_KHR_RAY_TRACING_EXTENSION_NAME,
