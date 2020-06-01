@@ -50,30 +50,31 @@ void RTXApplication::initVulkan() {
             triangles += indices.size();
         }
     }
-
+    
     triangles /= 3;
-
+    
     vertexBuffer = std::make_unique<Buffer>(
         vertices.size() * sizeof(Vertex),
         vk::BufferUsageFlagBits::eVertexBuffer
-        |vk::BufferUsageFlagBits::eTransferDst
-        |vk::BufferUsageFlagBits::eShaderDeviceAddress,
+        | vk::BufferUsageFlagBits::eStorageBuffer
+        | vk::BufferUsageFlagBits::eTransferDst
+        | vk::BufferUsageFlagBits::eShaderDeviceAddress,
         vk::MemoryPropertyFlagBits::eDeviceLocal,
         "All chunk vertices",
         vk::MemoryAllocateFlagBits::eDeviceAddress);
     vertexBuffer->uploadToBuffer(vertices);
-
+    
     swapchainFrameInfos.resize(swapchain->m_imageCount);
 
     for (uint32_t i = 0; i < swapchainFrameInfos.size(); ++i) {
         swapchainFrameInfos[i].frameBuffer = std::make_unique<CommandBuffer>(PoolType::eGraphics);
     }
-
+    
     inFlightFrameInfos.resize(MAX_FRAMES_IN_FLIGHT);
     vk::SemaphoreCreateInfo semaphoreCreateInfo;
     vk::FenceCreateInfo fenceCreateInfo;
     fenceCreateInfo.flags = vk::FenceCreateFlagBits::eSignaled;
-
+    
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
         inFlightFrameInfos[i].imageAvailableSemaphore = VulkanContext::getDevice().createSemaphoreUnique(semaphoreCreateInfo);
         inFlightFrameInfos[i].renderCompleteSemaphore = VulkanContext::getDevice().createSemaphoreUnique(semaphoreCreateInfo);
@@ -86,14 +87,6 @@ void RTXApplication::initVulkan() {
         | vk::BufferUsageFlagBits::eTransferDst,
         vk::MemoryPropertyFlagBits::eDeviceLocal,
         "RTX uniform buffer");
-
-    rt = std::make_unique<RayTracing>();
-    descriptorPool = rt->createDescriptorPool();
-    descriptorSetLayout = rt->createDescriptorSetLayout();
-    descriptorSet = rt->createDescriptorSet(
-        *descriptorPool,
-        *descriptorSetLayout
-    );
 
     AccelerationStructures asses;
     std::vector<std::unique_ptr<AccelerationStructure>> blases;
@@ -111,26 +104,26 @@ void RTXApplication::initVulkan() {
 
     tlas = std::make_unique<AccelerationStructure>(asses.createTopAccelerationStructure(blases));
 
+    rt = std::make_unique<RayTracing>();
+    descriptorPool = rt->createDescriptorPool();
+    descriptorSetLayout = rt->createDescriptorSetLayout(chunks.size());
+    descriptorSet = rt->createDescriptorSet(
+        *descriptorPool,
+        *descriptorSetLayout
+    );
+
     rayTraceTarget = std::make_unique<Image>(
         windowWidth,
         windowHeight,
+#ifdef OPTIX_DENOISER
         vk::Format::eR32G32B32A32Sfloat,
+#else
+        vk::Format::eB8G8R8A8Unorm,
+#endif
         "RTX render target",
         vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eTransferDst,
         vk::ImageAspectFlagBits::eColor,
         vk::ImageLayout::eGeneral);
-
-    denoiseTarget = std::make_unique<Image>(
-        windowWidth,
-        windowHeight,
-        vk::Format::eR32G32B32A32Sfloat,
-        "Optix denoiser target",
-        vk::ImageUsageFlagBits::eTransferDst
-        | vk::ImageUsageFlagBits::eStorage
-        | vk::ImageUsageFlagBits::eTransferSrc,
-        vk::ImageAspectFlagBits::eColor,
-        vk::ImageLayout::eTransferSrcOptimal);
-
 
 #ifdef OPTIX_DENOISER
     denoiser = std::make_unique<Denoiser>();
@@ -144,7 +137,9 @@ void RTXApplication::initVulkan() {
     updateDescriptorSets(
         *descriptorSet,
         *tlas->structure,
-        rayTraceTarget->getView());
+        rayTraceTarget->getView(),
+        chunks,
+        vertexBuffer->get());
 
     glfwGetCursorPos(window, &cursorX, &cursorY);
 }
@@ -199,7 +194,7 @@ void RTXApplication::mainLoop() {
         presentInfo.pSwapchains = &*swapchain->m_swapchain;
         presentInfo.pImageIndices = &swapchainImageIndex;
 
-        vk::Result presentResult = vkCtx->m_presentQueue.presentKHR(presentInfo);
+        vkCtx->m_presentQueue.presentKHR(presentInfo);
     }
 }
 
@@ -281,7 +276,9 @@ RTXApplication::~RTXApplication() {
 void RTXApplication::updateDescriptorSets(
     const vk::DescriptorSet& descriptorSet,
     const vk::AccelerationStructureKHR& as,
-    const vk::ImageView& imageView) {
+    const vk::ImageView& imageView,
+    const std::vector<std::unique_ptr<Mesh>>& chunks,
+    const vk::Buffer& vertexBuffer) {
 
     vk::WriteDescriptorSetAccelerationStructureKHR descriptorSetAccelerationStructureInfo;
     descriptorSetAccelerationStructureInfo.accelerationStructureCount = 1;
@@ -307,8 +304,8 @@ void RTXApplication::updateDescriptorSets(
 
     vk::DescriptorBufferInfo descriptorBufferInfo;
     descriptorBufferInfo.buffer = uniformBuffer->get();
-    descriptorBufferInfo.range = sizeof(UniformBufferObject);
     descriptorBufferInfo.offset = 0;
+    descriptorBufferInfo.range = VK_WHOLE_SIZE;
 
     vk::WriteDescriptorSet uniformBufferWrite;
     uniformBufferWrite.dstSet = descriptorSet;
@@ -317,10 +314,41 @@ void RTXApplication::updateDescriptorSets(
     uniformBufferWrite.descriptorCount = 1;
     uniformBufferWrite.pBufferInfo = &descriptorBufferInfo;
 
+    vk::DescriptorBufferInfo vertexBufferInfo;
+    vertexBufferInfo.buffer = vertexBuffer;
+    vertexBufferInfo.offset = 0;
+    vertexBufferInfo.range = VK_WHOLE_SIZE;
+
+    vk::WriteDescriptorSet vertexWrite;
+    vertexWrite.dstSet = descriptorSet;
+    vertexWrite.descriptorType = vk::DescriptorType::eStorageBuffer;
+    vertexWrite.dstBinding = 3;
+    vertexWrite.descriptorCount = 1;
+    vertexWrite.pBufferInfo = &vertexBufferInfo;
+
+    std::vector<vk::DescriptorBufferInfo> indices;
+    for (uint32_t i = 0; i < chunks.size(); ++i) {
+        vk::DescriptorBufferInfo info;
+        info.buffer = chunks[i]->getIndexBuffer();
+        info.offset = 0;
+        info.range = VK_WHOLE_SIZE;
+        
+        indices.push_back(info);
+    }
+
+    vk::WriteDescriptorSet indexArrayWrite;
+    indexArrayWrite.dstSet = descriptorSet;
+    indexArrayWrite.descriptorType = vk::DescriptorType::eStorageBuffer;
+    indexArrayWrite.dstBinding = 4;
+    indexArrayWrite.descriptorCount = indices.size();
+    indexArrayWrite.pBufferInfo = indices.data();
+
     std::vector<vk::WriteDescriptorSet> writeDescriptorSets = {
         accelerationStructureWrite,
         resultImageWrite,
-        uniformBufferWrite
+        uniformBufferWrite,
+        vertexWrite,
+        indexArrayWrite
     };
 
     VulkanContext::getDevice().updateDescriptorSets(writeDescriptorSets, nullptr);
@@ -369,23 +397,6 @@ void RTXApplication::executeCommandBuffer(const uint32_t index) {
         windowHeight,
         1);
 
-    denoiser->denoise(
-        cmdBuffer,
-        *rayTraceTarget,
-        vk::ImageLayout::eGeneral,
-        *denoiseTarget,
-        vk::ImageLayout::eTransferSrcOptimal);
-
-    cmdBuffer.setImageLayout(
-        rayTraceTarget->get(),
-        vk::ImageLayout::eTransferSrcOptimal,
-        vk::ImageLayout::eGeneral);
-
-    cmdBuffer.setImageLayout(
-        denoiseTarget->get(),
-        vk::ImageLayout::eTransferDstOptimal,
-        vk::ImageLayout::eTransferSrcOptimal);
-
     cmdBuffer.setImageLayout(
         swapchain->getImage(index),
         vk::ImageLayout::eUndefined,
@@ -397,6 +408,14 @@ void RTXApplication::executeCommandBuffer(const uint32_t index) {
     subresourceLayers.baseArrayLayer = 0;
     subresourceLayers.layerCount = 1;
 
+#ifdef OPTIX_DENOISER
+    denoiser->denoise(
+        cmdBuffer,
+        *rayTraceTarget,
+        vk::ImageLayout::eGeneral,
+        *rayTraceTarget,
+        vk::ImageLayout::eTransferSrcOptimal);
+
     vk::ImageBlit blit;
     blit.srcSubresource = subresourceLayers;
     blit.srcOffsets[0] = vk::Offset3D( 0, 0, 0 );
@@ -406,19 +425,20 @@ void RTXApplication::executeCommandBuffer(const uint32_t index) {
     blit.dstOffsets[1] = vk::Offset3D(windowWidth, windowHeight, 1 );
 
     cmdBuffer.get().blitImage(
-        denoiseTarget->get(),
+        rayTraceTarget->get(),
         vk::ImageLayout::eTransferSrcOptimal,
         swapchain->getImage(index),
         vk::ImageLayout::eTransferDstOptimal,
         blit,
         vk::Filter::eNearest);
 
+#else
     cmdBuffer.setImageLayout(
-        swapchain->getImage(index),
-        vk::ImageLayout::eTransferDstOptimal,
-        vk::ImageLayout::ePresentSrcKHR);
+        rayTraceTarget->get(),
+        vk::ImageLayout::eGeneral,
+        vk::ImageLayout::eTransferSrcOptimal);
 
-    /*vk::ImageCopy copyRegion;
+    vk::ImageCopy copyRegion;
     copyRegion.srcSubresource = subresourceLayers;
     copyRegion.srcOffset = vk::Offset3D(0, 0, 0);
     copyRegion.dstSubresource = subresourceLayers;
@@ -434,16 +454,17 @@ void RTXApplication::executeCommandBuffer(const uint32_t index) {
         swapchain->getImage(index),
         vk::ImageLayout::eTransferDstOptimal,
         copyRegion);
+#endif
+
+    cmdBuffer.setImageLayout(
+        rayTraceTarget->get(),
+        vk::ImageLayout::eTransferSrcOptimal,
+        vk::ImageLayout::eGeneral);
 
     cmdBuffer.setImageLayout(
         swapchain->getImage(index),
         vk::ImageLayout::eTransferDstOptimal,
         vk::ImageLayout::ePresentSrcKHR);
-
-    cmdBuffer.setImageLayout(
-        rayTraceTarget->get(),
-        vk::ImageLayout::eTransferSrcOptimal,
-        vk::ImageLayout::eGeneral);*/
 
     cmdBuffer.submitAndWait();
 }

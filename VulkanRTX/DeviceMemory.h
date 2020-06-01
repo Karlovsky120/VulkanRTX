@@ -25,7 +25,7 @@ public:
 		size_t size,
 		size_t alignment);
 
-	void freeBlock(uint32_t offset);
+	bool freeBlock(uint32_t offset);
 
 private:
 	//This is managed by MemoryAllocator,

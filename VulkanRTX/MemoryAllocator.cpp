@@ -41,7 +41,7 @@ std::unique_ptr<AllocId> MemoryAllocator::allocate(
 
     deviceMemories.push_back(DeviceMemory(BLOCK_SIZE, deviceMemoryType, allocateFlags));
 
-    blockIndex = deviceMemories.back().allocateBlock(BLOCK_SIZE, requirements.alignment);
+    blockIndex = deviceMemories.back().allocateBlock(requirements.size, requirements.alignment);
 
     return std::make_unique<AllocId>(deviceMemoryType, allocateFlags, chunkIndex, blockIndex);
 }

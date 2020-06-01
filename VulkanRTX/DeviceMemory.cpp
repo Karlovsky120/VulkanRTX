@@ -41,7 +41,7 @@ uint32_t DeviceMemory::allocateBlock(
 	return -1;
 }
 
-void DeviceMemory::freeBlock(uint32_t freeOffset) {
+bool DeviceMemory::freeBlock(uint32_t freeOffset) {
 	for (auto currentBlock = m_blocks.begin(); currentBlock != m_blocks.end(); ++currentBlock) {
 		if (currentBlock->offset == freeOffset) {
 			currentBlock->free = true;
@@ -61,9 +61,16 @@ void DeviceMemory::freeBlock(uint32_t freeOffset) {
 				m_blocks.erase(nextBlock);
 			}
 
-			return;
+			break;
 		}
 	}
+
+	/*if (m_blocks.size() == 1) {
+		VulkanContext::getDevice().freeMemory(m_deviceMemory);
+		return true;
+	}*/
+
+	return false;
 }
 
 DeviceMemory::DeviceMemory(

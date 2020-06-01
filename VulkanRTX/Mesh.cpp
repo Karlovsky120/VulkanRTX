@@ -14,6 +14,7 @@ Mesh::Mesh(std::vector<uint32_t> indices,
 	m_deviceIndexBuffer(sizeof(indices[0])* indices.size(),
 		vk::BufferUsageFlagBits::eTransferDst
 		| vk::BufferUsageFlagBits::eIndexBuffer
+		| vk::BufferUsageFlagBits::eStorageBuffer
 		| vk::BufferUsageFlagBits::eRayTracingKHR
 		| vk::BufferUsageFlagBits::eShaderDeviceAddress,
 		vk::MemoryPropertyFlagBits::eDeviceLocal,

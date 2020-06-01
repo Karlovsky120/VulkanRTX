@@ -23,7 +23,7 @@
 
 struct GLFWwindow;
 
-#define CHUNK_DIM 1
+#define CHUNK_DIM 16
 
 class RTXApplication {
 public:
@@ -59,7 +59,7 @@ private:
     std::chrono::time_point<std::chrono::high_resolution_clock> time;
     float skip;
     float frameTime;
-    const float velocity = 32.0f; 
+    const float velocity = 16.0f; 
 
     GLFWwindow* window;
 
@@ -91,7 +91,6 @@ private:
     std::unique_ptr<Buffer> vertexBuffer;
     std::unique_ptr<Buffer> uniformBuffer;
     std::unique_ptr<Image> rayTraceTarget;
-    std::unique_ptr<Image> denoiseTarget;
     
     std::vector<SwapchainFrameInfo> swapchainFrameInfos;
     std::vector<InFlightFrameInfo> inFlightFrameInfos;
@@ -125,7 +124,9 @@ private:
     void updateDescriptorSets(
         const vk::DescriptorSet& descriptorSet,
         const vk::AccelerationStructureKHR& as,
-        const vk::ImageView& imageView);
+        const vk::ImageView& imageView,
+        const std::vector<std::unique_ptr<Mesh>>& chunks,
+        const vk::Buffer& vertexBuffer);
 
     static void framebufferSizeCallback(GLFWwindow* window, int width, int height);
 };
