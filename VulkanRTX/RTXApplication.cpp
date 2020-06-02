@@ -356,23 +356,31 @@ void RTXApplication::updateDescriptorSets(
 }
 
 void RTXApplication::executeCommandBuffer(const uint32_t index) {
+    vk::DeviceSize groupHandleSize = vkCtx->m_rayTracingProperties.shaderGroupHandleSize;
+
     vk::StridedBufferRegionKHR raygenShaderSbtEntry;
     raygenShaderSbtEntry.buffer = sbt->get();
     raygenShaderSbtEntry.offset =
-        static_cast<vk::DeviceSize>(vkCtx->m_rayTracingProperties.shaderGroupHandleSize * INDEX_RAYGEN);
-    raygenShaderSbtEntry.size = vkCtx->m_rayTracingProperties.shaderGroupHandleSize;
+        static_cast<vk::DeviceSize>(groupHandleSize * INDEX_RAYGEN);
+    raygenShaderSbtEntry.size = groupHandleSize;
 
     vk::StridedBufferRegionKHR missShaderSbtEntry;
     missShaderSbtEntry.buffer = sbt->get();
     missShaderSbtEntry.offset =
-        static_cast<vk::DeviceSize>(vkCtx->m_rayTracingProperties.shaderGroupHandleSize * INDEX_MISS);
-    missShaderSbtEntry.size = vkCtx->m_rayTracingProperties.shaderGroupHandleSize;
+        static_cast<vk::DeviceSize>(groupHandleSize * INDEX_MISS);
+    missShaderSbtEntry.size = groupHandleSize;
 
+    vk::StridedBufferRegionKHR shadowMissShaderSbtEntry;
+    shadowMissShaderSbtEntry.buffer = sbt->get();
+    shadowMissShaderSbtEntry.offset =
+        static_cast<vk::DeviceSize>(groupHandleSize * INDEX_SHADOW_MISS);
+    shadowMissShaderSbtEntry.size = groupHandleSize;
+    
     vk::StridedBufferRegionKHR hitShaderSbtEntry;
     hitShaderSbtEntry.buffer = sbt->get();
     hitShaderSbtEntry.offset =
-        static_cast<vk::DeviceSize>(vkCtx->m_rayTracingProperties.shaderGroupHandleSize * INDEX_CLOSEST_HIT);
-    hitShaderSbtEntry.size = vkCtx->m_rayTracingProperties.shaderGroupHandleSize;
+        static_cast<vk::DeviceSize>(groupHandleSize * INDEX_CLOSEST_HIT);
+    hitShaderSbtEntry.size = groupHandleSize;
 
     vk::StridedBufferRegionKHR callableShaderSbtEntry;
 
@@ -504,12 +512,11 @@ void RTXApplication::executeCommandBuffer(const uint32_t index) {
 void RTXApplication::updateUniformBuffer() { 
     ubo.projInv = glm::inverse(camera.getProjectionMatrix());
     ubo.viewInv = glm::inverse(camera.getViewMatrix());
-    ubo.playerPosition = camera.getCameraPosition();
     ubo.lightPosition = lightPosition;
 
-    /*for (uint32_t i = 0; i < CHUNK_DIM * CHUNK_DIM; ++i) {
-        ubo.chunkTransformations[i] = glm::transpose(chunkTransformations[i]);
-    }*/
+    for (uint32_t i = 0; i < lightSpan.size(); ++i) {
+        ubo.lightSpan[i] = lightSpan[i];
+    }
 
     uniformBuffer->uploadToBuffer(ubo);
 }

@@ -23,7 +23,7 @@
 
 struct GLFWwindow;
 
-#define CHUNK_DIM 1
+#define CHUNK_DIM 2
 
 class RTXApplication {
 public:
@@ -35,10 +35,8 @@ private:
     struct UniformBufferObject {
         glm::mat4 viewInv;
         glm::mat4 projInv;
-        glm::vec3 playerPosition;
-        uint32_t padding1;
         glm::vec3 lightPosition;
-        uint32_t padding2;
+        glm::vec3 lightSpan[4];
     };
 
     struct SwapchainFrameInfo {
@@ -76,7 +74,7 @@ private:
 #ifdef OPTIX_DENOISER
     std::unique_ptr<Denoiser> denoiser;
 #endif
-
+    
     std::unique_ptr<RayTracing> rt;
     
     std::unique_ptr<Swapchain> swapchain;
@@ -100,8 +98,13 @@ private:
     std::vector<SwapchainFrameInfo> swapchainFrameInfos;
     std::vector<InFlightFrameInfo> inFlightFrameInfos;
     
-    glm::vec3 lightPosition = glm::vec3(0.0f, -64.0f, 0.0f);
-    glm::vec3 lightColor = glm::vec3(1.0f, 1.0f, 1.0f);
+    glm::vec3 lightPosition = glm::vec3(0.0f, 64.0f, 0.0f);
+    std::vector<glm::vec3> lightSpan = {
+        glm::vec3(0.0f, 0.0f, 0.0f),
+        glm::vec3(1.0f, 0.0f, 0.0f),
+        glm::vec3(0.0f, 0.0f, 1.0f),
+        glm::vec3(1.0f, 0.0f, 1.0f)
+    };
     
     vk::UniqueSemaphore flushStagingSemaphore;
 

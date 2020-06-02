@@ -6,7 +6,8 @@
 
 #define INDEX_RAYGEN 0
 #define INDEX_MISS 1
-#define INDEX_CLOSEST_HIT 2
+#define INDEX_SHADOW_MISS 2
+#define INDEX_CLOSEST_HIT 3
 
 class RTPipeline {
 public:
