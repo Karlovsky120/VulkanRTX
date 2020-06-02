@@ -36,7 +36,10 @@ layout( push_constant ) uniform PushConstants {
     vec3 lightPosition;
 } push;
 
-layout(location = 0) rayPayloadEXT vec3 hitValue;
+layout(location = 0) rayPayloadEXT Payload {
+    vec3 hitValue;
+    uint depth;
+} payload;
 
 void main() 
 {
@@ -51,7 +54,8 @@ void main()
 	float tmin = 0.001;
 	float tmax = 1000.0;
 
-    hitValue = vec3(0.0);
+    payload.hitValue = vec3(0.0);
+    payload.depth = 5;
 
     traceRayEXT(
         topLevelAS,
@@ -66,5 +70,5 @@ void main()
         tmax,
         0);
 
-	imageStore(image, ivec2(gl_LaunchIDEXT.xy), vec4(hitValue, 0.0));
+	imageStore(image, ivec2(gl_LaunchIDEXT.xy), vec4(payload.hitValue, 0.0));
 }

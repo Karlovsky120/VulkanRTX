@@ -29,7 +29,7 @@ std::unique_ptr<AllocId> MemoryAllocator::allocate(
     }
 
     std::vector<DeviceMemory>& deviceMemories = it->second;
-
+    
     uint32_t chunkIndex = 0;
     uint32_t blockIndex = -1;
     for (auto deviceMemory = deviceMemories.begin(); deviceMemory != deviceMemories.end(); ++deviceMemory) {
