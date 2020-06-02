@@ -348,6 +348,7 @@ for %%f in (*.vert *.tesc *.tese *.geom *.frag *.comp *.rgen *.rchit *.rmiss) do
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release rtx|x64'">
       </ExcludedFromBuild>
     </None>
+    <None Include="shadowMissShader.rmiss" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

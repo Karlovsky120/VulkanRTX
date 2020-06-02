@@ -6,19 +6,19 @@
 hitAttributeEXT vec3 attribs;
 
 layout(location = 0) rayPayloadInEXT vec3 hitValue;
+layout(location = 1) rayPayloadEXT bool isShadowed;
 
 struct Vertex {
     vec3 pos;
 };
 
-layout(binding = 2, set = 0) uniform UniformBuffer 
+layout(binding = 0, set = 0) uniform accelerationStructureEXT topLevelAS;
+layout(binding = 2, set = 0, scalar) uniform UniformBuffer 
 {
 	mat4 viewInverse;
 	mat4 projInverse;
-    vec3 playerPosition;
-    int padding1;
     vec3 lightPosition;
-    int padding2;
+    vec3 lightSpan[4];
 } UB;
 
 layout(binding = 3, set = 0, scalar) buffer Vertices {
@@ -38,11 +38,12 @@ layout( push_constant ) uniform PushConstants {
 
 void main()
 {
+    hitValue = UB.lightSpan[1];
+    return;
+
     ivec3 ind = ivec3(indices[gl_InstanceCustomIndexEXT].i[3 * gl_PrimitiveID + 0],
                     indices[gl_InstanceCustomIndexEXT].i[3 * gl_PrimitiveID + 1],
                     indices[gl_InstanceCustomIndexEXT].i[3 * gl_PrimitiveID + 2]);
-
-    int length = indices[gl_InstanceCustomIndexEXT].i.length();
 
     vec3 v0 = vertices.v[ind.x].pos;
     vec3 v1 = vertices.v[ind.y].pos;
@@ -52,17 +53,43 @@ void main()
     vec3 second = v2 - v0;
     vec3 normal = normalize(cross(first, second));
 
-    const vec3 barycentrics = vec3(1.0f - attribs.x - attribs.y, attribs.x, attribs.y);
+    vec3 worldPos = gl_WorldRayOriginEXT + gl_WorldRayDirectionEXT * gl_HitTEXT;
+    vec3 toLight = normalize(UB.lightPosition - worldPos);
 
-    vec3 hitPoint = v0 * barycentrics.x + v1 * barycentrics.y + v2 * barycentrics.z;
-    vec3 worldPos = hitPoint + vec3(32, 32, 0);
+    if (dot(normal, toLight) > 0) {
+        float tMin = 0.001;
+        float tMax = length(worldPos - UB.lightPosition);
+        vec3 origin = gl_WorldRayOriginEXT + gl_WorldRayDirectionEXT * gl_HitTEXT;
+        vec3 rayDir = toLight;
+        uint flags = 
+            gl_RayFlagsTerminateOnFirstHitEXT
+            | gl_RayFlagsOpaqueEXT
+            | gl_RayFlagsSkipClosestHitShaderEXT;
+        isShadowed = true;
+        traceRayEXT(
+            topLevelAS,
+            flags,
+            0xFF,
+            0,
+            0,
+            1,
+            origin,
+            tMin,
+            rayDir,
+            tMax,
+            1);
 
-    vec3 ambientComponent = vec3(0.0f, 0.2f, 0.0f);
+        if (isShadowed) {
+            hitValue = vec3(0);
+            return;
+        }
+     }
+
+    vec3 ambientComponent = vec3(0.0f, 0.0f, 0.0f);
     vec3 diffuseComponent = vec3(0.0f, 1.0f, 0.0f);
     vec3 specularComponent = vec3(0.0f, 1.0f, 0.0f);
 
     vec3 toEye = normalize(push.cameraPosition - worldPos);
-    vec3 toLight = normalize(push.lightPosition - worldPos);
 
     float diffuseFactor = dot(normal, toLight);
 
@@ -78,6 +105,4 @@ void main()
     vec3 fullColorClamped = clamp(fullColor, vec3(0.0), vec3(1.0));
 
     hitValue = fullColorClamped;
-
-    //hitValue = vec3(1.0);
 }

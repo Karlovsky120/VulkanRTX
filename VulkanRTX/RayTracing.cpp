@@ -10,7 +10,7 @@
 
 
 std::unique_ptr<Buffer> RayTracing::createSBTable(vk::Pipeline& pipeline) {
-	uint32_t sbTableSize = VulkanContext::get()->m_rayTracingProperties.shaderGroupHandleSize * 3;
+	uint32_t sbTableSize = VulkanContext::get()->m_rayTracingProperties.shaderGroupHandleSize * 4;
 
 	std::unique_ptr<Buffer> sbTable = std::make_unique<Buffer>(
 		sbTableSize,
@@ -21,7 +21,7 @@ std::unique_ptr<Buffer> RayTracing::createSBTable(vk::Pipeline& pipeline) {
 		"SBTable");
 
 	std::vector<uint8_t> handleData(sbTableSize);
-	VulkanContext::getDevice().getRayTracingShaderGroupHandlesKHR(pipeline, 0, 3, sbTableSize, handleData.data());
+	VulkanContext::getDevice().getRayTracingShaderGroupHandlesKHR(pipeline, 0, 4, sbTableSize, handleData.data());
 
 	sbTable->uploadToBuffer(handleData);
 	return std::move(sbTable);
@@ -32,7 +32,9 @@ vk::UniqueDescriptorSetLayout RayTracing::createDescriptorSetLayout(uint32_t chu
 	accelerationStructureBinding.binding = 0;
 	accelerationStructureBinding.descriptorType = vk::DescriptorType::eAccelerationStructureKHR;
 	accelerationStructureBinding.descriptorCount = 1;
-	accelerationStructureBinding.stageFlags = vk::ShaderStageFlagBits::eRaygenKHR;
+	accelerationStructureBinding.stageFlags =
+		vk::ShaderStageFlagBits::eRaygenKHR
+		| vk::ShaderStageFlagBits::eClosestHitKHR;
 
 	vk::DescriptorSetLayoutBinding resultImageBinding;
 	resultImageBinding.binding = 1;
@@ -44,7 +46,9 @@ vk::UniqueDescriptorSetLayout RayTracing::createDescriptorSetLayout(uint32_t chu
 	uniformBufferBinding.binding = 2;
 	uniformBufferBinding.descriptorType = vk::DescriptorType::eUniformBuffer;
 	uniformBufferBinding.descriptorCount = 1;
-	uniformBufferBinding.stageFlags = vk::ShaderStageFlagBits::eRaygenKHR;
+	uniformBufferBinding.stageFlags =
+		vk::ShaderStageFlagBits::eRaygenKHR
+		| vk::ShaderStageFlagBits::eClosestHitKHR;
 
 	vk::DescriptorSetLayoutBinding chunkVerticesBufferBinding;
 	chunkVerticesBufferBinding.binding = 3;

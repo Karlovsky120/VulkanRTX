@@ -52,30 +52,42 @@ void RTPipeline::createPipeline(vk::DescriptorSetLayout& setLayout) {
 
 	m_pipelineLayout = VulkanContext::getDevice().createPipelineLayoutUnique(pipelineLayoutInfo);
 
-	std::array<vk::PipelineShaderStageCreateInfo, 3> stageInfos;
+	std::array<vk::PipelineShaderStageCreateInfo, 4> stageInfos;
 
 	vk::PipelineShaderStageCreateInfo raygenShaderInfo;
-	vk::UniqueShaderModule raygenModule = createShaderModule("shaders/bin/raygenShader.rgen.spv");
+	vk::UniqueShaderModule raygenModule =
+		createShaderModule("shaders/bin/raygenShader.rgen.spv");
 	raygenShaderInfo.module = *raygenModule;
 	raygenShaderInfo.stage = vk::ShaderStageFlagBits::eRaygenKHR;
 	raygenShaderInfo.pName = "main";
 	stageInfos[INDEX_RAYGEN] = raygenShaderInfo;
 
 	vk::PipelineShaderStageCreateInfo missShaderInfo;
-	vk::UniqueShaderModule missModule = createShaderModule("shaders/bin/missShader.rmiss.spv");
+	vk::UniqueShaderModule missModule =
+		createShaderModule("shaders/bin/missShader.rmiss.spv");
 	missShaderInfo.module = *missModule;
 	missShaderInfo.stage = vk::ShaderStageFlagBits::eMissKHR;
 	missShaderInfo.pName = "main";
 	stageInfos[INDEX_MISS] = missShaderInfo;
 
+	vk::PipelineShaderStageCreateInfo shadowMissShaderInfo;
+	vk::UniqueShaderModule shadowMissModule =
+		createShaderModule("shaders/bin/shadowMissShader.rmiss.spv");
+	shadowMissShaderInfo.module = *shadowMissModule;
+	shadowMissShaderInfo.stage = vk::ShaderStageFlagBits::eMissKHR;
+	shadowMissShaderInfo.pName = "main";
+	stageInfos[INDEX_SHADOW_MISS] = shadowMissShaderInfo;
+
+
 	vk::PipelineShaderStageCreateInfo closestHitShaderInfo;
-	vk::UniqueShaderModule closestHitModule = createShaderModule("shaders/bin/closestHitShader.rchit.spv");
+	vk::UniqueShaderModule closestHitModule =
+		createShaderModule("shaders/bin/closestHitShader.rchit.spv");
 	closestHitShaderInfo.module = *closestHitModule;
 	closestHitShaderInfo.stage = vk::ShaderStageFlagBits::eClosestHitKHR;
 	closestHitShaderInfo.pName = "main";
 	stageInfos[INDEX_CLOSEST_HIT] = closestHitShaderInfo;
 
-	std::array<vk::RayTracingShaderGroupCreateInfoKHR, 3> groupInfos;
+	std::array<vk::RayTracingShaderGroupCreateInfoKHR, 4> groupInfos;
 	for (auto& group : groupInfos) {
 		group.generalShader = VK_SHADER_UNUSED_KHR;
 		group.closestHitShader = VK_SHADER_UNUSED_KHR;
@@ -87,6 +99,8 @@ void RTPipeline::createPipeline(vk::DescriptorSetLayout& setLayout) {
 	groupInfos[INDEX_RAYGEN].generalShader = INDEX_RAYGEN;
 	groupInfos[INDEX_MISS].type = vk::RayTracingShaderGroupTypeKHR::eGeneral;
 	groupInfos[INDEX_MISS].generalShader = INDEX_MISS;
+	groupInfos[INDEX_SHADOW_MISS].type = vk::RayTracingShaderGroupTypeKHR::eGeneral;
+	groupInfos[INDEX_SHADOW_MISS].generalShader = INDEX_SHADOW_MISS;
 	groupInfos[INDEX_CLOSEST_HIT].type = vk::RayTracingShaderGroupTypeKHR::eTrianglesHitGroup;
 	groupInfos[INDEX_CLOSEST_HIT].closestHitShader = INDEX_CLOSEST_HIT;
 

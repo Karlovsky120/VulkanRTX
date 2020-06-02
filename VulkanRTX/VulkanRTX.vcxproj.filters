@@ -184,5 +184,8 @@
     <None Include="shaders\missShader.rmiss">
       <Filter>Shaders</Filter>
     </None>
+    <None Include="shadowMissShader.rmiss">
+      <Filter>Shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>
