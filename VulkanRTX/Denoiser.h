@@ -47,7 +47,7 @@ private:
 	CudaBuffer m_inputBuffer;
 	CudaBuffer m_outputBuffer;
 
-	static void context_log_cb(
+	static void contextLogCB(
 		unsigned int level,
 		const char* tag,
 		const char* message,

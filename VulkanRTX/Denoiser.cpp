@@ -127,7 +127,7 @@ Denoiser::Denoiser() {
 
 	OPTIX_CHECK(optixInit());
 	OPTIX_CHECK(optixDeviceContextCreate(cuCtx, nullptr, &m_optixDevice));
-	OPTIX_CHECK(optixDeviceContextSetLogCallback(m_optixDevice, context_log_cb, nullptr, 4));
+	OPTIX_CHECK(optixDeviceContextSetLogCallback(m_optixDevice, contextLogCB, nullptr, 4));
 
 	m_dOptions.inputKind = OPTIX_DENOISER_INPUT_RGB;
 	m_dOptions.pixelFormat = OPTIX_PIXEL_FORMAT_FLOAT4;
@@ -143,7 +143,9 @@ void Denoiser::allocateBuffers() {
 		vk::BufferUsageFlagBits::eUniformBuffer
 		| vk::BufferUsageFlagBits::eTransferDst,
 		vk::MemoryPropertyFlagBits::eDeviceLocal,
-		"CUDA input buffer");
+		"CUDA input buffer",
+		vk::MemoryAllocateFlags(),
+		true);
 
 	m_outputBuffer.buffer = std::make_unique<Buffer>(
 		bufferSize,
@@ -151,7 +153,9 @@ void Denoiser::allocateBuffers() {
 		| vk::BufferUsageFlagBits::eTransferDst
 		| vk::BufferUsageFlagBits::eTransferSrc,
 		vk::MemoryPropertyFlagBits::eDeviceLocal,
-		"CUDA output buffer");
+		"CUDA output buffer",
+		vk::MemoryAllocateFlags(),
+		true);
 	
 	createCudaBuffer(m_inputBuffer);
 	createCudaBuffer(m_outputBuffer);
@@ -208,11 +212,11 @@ void Denoiser::createCudaBuffer(CudaBuffer& cudaBuffer) {
 		&cudaExtBufferDesc));
 }
 
-void Denoiser::context_log_cb(
+void Denoiser::contextLogCB(
 	unsigned int level,
 	const char* tag,
 	const char* message,
-	void* /*cbdata */) {
+	void* cbdata) {
 
 	std::cout << "[" << std::setw(2) << level << "][" << std::setw(12) << tag
 		<< "]: " << message << "\n";

@@ -15,7 +15,7 @@ public:
 
 	vk::Pipeline& get();
 	vk::PipelineLayout& getLayout();
-
+	
 private:
 	vk::UniqueShaderModule createShaderModule(
 		const std::string shaderPath) const;

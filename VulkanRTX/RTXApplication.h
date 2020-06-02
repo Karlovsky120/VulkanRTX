@@ -61,7 +61,7 @@ private:
     std::chrono::time_point<std::chrono::high_resolution_clock> time;
     float skip;
     float frameTime;
-    const float velocity = 16.0f; 
+    const float velocity = 8.0f; 
 
     GLFWwindow* window;
 
@@ -100,13 +100,11 @@ private:
     
     glm::vec3 lightPosition = glm::vec3(0.0f, 64.0f, 0.0f);
     std::vector<glm::vec3> lightSpan = {
-        glm::vec3(0.0f, 0.0f, 0.0f),
-        glm::vec3(1.0f, 0.0f, 0.0f),
-        glm::vec3(0.0f, 0.0f, 1.0f),
-        glm::vec3(1.0f, 0.0f, 1.0f)
+        glm::vec3(0.0f, 264.0f, 0.0f),
+        glm::vec3(10.0f, 264.0f, 0.0f),
+        glm::vec3(0.0f, 264.0f, 10.0f),
+        glm::vec3(10.0f, 264.0f, 10.0f)
     };
-    
-    vk::UniqueSemaphore flushStagingSemaphore;
 
     UniformBufferObject ubo;
     

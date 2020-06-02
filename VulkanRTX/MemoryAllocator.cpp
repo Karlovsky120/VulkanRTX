@@ -14,7 +14,8 @@ void MemoryAllocator::init(
 std::unique_ptr<AllocId> MemoryAllocator::allocate(
     vk::MemoryRequirements& requirements,
     vk::MemoryPropertyFlags memoryFlags,
-    vk::MemoryAllocateFlags allocateFlags) {
+    vk::MemoryAllocateFlags allocateFlags,
+    const bool dedicated) {
 
     uint32_t deviceMemoryType = instance.lock()->findMemoryType(requirements.memoryTypeBits, memoryFlags);
     auto memoryId = std::make_pair(deviceMemoryType, allocateFlags);
@@ -32,14 +33,20 @@ std::unique_ptr<AllocId> MemoryAllocator::allocate(
     uint32_t chunkIndex = 0;
     uint32_t blockIndex = -1;
     for (auto deviceMemory = deviceMemories.begin(); deviceMemory != deviceMemories.end(); ++deviceMemory) {
-        blockIndex = deviceMemory->allocateBlock(requirements.size, requirements.alignment);
-        if (blockIndex != -1) {
-            return std::make_unique<AllocId>(deviceMemoryType, allocateFlags, chunkIndex, blockIndex);
+        if (!dedicated) {
+            blockIndex = deviceMemory->allocateBlock(requirements.size, requirements.alignment);
+            if (blockIndex != -1) {
+                return std::make_unique<AllocId>(deviceMemoryType, allocateFlags, chunkIndex, blockIndex);
+            }
         }
         ++chunkIndex;
     }
-
-    deviceMemories.push_back(DeviceMemory(BLOCK_SIZE, deviceMemoryType, allocateFlags));
+    if (dedicated) {
+        deviceMemories.push_back(DeviceMemory(BLOCK_SIZE, deviceMemoryType, allocateFlags));
+    }
+    else {
+        deviceMemories.push_back(DeviceMemory(requirements.size, deviceMemoryType, allocateFlags));
+    }
 
     blockIndex = deviceMemories.back().allocateBlock(requirements.size, requirements.alignment);
 

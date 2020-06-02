@@ -42,7 +42,8 @@ public:
 		const vk::BufferUsageFlags usageFlags,
 		const vk::MemoryPropertyFlags memoryFlags,
 		const std::string name,
-		vk::MemoryAllocateFlags memoryAllocateFlags = vk::MemoryAllocateFlags());
+		vk::MemoryAllocateFlags memoryAllocateFlags = vk::MemoryAllocateFlags(),
+		const bool dedicatedAlloc = false);
 
 private:
 	template <class T>

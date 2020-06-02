@@ -1,7 +1,7 @@
 #pragma once
 
 #ifdef RTX
-	//#define OPTIX_DENOISER
+	#define OPTIX_DENOISER
 #endif
 
 #ifdef ENABLE_VALIDATION
