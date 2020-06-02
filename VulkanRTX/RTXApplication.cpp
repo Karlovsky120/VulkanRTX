@@ -99,6 +99,7 @@ void RTXApplication::initVulkan() {
                     )
                 )
             );
+            chunkTransformations.push_back(chunks.back()->getMeshMatrix());
         }
     }
 
@@ -388,6 +389,37 @@ void RTXApplication::executeCommandBuffer(const uint32_t index) {
         sets,
         nullptr);
 
+    glm::mat4 viewInv = glm::inverse(camera.getViewMatrix());
+    cmdBuffer.get().pushConstants(
+        rtPipeline->getLayout(),
+        vk::ShaderStageFlagBits::eRaygenKHR | vk::ShaderStageFlagBits::eClosestHitKHR,
+        0,
+        sizeof(glm::mat4),
+        &viewInv);
+
+    glm::mat4 projInv = glm::inverse(camera.getProjectionMatrix());
+    cmdBuffer.get().pushConstants(
+        rtPipeline->getLayout(),
+        vk::ShaderStageFlagBits::eRaygenKHR | vk::ShaderStageFlagBits::eClosestHitKHR,
+        sizeof(glm::mat4),
+        sizeof(glm::mat4),
+        &projInv);
+
+    glm::vec3 position = camera.getCameraPosition();
+    cmdBuffer.get().pushConstants(
+        rtPipeline->getLayout(),
+        vk::ShaderStageFlagBits::eRaygenKHR | vk::ShaderStageFlagBits::eClosestHitKHR,
+        2 * sizeof(glm::mat4),
+        sizeof(glm::vec3),
+        &position);
+
+    cmdBuffer.get().pushConstants(
+        rtPipeline->getLayout(),
+        vk::ShaderStageFlagBits::eRaygenKHR | vk::ShaderStageFlagBits::eClosestHitKHR,
+        2 * sizeof(glm::mat4) + sizeof(glm::vec3),
+        sizeof(glm::vec3),
+        &lightPosition);
+
     cmdBuffer.get().traceRaysKHR(
         &raygenShaderSbtEntry,
         &missShaderSbtEntry,
@@ -472,5 +504,12 @@ void RTXApplication::executeCommandBuffer(const uint32_t index) {
 void RTXApplication::updateUniformBuffer() { 
     ubo.projInv = glm::inverse(camera.getProjectionMatrix());
     ubo.viewInv = glm::inverse(camera.getViewMatrix());
+    ubo.playerPosition = camera.getCameraPosition();
+    ubo.lightPosition = lightPosition;
+
+    /*for (uint32_t i = 0; i < CHUNK_DIM * CHUNK_DIM; ++i) {
+        ubo.chunkTransformations[i] = glm::transpose(chunkTransformations[i]);
+    }*/
+
     uniformBuffer->uploadToBuffer(ubo);
 }

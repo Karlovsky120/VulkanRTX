@@ -10,9 +10,45 @@ void RTPipeline::createPipeline(vk::DescriptorSetLayout& setLayout) {
 
 	m_pipelineCache = VulkanContext::getDevice().createPipelineCacheUnique(cacheCreateInfo);
 
+	vk::PushConstantRange viewInverse;
+	viewInverse.stageFlags =
+		vk::ShaderStageFlagBits::eRaygenKHR
+		| vk::ShaderStageFlagBits::eClosestHitKHR;
+	viewInverse.offset = 0;
+	viewInverse.size = 16 * sizeof(float);
+
+	vk::PushConstantRange projInverse;
+	projInverse.stageFlags =
+		vk::ShaderStageFlagBits::eRaygenKHR
+		| vk::ShaderStageFlagBits::eClosestHitKHR;
+	projInverse.offset = 16 * sizeof(float);
+	projInverse.size = 16 * sizeof(float);
+
+	vk::PushConstantRange playerPosition;
+	playerPosition.stageFlags =
+		vk::ShaderStageFlagBits::eRaygenKHR
+		| vk::ShaderStageFlagBits::eClosestHitKHR;
+	playerPosition.offset = 32 * sizeof(float);
+	playerPosition.size = 3 * sizeof(float);
+
+	vk::PushConstantRange lightPosition;
+	lightPosition.stageFlags =
+		vk::ShaderStageFlagBits::eRaygenKHR
+		| vk::ShaderStageFlagBits::eClosestHitKHR;
+	lightPosition.offset = 35 * sizeof(float);
+	lightPosition.size = 3 * sizeof(float);
+
+	std::vector<vk::PushConstantRange> pushConstantRanges = {
+		viewInverse,
+		projInverse,
+		playerPosition,
+		lightPosition };
+
 	vk::PipelineLayoutCreateInfo pipelineLayoutInfo;
 	pipelineLayoutInfo.setLayoutCount = 1;
 	pipelineLayoutInfo.pSetLayouts = &setLayout;
+	pipelineLayoutInfo.pushConstantRangeCount = pushConstantRanges.size();
+	pipelineLayoutInfo.pPushConstantRanges = pushConstantRanges.data();
 
 	m_pipelineLayout = VulkanContext::getDevice().createPipelineLayoutUnique(pipelineLayoutInfo);
 
