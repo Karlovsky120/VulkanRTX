@@ -22,7 +22,8 @@ public:
 	static std::unique_ptr<AllocId> allocate(
 		vk::MemoryRequirements& requirements,
 		vk::MemoryPropertyFlags memoryFlags,
-		vk::MemoryAllocateFlags allocateFlags = vk::MemoryAllocateFlags());
+		vk::MemoryAllocateFlags allocateFlags = vk::MemoryAllocateFlags(),
+		const bool dedicated = false);
 
 	static void free(AllocId& allocId);
 	static vk::DeviceMemory& getMemory(AllocId& allocId);

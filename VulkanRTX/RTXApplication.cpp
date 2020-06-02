@@ -46,7 +46,7 @@ void RTXApplication::initVulkan() {
             chunks.push_back(std::make_unique<Mesh>(
                 indices,
                 "Index buffer for chunk " + std::to_string(i) + "x" + std::to_string(j)));
-            chunks.back()->translate(glm::vec3((i + 1) * CHUNK_SIZE, 0.0f, (j + 1) * CHUNK_SIZE));
+            chunks.back()->translate(glm::vec3((i+1) * CHUNK_SIZE, 0.0f, (j+1) * CHUNK_SIZE));
             triangles += indices.size();
         }
     }

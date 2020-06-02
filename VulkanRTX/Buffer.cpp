@@ -13,7 +13,8 @@ Buffer::Buffer(
 	const vk::BufferUsageFlags usageFlags,
 	const vk::MemoryPropertyFlags memoryFlags,
 	const std::string name,
-	vk::MemoryAllocateFlags memoryAllocateFlags) :
+	vk::MemoryAllocateFlags memoryAllocateFlags,
+	const bool dedicatedAlloc) :
 
 	m_memoryFlags(memoryFlags),
 	m_name(name) {
