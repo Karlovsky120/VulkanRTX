@@ -41,7 +41,7 @@ void ChunkGenerator::generateRandomly(uint32_t seed, bool blocks[CHUNK_PADDED_SI
 		srand(rand());
 		for (uint32_t j = 1; j < CHUNK_SIZE + 1; ++j) {
 			for (uint32_t k = 1; k < CHUNK_SIZE + 1; ++k) {
-				blocks[i][j][k] = rand() % 6 > 4;
+				blocks[i][j][k] = rand() % 10 == 0;
 			}
 		}
 	}

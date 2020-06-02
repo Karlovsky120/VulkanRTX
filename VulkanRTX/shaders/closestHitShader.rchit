@@ -5,8 +5,15 @@
 
 hitAttributeEXT vec3 attribs;
 
-layout(location = 0) rayPayloadInEXT vec3 hitValue;
+struct Payload {
+    vec3 hitValue;
+    uint depth;
+};
+
+layout(location = 0) rayPayloadInEXT Payload backPayload;
+
 layout(location = 1) rayPayloadEXT bool isShadowed;
+layout(location = 2) rayPayloadEXT Payload forwardPayload; 
 
 struct Vertex {
     vec3 pos;
@@ -46,8 +53,8 @@ float rand(vec2 co){
 }
 
 vec3 bilinearSample(vec3 a, vec3 b, vec3 c, vec3 seed) {
-   vec3 abDir = (b-a)*goldNoise(seed.xy+seed.z, seed.z*seed.x);
-   vec3 acDir = (c-a)*goldNoise(seed.yz-seed.x, seed.x-seed.y);
+   vec3 abDir = (b-a)*goldNoise(seed.xy, seed.z);
+   vec3 acDir = (c-a)*goldNoise(seed.yz, seed.x);
 
    return a + abDir + acDir;
 }
@@ -68,16 +75,28 @@ void main()
 
     vec3 worldPos = gl_WorldRayOriginEXT + gl_WorldRayDirectionEXT * gl_HitTEXT;
 
+    if (dot(normal, worldPos - push.cameraPosition) > 0) {
+        backPayload.hitValue = vec3(0.0f);
+        return;
+    }
+
     vec3 toLight[4];
     toLight[0] = normalize(UB.lightSpan[0] - worldPos);
     toLight[1] = normalize(UB.lightSpan[1] - worldPos);
     toLight[2] = normalize(UB.lightSpan[2] - worldPos);
     toLight[3] = normalize(UB.lightSpan[3] - worldPos);
 
-    if (dot(normal, toLight[0]) > 0
-        || dot(normal, toLight[1]) > 0
-        || dot(normal, toLight[2]) > 0
-        || dot(normal, toLight[3]) > 0) {
+    float lightAngle[4];
+    lightAngle[0] = dot(normal, toLight[0]);
+    lightAngle[1] = dot(normal, toLight[1]);
+    lightAngle[2] = dot(normal, toLight[2]);
+    lightAngle[3] = dot(normal, toLight[3]);
+
+    float shadowFactor = 0;
+    if (lightAngle[0] > 0
+        || lightAngle[1] > 0
+        || lightAngle[2] > 0
+        || lightAngle[3] > 0) {
 
         float tMin = 0.001;
         vec3 origin = gl_WorldRayOriginEXT + gl_WorldRayDirectionEXT * gl_HitTEXT;
@@ -87,15 +106,13 @@ void main()
             | gl_RayFlagsSkipClosestHitShaderEXT;
 
         uint obstruction = 0;
-        uint shadowSampleCount = 10;
+        uint shadowSampleCount = 20;
         for (uint i = 0; i < shadowSampleCount; ++i) {
             vec3 samplePoint = bilinearSample(
                 UB.lightSpan[0],
                 UB.lightSpan[1],
                 UB.lightSpan[2],
-                vec3(cos(worldPos.y)/(i+1), cos(i)*worldPos.x, sin(i)*worldPos.z));
-
-            //vec3 samplePoint = UB.lightSpan[0] + UB.lightSpan[1] * i + UB.lightSpan[2] * (i % 10);
+                vec3((i+1)*worldPos.y, (i+1)*worldPos.x, (i+1)*worldPos.z));
 
             float tMax = length(samplePoint - worldPos);
             vec3 rayDir = normalize(samplePoint - worldPos);
@@ -118,13 +135,41 @@ void main()
             }
         }
 
-        hitValue = vec3(0, 1.0 / (1 + obstruction), 0);
+        shadowFactor = 1.0 / (1 + obstruction);
+        //backPayload.hitValue = vec3(0, 1.0 / (1 + obstruction), 0);
 
-    } else {
-        hitValue = vec3(0.2, 0, 0);
+    } /*else {
+        backPayload.hitValue = vec3(0.2, 0, 0);
+    }*/
+
+    float diffuseFactor = (lightAngle[0] + lightAngle[1] + lightAngle[2] + lightAngle[3]) / 4.0;
+
+    vec3 lightBase = shadowFactor * diffuseFactor * vec3(0.0f, 1.0f, 0.0f);
+
+    vec3 toEye = normalize(push.cameraPosition - worldPos);
+    vec3 reflectedToEye = -toEye - 2 * dot(normal, -toEye) * normal;
+
+    if (backPayload.depth == 0) {
+        return;
     }
 
-    return;
+    forwardPayload.hitValue = vec3(0.0f);
+    forwardPayload.depth = backPayload.depth - 1;
+
+    traceRayEXT(
+        topLevelAS,
+        gl_RayFlagsOpaqueEXT,
+        0xFF,
+        0,
+        0,
+        0,
+        worldPos,
+        0.001,
+        reflectedToEye,
+        1000.0,
+        2);
+
+    backPayload.hitValue = lightBase + 0.5 * forwardPayload.hitValue;
 
     /*vec3 ambientComponent = vec3(0.0f, 0.2f, 0.0f);
     vec3 diffuseComponent = vec3(0.0f, 1.0f, 0.0f);
@@ -145,5 +190,5 @@ void main()
     vec3 fullColor = ambientComponent + diffuse + specular;
     vec3 fullColorClamped = clamp(fullColor, vec3(0.0), vec3(1.0));
 
-    hitValue = shadowFactor * fullColor;*/
+    hitValue = fullColor;*/
 }

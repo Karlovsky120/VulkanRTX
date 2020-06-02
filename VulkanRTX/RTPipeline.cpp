@@ -109,7 +109,7 @@ void RTPipeline::createPipeline(vk::DescriptorSetLayout& setLayout) {
 	pipelineCreateInfo.pStages = stageInfos.data();
 	pipelineCreateInfo.groupCount = static_cast<uint32_t>(groupInfos.size());
 	pipelineCreateInfo.pGroups = groupInfos.data();
-	pipelineCreateInfo.maxRecursionDepth = 1;
+	pipelineCreateInfo.maxRecursionDepth = 5;
 	pipelineCreateInfo.layout = *m_pipelineLayout;
 
 	m_pipeline = VulkanContext::getDevice().createRayTracingPipelineKHRUnique(*m_pipelineCache, pipelineCreateInfo).value;
